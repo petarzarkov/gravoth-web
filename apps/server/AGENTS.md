@@ -57,6 +57,7 @@ bottom is what stops that starting a server.
 - **http** - CORS, the cross-site request check, request logging and error mapping.
 - **database** - Postgres through `Bun.SQL` (`@dunx/infra/db`'s `SqlOptions`, drizzle), migrations applied in `onBeforeInit`. drizzle's own `jsonb()` stores a string over `Bun.SQL`; use `database/columns.ts`'s.
 - **backup** - `pg_dump` at 03:30 to R2 (`@dunx/infra/files`), skipped with a log line without the R2 variables.
+- **guest clean-up** - at 04:15 (`players/guest-cleanup.ts`), deleting guests with no heroes and no use in 30 days (a session's `updated_at`; `GET /api/account` marks a game session used, since better-auth never renews one).
 - **auth** - better-auth mounted at `/api/auth` (guests, email and password, Google, Discord), and `/api/account` (the caller, the sign-in methods, deletion, the mail-link pages).
 - **mail** - Resend with React Email templates; logged without `RESEND_API_KEY`.
 - **social, heroes, boards** - `/api/profile`, `/api/friends`, `/api/blocks`, `/api/heroes`, `/api/builds/:id`, `/api/leaderboards`.

@@ -1,5 +1,8 @@
 import { Auth, AuthContext } from '@dunx/auth';
 import { HttpError, HttpStatusCode } from '@dunx/http';
+import { and, eq, lt } from 'drizzle-orm';
+import { Db } from '../database/db.js';
+import { session as sessions } from '../database/schema.js';
 import { Mailer } from '../mail/mailer.js';
 import { SignInProviders, type SignInMethod } from './sign-in-providers.js';
 import type { AccountView } from '@gravoth/contracts';
@@ -18,6 +21,7 @@ export class Accounts {
     private readonly caller: AuthContext,
     private readonly providers: SignInProviders,
     private readonly mail: Mailer,
+    private readonly db: Db,
   ) {}
 
   methods(): readonly SignInMethod[] {
@@ -25,7 +29,8 @@ export class Accounts {
   }
 
   async view(): Promise<AccountView> {
-    const { user } = this.caller.require();
+    const { user, session } = this.caller.require();
+    await this.used(session.id);
     const context = await this.auth.$context;
     const linked = await context.internalAdapter.findAccounts(user.id);
     const guest =
@@ -46,6 +51,25 @@ export class Accounts {
         .sort(),
       createdAt: new Date(user.createdAt).toISOString(),
     };
+  }
+
+  /**
+   * Marks the session used today: its `updated_at`, at most once a day. better-auth moves a website session's itself
+   * as it renews it, but never a game session's (decision 223: those do not expire, so they are never renewed), and the
+   * guest clean-up (players/guest-cleanup.ts) reads a guest's last use from it. The game reads this route at every
+   * launch.
+   */
+  private async used(sessionId: string): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(sessions)
+      .set({ updatedAt: now })
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          lt(sessions.updatedAt, new Date(now.getTime() - 86_400_000)),
+        ),
+      );
   }
 
   /**

@@ -1,5 +1,5 @@
 import { Module } from '@dunx/core';
-import { ScheduleModule } from '@dunx/infra/schedule';
+import { ScheduleModule, ScheduleRegistry } from '@dunx/infra/schedule';
 import { AppConfigService } from '../config.js';
 
 /**
@@ -19,5 +19,7 @@ import { AppConfigService } from '../config.js';
       inject: [AppConfigService] as const,
     }),
   ],
+  // What is armed, and `trigger` to run one now (the suites; app.module.ts exports it).
+  exports: [ScheduleRegistry],
 })
 export class MaintenanceModule {}
