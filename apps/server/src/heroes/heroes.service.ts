@@ -1,0 +1,91 @@
+import { HttpError, HttpStatusCode } from '@dunx/http';
+import { and, asc, eq, sql } from 'drizzle-orm';
+import { Db } from '../database/db.js';
+import { isUniqueViolation } from '../database/errors.js';
+import { hero, type Hero, type HeroClass } from '../database/schema.js';
+
+export interface HeroView {
+  readonly id: string;
+  readonly name: string;
+  readonly class: HeroClass;
+  readonly hardcore: boolean;
+  readonly online: boolean;
+  readonly createdAt: string;
+}
+
+export const toHeroView = (row: Hero): HeroView => ({
+  id: row.id,
+  name: row.name,
+  class: row.class,
+  hardcore: row.hardcore,
+  online: row.online,
+  createdAt: row.createdAt.toISOString(),
+});
+
+export interface RegisterHero {
+  readonly name: string;
+  readonly class: HeroClass;
+  readonly hardcore: boolean;
+}
+
+/**
+ * The heroes a player has told the server about. Until online heroes (step 5), a hero is registered so its records can
+ * stand on the boards: registering is idempotent by name (the same hero after a reinstall finds its row again), a
+ * name is one hero per player, and the device is the authority on hardcore (a hardcore hero that falls becomes normal;
+ * MAKE HARDCORE goes the other way once, decision 198).
+ */
+export class Heroes {
+  constructor(private readonly db: Db) {}
+
+  async register(userId: string, input: RegisterHero): Promise<{ hero: Hero; created: boolean }> {
+    const existing = await this.byName(userId, input.name);
+    if (existing !== undefined) return { hero: await this.reconcile(existing, input), created: false };
+    try {
+      const [row] = await this.db.insert(hero).values({ userId, name: input.name, class: input.class, hardcore: input.hardcore }).returning();
+      if (row === undefined) throw new Error('hero not stored');
+      return { hero: row, created: true };
+    } catch (error) {
+      // Two registrations of one hero at once: the unique index kept one.
+      if (!isUniqueViolation(error, 'heroes_user_name_key')) throw error;
+      const raced = await this.byName(userId, input.name);
+      if (raced === undefined) throw error;
+      return { hero: await this.reconcile(raced, input), created: false };
+    }
+  }
+
+  async mine(userId: string): Promise<Hero[]> {
+    return this.db.select().from(hero).where(eq(hero.userId, userId)).orderBy(asc(hero.createdAt), asc(hero.id));
+  }
+
+  async find(id: string): Promise<Hero | undefined> {
+    const [row] = await this.db.select().from(hero).where(eq(hero.id, id)).limit(1);
+    return row;
+  }
+
+  /** The caller's own hero, or a 404 (another player's hero is not the caller's to post with). */
+  async own(userId: string, id: string): Promise<Hero> {
+    const [row] = await this.db
+      .select()
+      .from(hero)
+      .where(and(eq(hero.id, id), eq(hero.userId, userId)))
+      .limit(1);
+    if (row === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'HERO_NOT_FOUND');
+    return row;
+  }
+
+  private async byName(userId: string, name: string): Promise<Hero | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(hero)
+      .where(and(eq(hero.userId, userId), sql`lower(${hero.name}) = lower(${name})`))
+      .limit(1);
+    return row;
+  }
+
+  private async reconcile(existing: Hero, input: RegisterHero): Promise<Hero> {
+    if (existing.class !== input.class) throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_NAME_TAKEN');
+    if (existing.hardcore === input.hardcore) return existing;
+    const [row] = await this.db.update(hero).set({ hardcore: input.hardcore, updatedAt: new Date() }).where(eq(hero.id, existing.id)).returning();
+    return row ?? existing;
+  }
+}

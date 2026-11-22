@@ -1,0 +1,101 @@
+# The deployed shape (docs/online-plan.md): the API, Postgres, Redis, the rules checker and the Cloudflare Tunnel. Same file on
+# the Raspberry Pi and on a VPS.
+#
+#   COMMIT_SHA=$(git rev-parse --short HEAD) docker compose -f compose.prod.yml up -d --build
+#
+# The tunnel is behind the `tunnel` profile, off until its public hostname (gravoth-api.petarzarkov.com -> http://app:3000) is
+# set in Cloudflare Zero Trust: `docker compose -f compose.prod.yml --profile tunnel up -d`. Secrets live only in `.env` beside this
+# file, written by the developer (every name in .env.example); Compose reads POSTGRES_PASSWORD from it for the database
+# and refuses to start without it.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: '10m', max-file: '5' }
+
+services:
+  app:
+    build:
+      context: .
+      args: { COMMIT_SHA: '${COMMIT_SHA:-dev}' }
+    container_name: gravoth-api
+    restart: unless-stopped
+    logging: *logging
+    env_file: [{ path: .env, required: false }]
+    environment:
+      # The database URL is built from these and POSTGRES_PASSWORD (from .env), each part encoded (src/config.ts).
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: gravoth
+      POSTGRES_DB: gravoth
+      REDIS_URL: redis://redis:6379
+      VALIDATOR_URL: http://validator:8080
+      PUBLIC_URL: '${PUBLIC_URL:-https://gravoth-api.petarzarkov.com}'
+      CORS_ORIGIN: '${CORS_ORIGIN:-https://gravoth.petarzarkov.com}'
+    ports: ['3000:3000']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      validator: { condition: service_started }
+    networks: [gravoth]
+
+  # The database: accounts, profiles, heroes and their builds, boards, friends. On the private network only, never published.
+  # POSTGRES_PASSWORD sets the password when the volume is first made; changing it later is an ALTER ROLE, not an edit here.
+  # Backed up nightly to R2 by the app (pg_dump, src/backup/); a restore is in docs/online-plan.md.
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:17.11-alpine
+    container_name: gravoth-postgres
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: gravoth
+      POSTGRES_DB: gravoth
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in server/.env}'
+    volumes: ['postgres-data:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gravoth -d gravoth']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks: [gravoth]
+
+  # The rules checker: the game's own Core behind a private HTTP API (dotnet/Gravoth.Validator). Built from the repository root,
+  # so the Pi keeps dotnet/ and game/Assets/Gravoth/Core beside server/ (tools in docs/online-plan.md). Never on the tunnel.
+  validator:
+    build:
+      context: ..
+      dockerfile: dotnet/Gravoth.Validator/Dockerfile
+    container_name: gravoth-validator
+    restart: unless-stopped
+    logging: *logging
+    networks: [gravoth]
+
+  redis:
+    image: public.ecr.aws/docker/library/redis:8.4.0
+    container_name: gravoth-redis
+    restart: unless-stopped
+    logging: *logging
+    volumes: ['redis-data:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [gravoth]
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gravoth-tunnel
+    profiles: [tunnel]
+    restart: unless-stopped
+    logging: *logging
+    command: tunnel run
+    env_file: [.env]
+    depends_on:
+      app: { condition: service_healthy }
+    networks: [gravoth]
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  gravoth:
