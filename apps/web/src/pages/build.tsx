@@ -4,7 +4,7 @@ import type {
   GearItem,
   SkillGem,
 } from '@gravoth/contracts';
-import { ITEM_SLOTS } from '@gravoth/contracts/constants';
+import { ITEM_SLOTS, avatarBorderOf } from '@gravoth/contracts/constants';
 import {
   Badge,
   Box,
@@ -21,13 +21,8 @@ import {
 } from '@mantine/core';
 import { api } from '../api.js';
 import { PlayerAvatar } from '../components/avatar.js';
-import {
-  ClassBadge,
-  Empty,
-  HardcoreBadge,
-  Loaded,
-  Panel,
-} from '../components/bits.js';
+import { Empty, HeroBadges, Loaded, Panel } from '../components/bits.js';
+import { buildFacts } from '../build-facts.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
 import {
@@ -239,32 +234,50 @@ const Gear = ({ build }: { build: BuildCard }) => {
   );
 };
 
+/** A titled list of label and value rows, as the rules checker's card and the build's own facts read. */
+const Sections = ({
+  sections,
+}: {
+  sections: readonly {
+    title: string;
+    rows: readonly { label: string; value: string }[];
+  }[];
+}) => (
+  <>
+    {sections.map((section, index) => (
+      <Box key={`${section.title}:${index}`} mb="sm">
+        <Text size="xs" c="dimmed" tt="uppercase" lts="0.12em">
+          {section.title}
+        </Text>
+        <Table verticalSpacing={4} layout="fixed">
+          <Table.Tbody>
+            {section.rows.map((row, at) => (
+              <Table.Tr key={`${row.label}:${at}`}>
+                <Table.Td c="dimmed" w="45%">
+                  {row.label}
+                </Table.Td>
+                <Table.Td className="num" style={{ overflowWrap: 'anywhere' }}>
+                  {row.value}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Box>
+    ))}
+  </>
+);
+
 /** The rules checker's own pages, when it has read this build's save. */
 const CheckerCard = ({ pages }: { pages: CardPage[] }) => (
-  <Panel title="Rules checker">
+  <Panel title="Rules checker" className="checker-card">
     <Stack gap="md">
       {pages.map((page) => (
         <Box key={page.title}>
           <Title order={3} size="h5" mb="xs">
             {page.title}
           </Title>
-          {page.sections.map((section) => (
-            <Box key={section.title} mb="sm">
-              <Text size="xs" c="dimmed" tt="uppercase" lts="0.12em">
-                {section.title}
-              </Text>
-              <Table verticalSpacing={4}>
-                <Table.Tbody>
-                  {section.rows.map((row) => (
-                    <Table.Tr key={row.label}>
-                      <Table.Td c="dimmed">{row.label}</Table.Td>
-                      <Table.Td className="num">{row.value}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Box>
-          ))}
+          <Sections sections={page.sections} />
         </Box>
       ))}
     </Stack>
@@ -274,77 +287,102 @@ const CheckerCard = ({ pages }: { pages: CardPage[] }) => (
 const documentSize = (value: Record<string, unknown>): number =>
   Object.keys(value).length;
 
+/**
+ * The rest of the build: talents, carvings, Marks, attributes, the rites, the atlas, the border and cosmetics, read
+ * from the documents the game sent (build-facts.ts), and all of them as sent.
+ */
+const Character = ({ build }: { build: BuildCard }) => {
+  const sections = buildFacts(build);
+  const raw =
+    documentSize(build.talents) +
+      documentSize(build.atlas) +
+      documentSize(build.extras) >
+    0;
+  if (sections.length === 0 && !raw) return null;
+  return (
+    <Panel title="Character" className="character-card">
+      {sections.length === 0 ? null : <Sections sections={sections} />}
+      {raw ? (
+        <details className="raw">
+          <summary>Everything as the game sent it</summary>
+          <pre>
+            {JSON.stringify(
+              {
+                talents: build.talents,
+                atlas: build.atlas,
+                extras: build.extras,
+              },
+              null,
+              2,
+            )}
+          </pre>
+        </details>
+      ) : null}
+    </Panel>
+  );
+};
+
 export const BuildPage = ({ id }: { id: string }) => {
   const [build, reload] = useLoad(id, () => api.build(id));
   return (
     <Loaded load={build} retry={reload}>
-      {(card) => (
-        <>
-          <PageTitle
-            title={card.hero.name}
-            sub={
-              <Group gap="sm">
-                <ClassBadge heroClass={card.hero.class} />
-                {card.hero.hardcore ? <HardcoreBadge /> : null}
-                <Text span>
-                  Level {card.level}{' '}
-                  {card.ascendancy ?? CLASS_NAMES[card.hero.class]}
-                </Text>
-                <Group gap={6} wrap="nowrap" className="build-player">
-                  <PlayerAvatar
-                    avatar={card.player?.avatar ?? null}
-                    size={24}
-                  />
-                  <Text span c="dimmed">
-                    {card.player === null
-                      ? 'A hidden player'
-                      : card.player.displayName}
+      {(card) => {
+        const border = avatarBorderOf(card.extras['border']);
+        return (
+          <>
+            <PageTitle
+              title={card.hero.name}
+              sub={
+                <Group gap="sm">
+                  <HeroBadges hero={card.hero} />
+                  <Text span>
+                    Level {card.level}{' '}
+                    {card.ascendancy ?? CLASS_NAMES[card.hero.class]}
                   </Text>
+                  <Group gap={6} wrap="nowrap" className="build-player">
+                    <PlayerAvatar
+                      avatar={card.player?.avatar ?? null}
+                      {...(border === null
+                        ? { size: 24 }
+                        : { size: 30, border })}
+                    />
+                    <Text span c="dimmed">
+                      {card.player === null
+                        ? 'A hidden player'
+                        : card.player.displayName}
+                    </Text>
+                  </Group>
                 </Group>
-              </Group>
-            }
-          >
-            <CopyButton value={window.location.href}>
-              {({ copied, copy }) => (
-                <Button variant="default" onClick={copy}>
-                  {copied ? 'Copied' : 'Copy link'}
-                </Button>
-              )}
-            </CopyButton>
-          </PageTitle>
-          <Text size="sm" c="dimmed" mt={-8} mb="lg">
-            Build {card.revision} · game {card.gameVersion} ·{' '}
-            {formatDate(card.createdAt)}
-          </Text>
-          <Grid gap="lg">
-            <Grid.Col span={{ base: 12, md: 5 }}>
-              <Sheet build={card} />
-              <Skills build={card} />
-              {documentSize(card.talents) + documentSize(card.atlas) ===
-              0 ? null : (
-                <Panel title="Talents and atlas">
-                  <details className="raw">
-                    <summary>As the game sent them</summary>
-                    <pre>
-                      {JSON.stringify(
-                        { talents: card.talents, atlas: card.atlas },
-                        null,
-                        2,
-                      )}
-                    </pre>
-                  </details>
-                </Panel>
-              )}
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 7 }}>
-              <Gear build={card} />
-              {card.card === null || card.card.length === 0 ? null : (
-                <CheckerCard pages={card.card} />
-              )}
-            </Grid.Col>
-          </Grid>
-        </>
-      )}
+              }
+            >
+              <CopyButton value={window.location.href}>
+                {({ copied, copy }) => (
+                  <Button variant="default" onClick={copy}>
+                    {copied ? 'Copied' : 'Copy link'}
+                  </Button>
+                )}
+              </CopyButton>
+            </PageTitle>
+            <Text size="sm" c="dimmed" mt={-8} mb="lg">
+              Build {card.revision} · game {card.gameVersion} ·{' '}
+              {formatDate(card.createdAt)}
+            </Text>
+            <Grid gap="lg">
+              <Grid.Col span={{ base: 12, md: 5 }}>
+                <Sheet build={card} />
+                <Skills build={card} />
+                <Character build={card} />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, md: 7 }}>
+                <Gear build={card} />
+                {card.card === null || card.card.length === 0 ? null : (
+                  <CheckerCard pages={card.card} />
+                )}
+              </Grid.Col>
+            </Grid>
+          </>
+        );
+      }}
     </Loaded>
   );
 };

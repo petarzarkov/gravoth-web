@@ -1,7 +1,8 @@
 import type { BoardView, EntryView, HeroClass } from '@gravoth/contracts';
-import { HERO_CLASSES } from '@gravoth/contracts/constants';
+import { HERO_CLASSES, avatarBorderOf } from '@gravoth/contracts/constants';
 import {
   Anchor,
+  Box,
   Button,
   Group,
   NativeSelect,
@@ -13,10 +14,10 @@ import {
 import { api, withQuery } from '../api.js';
 import { PlayerAvatar } from '../components/avatar.js';
 import {
-  ClassBadge,
   Empty,
   ErrorNote,
   HardcoreBadge,
+  HeroBadges,
   Loaded,
   Panel,
   Spinner,
@@ -31,7 +32,11 @@ import { isGuest, useSession } from '../session.js';
 const isClass = (value: string | null): value is HeroClass =>
   value !== null && (HERO_CLASSES as readonly string[]).includes(value);
 
-/** The rank, the hero and the score on a phone; the class, level, DPS, EHP and check from `sm` up. */
+/**
+ * The rank, the hero (with its class and hardcore badges under the names) and the score on a phone; the class, level,
+ * DPS, EHP and check columns from `sm` up. Each picture wears its hero's avatar border; while any row has one, every
+ * picture sits in a frame's square so the names line up.
+ */
 const EntryTable = ({
   board,
   entries,
@@ -40,87 +45,103 @@ const EntryTable = ({
   board: BoardView;
   entries: readonly EntryView[];
   me?: string | undefined;
-}) => (
-  <Table.ScrollContainer minWidth={320}>
-    <Table highlightOnHover verticalSpacing="sm" className="board-table">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th w={48}>#</Table.Th>
-          <Table.Th>Hero</Table.Th>
-          <Table.Th visibleFrom="sm">Class</Table.Th>
-          <Table.Th visibleFrom="sm" className="num">
-            Lvl
-          </Table.Th>
-          <Table.Th className="num">
-            {board.format === 'time_ms' ? 'Time' : 'Score'}
-          </Table.Th>
-          <Table.Th visibleFrom="md" className="num">
-            DPS
-          </Table.Th>
-          <Table.Th visibleFrom="md" className="num">
-            EHP
-          </Table.Th>
-          <Table.Th visibleFrom="md">Check</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {entries.map((entry) => (
-          <Table.Tr
-            key={entry.id}
-            className={
-              me !== undefined && entry.player.userId === me
-                ? 'row-mine'
-                : undefined
-            }
-          >
-            <Table.Td>
-              <Text ff="heading" fz="lg" c="dimmed">
-                {entry.rank}
-              </Text>
-            </Table.Td>
-            <Table.Td>
-              <Group gap="sm" wrap="nowrap">
-                <PlayerAvatar avatar={entry.player.avatar} size={34} />
-                <div style={{ minWidth: 0 }}>
-                  <Anchor
-                    component={Link}
-                    to={`/builds/${entry.build.id}`}
-                    c="gray.0"
-                    fw={600}
-                    className="hero-link"
-                  >
-                    {entry.hero.name}
-                  </Anchor>
-                  <Text size="xs" c="dimmed">
-                    {entry.player.displayName}
-                  </Text>
-                </div>
-              </Group>
-            </Table.Td>
-            <Table.Td visibleFrom="sm">
-              <ClassBadge heroClass={entry.hero.class} />
-            </Table.Td>
-            <Table.Td visibleFrom="sm" className="num">
-              {entry.build.level}
-            </Table.Td>
-            <Table.Td className="num score">
-              {formatScore(entry.score, board.format)}
-            </Table.Td>
-            <Table.Td visibleFrom="md" className="num">
-              {formatCompact(entry.build.dps)}
-            </Table.Td>
-            <Table.Td visibleFrom="md" className="num">
-              {formatCompact(entry.build.ehp)}
-            </Table.Td>
-            <Table.Td visibleFrom="md">
-              <VerdictBadge verdict={entry.verdict} />
-            </Table.Td>
+}) => {
+  const framed = entries.some(
+    (entry) => avatarBorderOf(entry.build.extras['border']) !== null,
+  );
+  return (
+    <Table.ScrollContainer minWidth={320}>
+      <Table highlightOnHover verticalSpacing="sm" className="board-table">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th w={48}>#</Table.Th>
+            <Table.Th>Hero</Table.Th>
+            <Table.Th visibleFrom="sm">Class</Table.Th>
+            <Table.Th visibleFrom="sm" className="num">
+              Lvl
+            </Table.Th>
+            <Table.Th className="num">
+              {board.format === 'time_ms' ? 'Time' : 'Score'}
+            </Table.Th>
+            <Table.Th visibleFrom="md" className="num">
+              DPS
+            </Table.Th>
+            <Table.Th visibleFrom="md" className="num">
+              EHP
+            </Table.Th>
+            <Table.Th visibleFrom="md">Check</Table.Th>
           </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
-  </Table.ScrollContainer>
-);
+        </Table.Thead>
+        <Table.Tbody>
+          {entries.map((entry) => (
+            <Table.Tr
+              key={entry.id}
+              className={
+                me !== undefined && entry.player.userId === me
+                  ? 'row-mine'
+                  : undefined
+              }
+            >
+              <Table.Td>
+                <Text ff="heading" fz="lg" c="dimmed">
+                  {entry.rank}
+                </Text>
+              </Table.Td>
+              <Table.Td>
+                <Group gap="sm" wrap="nowrap">
+                  <PlayerAvatar
+                    avatar={entry.player.avatar}
+                    size={34}
+                    border={
+                      framed
+                        ? (entry.build.extras['border'] ?? null)
+                        : undefined
+                    }
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <Anchor
+                      component={Link}
+                      to={`/builds/${entry.build.id}`}
+                      c="gray.0"
+                      fw={600}
+                      className="hero-link"
+                    >
+                      {entry.hero.name}
+                    </Anchor>
+                    <Text size="xs" c="dimmed">
+                      {entry.player.displayName}
+                    </Text>
+                    <Box hiddenFrom="sm" mt={4}>
+                      <HeroBadges hero={entry.hero} size="xs" />
+                    </Box>
+                  </div>
+                </Group>
+              </Table.Td>
+              <Table.Td visibleFrom="sm">
+                <HeroBadges hero={entry.hero} />
+              </Table.Td>
+              <Table.Td visibleFrom="sm" className="num">
+                {entry.build.level}
+              </Table.Td>
+              <Table.Td className="num score">
+                {formatScore(entry.score, board.format)}
+              </Table.Td>
+              <Table.Td visibleFrom="md" className="num">
+                {formatCompact(entry.build.dps)}
+              </Table.Td>
+              <Table.Td visibleFrom="md" className="num">
+                {formatCompact(entry.build.ehp)}
+              </Table.Td>
+              <Table.Td visibleFrom="md">
+                <VerdictBadge verdict={entry.verdict} />
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
+  );
+};
 
 /** The caller's best on this board and the rows around it. */
 const MyPlace = ({

@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { AVATAR_PORTRAITS } from '@gravoth/contracts/constants';
+import { AVATAR_BORDERS, AVATAR_PORTRAITS } from '@gravoth/contracts/constants';
 import { Glob } from 'bun';
 import { errorCode, withQuery } from './api.js';
-import { portraitSrc } from './components/avatar.js';
+import { buildFacts } from './build-facts.js';
+import {
+  BORDER_HOLE_ON_PICTURE,
+  BORDER_HOLE_SHARE,
+  borderSrc,
+  borderWidth,
+  portraitSrc,
+} from './components/avatar.js';
 import { formatCompact, formatScore, messageFor, titleOf } from './format.js';
 import { matchPath } from './router.js';
 import { safeNext } from './pages/sign-in.js';
@@ -96,5 +103,89 @@ describe('pictures', () => {
 
   test('a missing photo says how to get one', () => {
     expect(messageFor('NO_PROVIDER_PHOTO')).toContain('Google or Discord');
+  });
+});
+
+describe('avatar borders', () => {
+  test('every border the game sends has its frame, and no other frame is there', async () => {
+    const files = [
+      ...new Glob('*.webp').scanSync({
+        cwd: `${import.meta.dir}/../public/img/borders`,
+      }),
+    ].sort();
+    expect(files).toEqual(AVATAR_BORDERS.map((key) => `${key}.webp`).sort());
+    expect(borderSrc('hall_gold_4')).toBe('/img/borders/hall_gold_4.webp');
+  });
+
+  test('a frame is sized as the game sizes it: its hole, 56% of its width, is 96% of the picture', () => {
+    expect(BORDER_HOLE_SHARE).toBe(0.56);
+    expect(BORDER_HOLE_ON_PICTURE).toBe(0.96);
+    expect(borderWidth(56)).toBe(96);
+    expect(borderWidth(30)).toBe(51);
+  });
+});
+
+describe('build facts', () => {
+  test("read the game's documents: talents, carvings, Marks, attributes, rites, atlas, border, cosmetics", () => {
+    const sections = buildFacts({
+      talents: { version: 3, points: 41, earned: 45, nodes: [1, 4, 9] },
+      atlas: { tree: [0, 2], highestTier: 12, cleared: 9, chartsRun: 140 },
+      extras: {
+        tag: 'x',
+        marks: 120,
+        overlevels: 2,
+        mainSkill: 'cleave',
+        movement: 'leap_slam',
+        rites: [
+          { slot: 1, id: 'bloodrite', name: 'Bloodrite', nodes: ['a', 'b'] },
+        ],
+        carvings: { points: 6, nodes: [] },
+        attributes: { strength: 212, dexterity: 40.4 },
+        cosmetics: [{ slot: 'Back', id: 'ash_cloak', name: 'Ash Cloak' }],
+        border: 'pit_50',
+      },
+    });
+    const read = Object.fromEntries(
+      sections.map((section) => [
+        section.title,
+        Object.fromEntries(section.rows.map((row) => [row.label, row.value])),
+      ]),
+    );
+    expect(read).toEqual({
+      Progress: {
+        'Talent points': '41 of 45',
+        'Talents taken': '3',
+        Carvings: '6 points',
+        Marks: '120',
+        Overlevels: '2',
+      },
+      Attributes: { Strength: '212', Dexterity: '40' },
+      'Skills in use': { 'Main skill': 'Cleave', Movement: 'Leap Slam' },
+      Ascendancy: { 'Rite 1': 'Bloodrite · 2 nodes' },
+      Atlas: {
+        'Highest tier': 'T12',
+        'Places cleared': '9',
+        'Charts run': '140',
+        'Atlas nodes': '2',
+      },
+      Look: {
+        'Avatar border': "Pit's Floor (Clear floor 50 of the Bone Pit)",
+        Back: 'Ash Cloak',
+      },
+    });
+  });
+
+  test('leave out what is absent or not the shape the game writes', () => {
+    expect(
+      buildFacts({
+        talents: { points: 'many', nodes: 'all' },
+        atlas: {},
+        extras: {
+          rites: [null, 7, { slot: 2 }],
+          border: 'gold',
+          cosmetics: {},
+        },
+      }),
+    ).toEqual([]);
   });
 });

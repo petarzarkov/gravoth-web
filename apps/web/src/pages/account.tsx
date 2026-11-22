@@ -19,13 +19,7 @@ import {
 } from '@mantine/core';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, api } from '../api.js';
-import {
-  ClassBadge,
-  Empty,
-  HardcoreBadge,
-  Loaded,
-  Panel,
-} from '../components/bits.js';
+import { Empty, HeroBadges, Loaded, Panel } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { PicturePicker } from '../components/picture-picker.js';
 import { useLoad } from '../components/use-load.js';
@@ -80,6 +74,8 @@ const ProfileForm = ({
     void save({ displayName: name });
   };
 
+  // `showOnline` stays in the profile and its API, and comes back here once friends can see who is playing (decision
+  // 224): offered before that, it would promise something nothing shows.
   const toggles: readonly [
     keyof UpdateProfile & keyof ProfileView,
     string,
@@ -95,7 +91,6 @@ const ProfileForm = ({
       'Friend requests',
       'Let players ask to be your friend.',
     ],
-    ['showOnline', 'Show when online', 'Friends see when you play.'],
     [
       'emailFriendRequests',
       'Mail me friend requests',
@@ -264,8 +259,7 @@ export const AccountPage = () => {
                         <Text fw={600} style={{ flex: 1 }}>
                           {hero.name}
                         </Text>
-                        <ClassBadge heroClass={hero.class} />
-                        {hero.hardcore ? <HardcoreBadge /> : null}
+                        <HeroBadges hero={hero} />
                         <Text size="xs" c="dimmed">
                           since {formatDate(hero.createdAt)}
                         </Text>

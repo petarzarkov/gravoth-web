@@ -321,3 +321,25 @@ body {
   border-color: var(--gold);
   box-shadow: 0 0 12px rgba(255, 199, 89, 0.45);
 }
+
+/*
+ * A hero's avatar border round the picture (the game's BorderRing.cs): the picture centred in the frame's square, the
+ * frame's bottom on the square's bottom so its hole's centre is the picture's; a tall crest reaches above the square.
+ */
+.avatar-frame {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-frame-img {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+}

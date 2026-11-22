@@ -1,4 +1,5 @@
 import type { BoardPage, BoardView } from '@gravoth/contracts';
+import { avatarBorderOf } from '@gravoth/contracts/constants';
 import {
   Anchor,
   Card,
@@ -12,7 +13,7 @@ import {
 } from '@mantine/core';
 import { api } from '../api.js';
 import { PlayerAvatar } from '../components/avatar.js';
-import { ClassBadge, Empty, Loaded } from '../components/bits.js';
+import { Empty, HeroBadges, Loaded } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
 import { formatScore } from '../format.js';
@@ -22,6 +23,12 @@ export const boardHref = (board: Pick<BoardView, 'key' | 'hardcore'>) =>
   `/boards/${board.key}${board.hardcore ? '?hardcore=true' : ''}`;
 
 const RANK_COLOURS = ['var(--gold)', '#d9d9d9', '#d98f52'];
+
+/** Whether any of these rows' heroes wears an avatar border (then every picture sits in a frame's square). */
+const anyBorder = (page: BoardPage): boolean =>
+  page.entries.data.some(
+    (entry) => avatarBorderOf(entry.build.extras['border']) !== null,
+  );
 
 /** One board's card: its top three, and the way in. */
 const BoardCard = ({ board }: { board: BoardView }) => {
@@ -61,20 +68,30 @@ const BoardCard = ({ board }: { board: BoardView }) => {
                     >
                       {entry.rank}
                     </Text>
-                    <PlayerAvatar avatar={entry.player.avatar} size={30} />
-                    <UnstyledButton
-                      component={Link}
-                      to={`/builds/${entry.build.id}`}
-                      style={{ flex: 1, minWidth: 0 }}
-                    >
-                      <Text fw={600} truncate>
-                        {entry.hero.name}
-                      </Text>
-                      <Text size="xs" c="dimmed" truncate>
-                        {entry.player.displayName}
-                      </Text>
-                    </UnstyledButton>
-                    <ClassBadge heroClass={entry.hero.class} />
+                    <PlayerAvatar
+                      avatar={entry.player.avatar}
+                      size={30}
+                      border={
+                        anyBorder(page)
+                          ? (entry.build.extras['border'] ?? null)
+                          : undefined
+                      }
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <UnstyledButton
+                        component={Link}
+                        to={`/builds/${entry.build.id}`}
+                        display="block"
+                      >
+                        <Text fw={600} truncate>
+                          {entry.hero.name}
+                        </Text>
+                        <Text size="xs" c="dimmed" truncate>
+                          {entry.player.displayName}
+                        </Text>
+                      </UnstyledButton>
+                      <HeroBadges hero={entry.hero} size="xs" mt={4} />
+                    </div>
                     <Text className="score">
                       {formatScore(entry.score, board.format)}
                     </Text>

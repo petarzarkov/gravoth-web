@@ -73,17 +73,58 @@ export const CLASS_COLOURS: Record<HeroClass, string> = {
   templar: '#f2d27a',
 };
 
-export const ClassBadge = ({ heroClass }: { heroClass: HeroClass }) => (
-  <Badge className="class-badge" color={CLASS_COLOURS[heroClass]}>
+export const ClassBadge = ({
+  heroClass,
+  size,
+}: {
+  heroClass: HeroClass;
+  size?: 'xs' | 'sm';
+}) => (
+  <Badge
+    className="class-badge"
+    color={CLASS_COLOURS[heroClass]}
+    {...(size === undefined ? {} : { size })}
+  >
     {CLASS_NAMES[heroClass]}
   </Badge>
 );
 
-export const HardcoreBadge = () => (
-  <Badge color="red" title="Hardcore: one life">
-    HC
+/** A hardcore hero or board: red and filled, beside the class badge (which is outlined). */
+export const HardcoreBadge = ({ size }: { size?: 'xs' | 'sm' }) => (
+  <Badge
+    className="hardcore-badge"
+    color="red"
+    variant="filled"
+    title="Hardcore: one life"
+    {...(size === undefined ? {} : { size })}
+  >
+    Hardcore
   </Badge>
 );
+
+/** A hero's class and, when it is hardcore, the hardcore badge beside it. */
+export const HeroBadges = ({
+  hero,
+  size,
+  mt,
+}: {
+  hero: { readonly class: HeroClass; readonly hardcore: boolean };
+  size?: 'xs' | 'sm';
+  mt?: number;
+}) => {
+  const sized = size === undefined ? {} : { size };
+  return (
+    <Group
+      gap={6}
+      wrap="nowrap"
+      className="hero-badges"
+      {...(mt === undefined ? {} : { mt })}
+    >
+      <ClassBadge heroClass={hero.class} {...sized} />
+      {hero.hardcore ? <HardcoreBadge {...sized} /> : null}
+    </Group>
+  );
+};
 
 export const VerdictBadge = ({ verdict }: { verdict: ShownVerdict }) =>
   verdict === 'verified' ? (
