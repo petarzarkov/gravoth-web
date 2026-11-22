@@ -21,6 +21,7 @@ import {
 } from './format.js';
 import { matchPath } from './router.js';
 import { safeNext } from './pages/sign-in.js';
+import { bestBorder, recordBoard } from './pages/player.js';
 
 describe('format', () => {
   test('a count board reads as a number', () => {
@@ -222,5 +223,42 @@ describe('build facts', () => {
         },
       }),
     ).toEqual([]);
+  });
+});
+
+describe('player pages', () => {
+  test("a record's board reads as the boards name it, the hardcore twin too", () => {
+    expect(recordBoard('pit_floor')).toEqual({
+      title: 'Deepest Bone Pit floor',
+      format: 'number',
+      path: '/boards/pit_floor',
+    });
+    expect(recordBoard('hc_map_s16')).toEqual({
+      title: 'Hardcore fastest S16 map clear',
+      format: 'time_ms',
+      path: '/boards/map_s16?hardcore=true',
+    });
+    expect(recordBoard('trial_v')).toEqual({
+      title: 'trial_v',
+      format: 'number',
+      path: '',
+    });
+  });
+
+  test("the player's picture wears the best border any hero has", () => {
+    const withBorder = (border: unknown) =>
+      ({ build: { extras: { border } } }) as never;
+    expect(bestBorder([])).toBeNull();
+    expect(
+      bestBorder([
+        withBorder('tier_12'),
+        withBorder('pit_30'),
+        withBorder('nonsense'),
+        { build: null } as never,
+      ]),
+    ).toBe('tier_12');
+    expect(bestBorder([withBorder('pinnacle'), withBorder('hall_gold')])).toBe(
+      'pinnacle',
+    );
   });
 });

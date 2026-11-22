@@ -1,6 +1,7 @@
 import { DISPLAY_NAME_PATTERN } from '@gravoth/contracts/constants';
 import {
   Alert,
+  Anchor,
   Button,
   Grid,
   Group,
@@ -16,7 +17,7 @@ import { Empty, Loaded, Panel } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
 import { formatDate, messageFor } from '../format.js';
-import { useNavigation } from '../router.js';
+import { Link, useNavigation } from '../router.js';
 import { isGuest, useSession } from '../session.js';
 
 const problem = (caught: unknown): string =>
@@ -99,23 +100,37 @@ const ByName = ({
   );
 };
 
-/** One player's row: the picture and name, when, then the actions at the far end. */
+/** One player's row: the picture and name (to their player page, given `userId`), when, then the actions at the far end. */
 const Person = ({
   name,
   avatar,
   when,
+  userId,
   children,
 }: {
   name: string;
   avatar?: AvatarView;
   when: string;
+  userId?: string;
   children: ReactNode;
 }) => (
   <Group gap="sm" py={6} className="person-row" wrap="nowrap">
     {avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />}
-    <Text fw={600} className="person">
-      {name}
-    </Text>
+    {userId === undefined ? (
+      <Text fw={600} className="person">
+        {name}
+      </Text>
+    ) : (
+      <Anchor
+        component={Link}
+        to={`/players/${userId}`}
+        fw={600}
+        c="gray.0"
+        className="person"
+      >
+        {name}
+      </Anchor>
+    )}
     <Text size="xs" c="dimmed" style={{ flex: 1 }}>
       {when}
     </Text>
@@ -168,7 +183,7 @@ export const FriendsPage = () => {
     <>
       <PageTitle
         title="Friends"
-        sub="Friends see each other on the friends view of every board."
+        sub="Friends see each other's heroes on their player pages, and each other on the friends view of every board."
       />
       {error === null ? null : (
         <Alert color="red" variant="light" mb="lg" role="alert">
@@ -201,6 +216,7 @@ export const FriendsPage = () => {
                         key={item.id}
                         name={item.displayName}
                         avatar={item.avatar}
+                        userId={item.userId}
                         when={formatDate(item.createdAt)}
                       >
                         <Button
@@ -235,6 +251,7 @@ export const FriendsPage = () => {
                         key={item.id}
                         name={item.displayName}
                         avatar={item.avatar}
+                        userId={item.userId}
                         when={formatDate(item.createdAt)}
                       >
                         <Button
@@ -267,6 +284,7 @@ export const FriendsPage = () => {
                         key={friend.userId}
                         name={friend.displayName}
                         avatar={friend.avatar}
+                        userId={friend.userId}
                         when={`since ${formatDate(friend.since)}`}
                       >
                         <Button

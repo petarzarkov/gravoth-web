@@ -12,6 +12,7 @@ import { DeleteAccountPage } from './pages/delete-account.js';
 import { FriendsPage } from './pages/friends.js';
 import { BoardsPage } from './pages/home.js';
 import { LandingPage } from './pages/landing.js';
+import { PlayerPage } from './pages/player.js';
 import { SignInPage } from './pages/sign-in.js';
 import { Link, Router, Routes, type RouteDefinition } from './router.js';
 import { SessionProvider } from './session.js';
@@ -27,6 +28,10 @@ const routes: readonly RouteDefinition[] = [
   {
     pattern: '/builds/:id',
     render: ({ id }) => <BuildPage key={id} id={id ?? ''} />,
+  },
+  {
+    pattern: '/players/:userId',
+    render: ({ userId }) => <PlayerPage key={userId} userId={userId ?? ''} />,
   },
   { pattern: '/sign-in', render: () => <SignInPage /> },
   { pattern: '/account', render: () => <AccountPage /> },

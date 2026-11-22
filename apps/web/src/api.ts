@@ -14,6 +14,7 @@ import type {
   MyHeroes,
   Neighbourhood,
   Page,
+  PlayerPage,
   ProfileView,
   RequestOutcome,
   RequestView,
@@ -126,6 +127,9 @@ export const api = {
     }),
   build: (id: string) =>
     get<BuildCard>(`/api/builds/${encodeURIComponent(id)}`),
+  /** A player page (decision 226): 404 for a hidden player to anyone but a friend and themselves. */
+  player: (userId: string) =>
+    get<PlayerPage>(`/api/players/${encodeURIComponent(userId)}`),
 
   // The session (better-auth).
   session: () => get<SessionView | null>(AUTH_ROUTES.session),

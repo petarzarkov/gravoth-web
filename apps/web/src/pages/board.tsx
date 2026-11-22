@@ -108,9 +108,22 @@ const EntryTable = ({
                     >
                       {entry.hero.name}
                     </Anchor>
-                    <Text size="xs" c="dimmed">
-                      {entry.player.displayName}
-                    </Text>
+                    {entry.player.userId === null ? (
+                      <Text size="xs" c="dimmed">
+                        {entry.player.displayName}
+                      </Text>
+                    ) : (
+                      <Anchor
+                        component={Link}
+                        to={`/players/${entry.player.userId}`}
+                        size="xs"
+                        c="dimmed"
+                        display="block"
+                        className="player-link"
+                      >
+                        {entry.player.displayName}
+                      </Anchor>
+                    )}
                     <Box hiddenFrom="sm" mt={4}>
                       <HeroBadges hero={entry.hero} size="xs" />
                     </Box>
