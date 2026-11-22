@@ -243,7 +243,10 @@
           password, which the server keeps only as a one-way hash (bcrypt), or a
           sign-in with Google or Discord. A guest account has neither, only a
           random id and a placeholder address. Signing up from a guest keeps its
-          heroes and display name and removes the guest.
+          heroes and display name and removes the guest. A guest account with no
+          records (no hero posted to the server) is deleted automatically, with
+          its profile and sessions, once it has gone 30 days without use
+          (neither the game nor the website signed in with it).
         </li>
         <li>
           <strong>Google and Discord sign-in:</strong> when you choose one, it
@@ -252,11 +255,12 @@
           your name and the web address of your profile picture (Google's
           <code>openid</code>, <code>email</code> and
           <code>profile</code> permissions; Discord's <code>identify</code> and
-          <code>email</code>). The server also keeps the sign-in tokens the
-          service returns. It uses none of this to read anything else from your
-          Google or Discord account or to act for you, and it never sees your
-          password there. Google and Discord handle the sign-in under their own
-          policies:
+          <code>email</code>). The sign-in tokens the service returns (its
+          access and refresh tokens) are stored encrypted, with a key only the
+          server holds, and its ID token is not kept. The server uses none of
+          this to read anything else from your Google or Discord account or to
+          act for you, and it never sees your password there. Google and Discord
+          handle the sign-in under their own policies:
           <a href="https://policies.google.com/privacy"
             >Google's Privacy Policy</a
           >
@@ -323,8 +327,9 @@
           <strong>Security records:</strong> the server counts requests per IP
           address to slow down abuse and forgets each count within an hour. Its
           logs record each request (the address asked for, the time, the browser
-          or app identity and the result), never passwords, session tokens or
-          cookies. The logs have a fixed size and are overwritten as they fill.
+          or app identity and the result), never passwords, session tokens,
+          cookies or the one-time codes of a Google or Discord sign-in. The logs
+          have a fixed size and are overwritten as they fill.
         </li>
         <li>
           <strong>Where it is kept:</strong> in the server's database.
