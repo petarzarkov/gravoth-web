@@ -103,6 +103,25 @@ it:
 
 `~/gravoth/server` can be deleted once the new stack has run a few days.
 
+### The moderator's role
+
+Chat's moderation (decision 228: `/api/admin/chat`, the website's
+`/admin/chat`) needs better-auth's `admin` role on the developer's account. It
+is given by display name with the script in the app's image, which reads the
+database the app reads and prints the player's name and id only:
+
+```bash
+# On the Pi, in ~/gravoth/web:
+docker compose -f compose.prod.yml exec app bun run admin:grant <displayName>
+docker compose -f compose.prod.yml exec app bun run admin:revoke <displayName>
+# The same, by the container's name:
+docker exec gravoth-api bun run admin:grant <displayName>
+```
+
+The role counts from the account's next request (no new sign-in), and the
+account page then links Chat moderation. `bun run e2e` runs the same script in
+the e2e stack's container.
+
 ## The developer's setup list
 
 Values never go through an agent. Each line names where a value goes.

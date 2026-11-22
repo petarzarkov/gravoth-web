@@ -928,6 +928,11 @@ const firstRealm = async (token: string, data: string) => {
     'cloud_saves',
     'realms',
     'realm_transfers',
+    // Decision 228's chat (e2e/chat.e2e.ts runs first, so these hold rows).
+    'chat_messages',
+    'chat_reads',
+    'chat_reports',
+    'chat_mutes',
   ]) {
     const [live, drill] = [
       await count('gravoth', table),

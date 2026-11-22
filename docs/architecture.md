@@ -2,7 +2,7 @@
 
 The product plan (what each step gives players, the decisions behind it) is in
 the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
-(decisions 171, 216, 218, 219, 225, 226 and 227). This page is the code's side.
+(decisions 171, 216, 218, 219, 225, 226, 227 and 228). This page is the code's side.
 
 ```
  the game (Unity, Android)          the website (apps/web, Cloudflare Pages)
@@ -24,7 +24,7 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's C# client mirrors the same shapes by hand; the OpenAPI document at
   `/api/openapi.json` is the reference for it.
 - **`apps/server`** is the API. Each feature is a dunx module (`auth`,
-  `players`, `social`, `heroes`, `boards`, `saves`, `realm`, `mail`, `backup`) over one Postgres
+  `players`, `social`, `heroes`, `boards`, `saves`, `realm`, `chat`, `mail`, `backup`) over one Postgres
   pool (drizzle over `Bun.SQL`). better-auth serves sign-in under `/api/auth`:
   the game sends `Authorization: Bearer`, the website a first-party cookie.
   `web/` serves the website's build.
@@ -32,7 +32,8 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's palette, always dark) on Bun's bundler, and a small history router
   (`router.tsx`). Pages: the boards
   (`/`, `/boards/:key`), a build card (`/builds/:id`), a player page
-  (`/players/:userId`), sign-in, the account (with the cloud save) and friends. Every request goes through `api.ts`, typed by the contracts.
+  (`/players/:userId`), sign-in, the account (with the cloud save), friends, and chat moderation
+  for the `admin` role (`/admin/chat`). Every request goes through `api.ts`, typed by the contracts.
 
 ## The database
 
@@ -53,6 +54,10 @@ together. The tables (`apps/server/src/database/`):
 | `cloud_saves`               | the game's cloud save, one per account (never a guest's): the decoded bytes (`bytea`), their size and SHA-256, the description, play time and game version |
 | `realms`                    | the online realm, one per account (never a guest's): the save's bytes, revision, size, SHA-256, the checked revision, the game version, the lease          |
 | `realm_transfers`           | each offline hero moved online, by the rules checker's fingerprint (unique across accounts), with its realm id                                             |
+| `chat_messages`             | both channels in one table (one id orders them): `global` with no recipient, `direct` to one player; the filtered body; `hidden_at`/`hidden_by`            |
+| `chat_reads`                | how far a player has read each conversation (`last_read_id`, never past its newest message)                                                                |
+| `chat_reports`              | one per message and reporter: the reason, the note, a copy of the message (channel, sender, recipient, body, time), the outcome and who closed it          |
+| `chat_mutes`                | one per player: until when, why, and the moderator; `profiles.chat_rules_at` is when the player accepted the chat rules                                    |
 
 A player's picture is one of the game's 42 portraits (`AVATAR_PORTRAITS`, a
 random one at sign-up) or their Google or Discord photo. The photo is linked,
@@ -141,6 +146,65 @@ SHA-256 of the hero's class, body and hair (fixed at creation) and the first fiv
 entries of its level clock (the play seconds at levels 2-6, never rewritten), or its
 name while the clock is shorter. A save has no creation time and a moved hero gets a
 new id in the realm, so neither can identify it.
+
+## Chat (decision 228)
+
+One global channel every account reads and writes, and direct messages between
+friends, read by polling (the game asks for what is new while CHAT is open; no
+socket). Everything is under `/api/chat` (`chat/`), and every route needs an
+account that can sign in again (a guest gets 403 `GUEST_ACCOUNT`):
+
+- `GET /api/chat/global` and `GET /api/chat/direct/:userId` answer a `ChatPage`:
+  messages oldest first; `after` (the poll: the ones newer than that id, and
+  `gap: true` with the newest `take` when more are newer), `before` (scrolling
+  back) or neither (the newest); `removed`, the ids moderation hid in that
+  channel in the last day; the caller's `muted` and `rulesAccepted`. A
+  conversation stays readable to both players once they are no longer friends.
+- `GET /api/chat/direct` lists the conversations newest first, each with its last
+  shown line and unread count; `GET /api/chat/unread` is the badge; `POST
+/api/chat/direct/:userId/read` moves the read mark (held at the conversation's
+  newest message, never back).
+- Sending (`POST /api/chat/global`, `POST /api/chat/direct/:userId`,
+  `chat/chat-sends.ts`) checks in order: the rules accepted (`POST
+/api/chat/rules/accept`, once: 403 `CHAT_RULES`), no mute (403 `CHAT_MUTED`
+  with `until` and `reason`), a friend for a direct message (403 `NOT_FRIENDS`),
+  the filter (422), then under a Postgres advisory lock on the sender: ten
+  messages a minute across both channels, counted from the sender's own rows
+  (429 `TOO_MANY_REQUESTS` with `Retry-After`; the per-route `@Throttle` counts an
+  address, which a carrier's players share, so it is only a looser outer limit),
+  and not the text of the sender's last message in that channel within 30
+  seconds (409 `CHAT_REPEAT`).
+- The filter (`chat/chat-filter.ts`) reads the display names' lists by kind
+  (`players/display-names.ts`): hate refused (422 `MESSAGE_NOT_ALLOWED`),
+  obscenities masked with one `*` per character, the staff words left to names;
+  the same look-alike folding, whole-word matching for the short words (so
+  `Assassin` and `grape` pass), dots and repeated letters seen through, and
+  control and invisible characters dropped. Links go to `CHAT_LINK_HOST`
+  (gravoth.petarzarkov.com) only: a scheme, `www.`, an address or a bare domain
+  with a known top-level domain is 422 `LINKS_NOT_ALLOWED`.
+- A player the caller blocked has their messages hidden from the caller
+  everywhere (global, conversations, unread); blocking ends the friendship, so
+  direct messages stop both ways.
+- `POST /api/chat/messages/:id/report` takes a message the caller can see and did
+  not write (404 `MESSAGE_NOT_FOUND`, 400 `CANNOT_REPORT_SELF`), once per
+  reporter (again changes nothing), with a copy of the message; three open
+  reports of a global message hide it (`hidden_by` `reports`) until the
+  moderator looks.
+
+The moderation routes are `/api/admin/chat` for the `admin` role
+(`@Roles('admin')`, 403 for anyone else; `bun run admin:grant`,
+`docs/deploy.md`): the reports open or closed, their outcome (`dismiss` shows
+again a message the reports hid, `hide`, `mute` for `hours`; each closes every
+open report of the message), the mutes (set, replaced, removed), any message
+hidden or not (the global channel, a player's, a pair's, `around` an id), and
+hiding one. `GET /api/account` answers `admin` so the website can link the page.
+
+Retention (`chat/chat-retention.ts`, daily at 04:45 UTC, after the 03:30 backup
+and the 04:15 guest clean-up): messages after 30 days unless an open report
+holds them, closed reports 180 days after they closed, mutes once they end.
+Everything of a player (their messages and the ones to them, read marks,
+reports by them or about their messages, a mute) goes with the account through
+the foreign keys.
 
 ## The website, and its copy on the API
 

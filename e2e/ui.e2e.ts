@@ -1,6 +1,6 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
-// the local stack. Screenshots of the account (its cloud save too), friends, board, build, player and delete pages land
-// in e2e/.tmp/ui.
+// the local stack. Screenshots of the account (its cloud save too), friends, board, build, player, chat moderation and
+// delete pages land in e2e/.tmp/ui.
 // The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
 const base = 'http://localhost:3001';
 const apiBase = 'http://localhost:3000';
@@ -662,6 +662,152 @@ ok(
 await fullShot('player-phone');
 await desktop();
 
+// 5d. Decision 228: chat moderation. Eli and Fen chat (through the API, as the game would) and Fen reports Eli's line.
+// The page is no page to Dara until the script in the app's container gives her the admin role; then she moderates.
+const fen = await api('POST', '/api/auth/sign-up/email', {
+  name: 'Fen',
+  email: `fen-${run}@example.test`,
+  password: 'a long enough password',
+});
+const fenName = `Fen${run}`;
+await api('PATCH', '/api/profile', { displayName: fenName }, fen.token!);
+for (const token of [eli.token!, fen.token!])
+  await api('POST', '/api/chat/rules/accept', {}, token);
+await api(
+  'POST',
+  '/api/chat/global',
+  { body: 'anyone for the Bone Pit?' },
+  fen.token!,
+);
+const rude = await api(
+  'POST',
+  '/api/chat/global',
+  { body: 'buy gold cheap, you shit' },
+  eli.token!,
+);
+await api('POST', '/api/chat/global', { body: 'not you again' }, fen.token!);
+ok(
+  "Eli's line is stored as the filter left it",
+  rude.body.body === 'buy gold cheap, you ****',
+  rude.body,
+);
+const reported = await api(
+  'POST',
+  `/api/chat/messages/${rude.body.id}/report`,
+  { reason: 'spam', note: 'gold seller' },
+  fen.token!,
+);
+ok('Fen reports it', reported.status === 200, reported.body);
+await go('/admin/chat');
+ok(
+  'the admin page is no page to a player without the role',
+  await until(has('Nothing at this address')),
+);
+const granted =
+  await Bun.$`docker exec gravoth-api bun run admin:grant ${darName}`
+    .quiet()
+    .nothrow();
+ok(
+  "the script in the app's container gives Dara the admin role",
+  granted.exitCode === 0 &&
+    granted.stdout.toString().includes('is now an admin'),
+  granted.stderr.toString().slice(-300),
+);
+await go('/account');
+ok(
+  'the account page links an admin to the moderation page',
+  await until(
+    `!!document.querySelector('.moderation-panel a[href="/admin/chat"]')`,
+  ),
+);
+await js(
+  `document.querySelector('.moderation-panel a[href="/admin/chat"]').click()`,
+);
+ok(
+  "the open reports show Eli's line with the reason, note and reporter, names to their pages",
+  await until(
+    `location.pathname === '/admin/chat' && ${has('buy gold cheap, you ****')} && ${has('gold seller')} && ${has(fenName)} && !!document.querySelector('.report-card a[href="/players/${eliId}"]')`,
+    8000,
+  ),
+  await js('__t.text().slice(0, 400)'),
+);
+const contextShown = `document.querySelectorAll('.report-context .chat-line').length >= 3 && !!document.querySelector('.report-context .chat-line-focus')`;
+await js(`__t.click('Messages around it')`);
+ok(
+  'the messages around it show, the reported one marked',
+  await until(contextShown),
+);
+await fullShot('admin-chat');
+await phone();
+await go('/admin/chat');
+await until(has('gold seller'));
+await js(`__t.click('Messages around it')`);
+await until(contextShown);
+ok(
+  'the admin page fits a phone',
+  (await js(
+    `document.documentElement.scrollWidth <= window.innerWidth + 1`,
+  )) === true,
+);
+await fullShot('admin-chat-phone');
+await desktop();
+await go('/admin/chat');
+await until(has('gold seller'));
+await js(`__t.click('Hide and mute')`);
+await until(`!!document.querySelector('.mute-choices')`);
+await js(`__t.click('1 day')`);
+ok('hide and mute closes the report', await until(has('No open reports')));
+const silenced = await api(
+  'POST',
+  '/api/chat/global',
+  { body: 'let me talk' },
+  eli.token!,
+);
+ok(
+  'Eli is muted',
+  silenced.status === 403 && silenced.body.error === 'CHAT_MUTED',
+  silenced.body,
+);
+await js(`__t.click('Closed')`);
+ok(
+  'the closed report says what was done, and by whom',
+  await until(has(`Hidden and muted by ${darName}`)),
+);
+await fullShot('admin-closed');
+await js(`__t.click('Mutes')`);
+ok(
+  'the mutes list Eli, for a day',
+  await until(`${has(eliName)} && ${has('Muted until')}`),
+);
+await fullShot('admin-mutes');
+await js(`__t.click('Unmute')`);
+ok('unmuting empties the list', await until(has('Nobody is muted')));
+await js(`__t.click('Global')`);
+const line = (text: string) =>
+  `[...document.querySelectorAll('.chat-line')].find((l) => l.textContent.includes(${JSON.stringify(text)}))`;
+ok(
+  'the global channel lists the messages, the hidden one marked',
+  await until(
+    `!!${line('not you again')} && ${line('buy gold cheap')}?.textContent.includes('Hidden')`,
+  ),
+);
+await js(`${line('not you again')}.querySelector('button').click()`);
+ok(
+  'Hide marks a message hidden',
+  await until(
+    `${line('not you again')}?.textContent.includes('Hidden') && !${line('not you again')}.querySelector('button')`,
+  ),
+);
+await fullShot('admin-global');
+const channel = await api('GET', '/api/chat/global', undefined, eli.token!);
+ok(
+  "a hidden line leaves the players' channel",
+  channel.status === 200 &&
+    !channel.body.messages.some((m: any) => m.body === 'not you again') &&
+    channel.body.removed.length >= 2,
+  channel.body,
+);
+
 // 6. Remove Eli, sign out, sign back in.
 await go('/friends');
 await js(`__t.click('Remove')`);
@@ -681,6 +827,11 @@ ok(
   await until(
     `location.pathname === '/' && [...document.querySelectorAll('.nav-link')].some(a => a.textContent === 'Sign in')`,
   ),
+);
+await go('/admin/chat');
+ok(
+  'signed out, the admin page asks to sign in',
+  await until(has('to see this page')),
 );
 await go('/account');
 ok(

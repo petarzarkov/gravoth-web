@@ -21,6 +21,7 @@ bun run test           # its own Postgres from compose.yml (port 55432), every s
 bun run typecheck
 bun run db:generate    # a migration from a schema change; never edit a committed one
 bun run mail:preview   # the mail templates
+bun run admin:grant <displayName>   # chat's moderator role (admin:revoke takes it back)
 ```
 
 `bun test` alone needs `TEST_DATABASE_URL` (a Postgres the suites may create databases in); `bun run test` sets it.
@@ -35,12 +36,12 @@ bun run mail:preview   # the mail templates
 - `src/database/` - the schema (auth, social, heroes, boards, saves), the `Db` handle, the migration runner, Postgres errors
 - `drizzle/` - the migrations (drizzle-kit's; `0001` is hand-written: the trigger that keeps builds immutable)
 - `src/auth/` - better-auth and `/api/account`; `src/players/` - profiles, display names, the guest upgrade
-- `src/social/` - profile, friends, blocks; `src/heroes/` - heroes, builds and player pages; `src/boards/` - the boards; `src/saves/` - the cloud save; `src/realm/` - the online realm
+- `src/social/` - profile, friends, blocks; `src/heroes/` - heroes, builds and player pages; `src/boards/` - the boards; `src/saves/` - the cloud save; `src/realm/` - the online realm; `src/chat/` - chat, its filter, moderation and retention
 - `src/mail/` - the mailer and its React Email templates; `src/backup/` - the nightly dump to R2
 - `src/cache/`, `src/throttle/`, `src/schedule/` - the scaffold's infrastructure
 - `src/web/` - the website's page (`SpaShell`) and the static options
 - `src/*.test.ts` - the suites; `src/testing/` boots the app over a fresh database; `src/test.preload.ts` quiets the logs
-- `scripts/test.ts` - what `bun run test` runs
+- `scripts/test.ts` - what `bun run test` runs; `scripts/admin-role.ts` - `bun run admin:grant|revoke <displayName>` (in the image too); `scripts/backup-now.ts` - a backup now
 - `bunfig.toml` - the preload line constructor injection needs
 
 `main.ts`, `app.module.ts` and `config.ts` were generated for the features chosen
@@ -58,7 +59,8 @@ bottom is what stops that starting a server.
 - **database** - Postgres through `Bun.SQL` (`@dunx/infra/db`'s `SqlOptions`, drizzle), migrations applied in `onBeforeInit`. drizzle's own `jsonb()` stores a string over `Bun.SQL`; use `database/columns.ts`'s, and its `bytea` for bytes.
 - **backup** - `pg_dump` at 03:30 to R2 (`@dunx/infra/files`), skipped with a log line without the R2 variables.
 - **guest clean-up** - at 04:15 (`players/guest-cleanup.ts`), deleting guests with no heroes and no use in 30 days (a session's `updated_at`; `GET /api/account` marks a game session used, since better-auth never renews one).
-- **auth** - better-auth mounted at `/api/auth` (guests, email and password, Google, Discord), and `/api/account` (the caller, the sign-in methods, deletion, the mail-link pages).
+- **chat** - `/api/chat` (decision 228): the global channel and friends' direct messages by polling, the rules, the filter (`chat/chat-filter.ts`, the display names' lists), ten sends a minute per player (counted in Postgres under an advisory lock, since `@Throttle` keys by address), repeats, mutes, blocks, reports; `/api/admin/chat` for the `admin` role (`@Roles('admin')`); `chat/chat-retention.ts` at 04:45 (messages 30 days unless an open report holds them, closed reports 180 days, ended mutes).
+- **auth** - better-auth mounted at `/api/auth` (guests, email and password, Google, Discord; its `admin` plugin's `role`), and `/api/account` (the caller with `admin`, the sign-in methods, deletion, the mail-link pages).
 - **mail** - Resend with React Email templates; logged without `RESEND_API_KEY`.
 - **social, heroes, boards** - `/api/profile`, `/api/friends`, `/api/blocks`, `/api/heroes` (with every hero's build, decision 226), `/api/builds/:id`, `/api/players/:userId`, `/api/leaderboards` (online heroes only, decision 227).
 - **realm** - `/api/realm`: the online realm (decision 227), one save of online heroes per account, its one-device lease and revisions; `realm/realm-sync.ts` lands the rules checker's read of each upload on the heroes, builds and boards after the reply.
