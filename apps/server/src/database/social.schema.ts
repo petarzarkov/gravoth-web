@@ -62,6 +62,8 @@ export const profile = pgTable(
       ),
     /** False while the picture is the one made at sign-up; a guest's chosen one moves to the account it becomes. */
     avatarChosen: boolean('avatar_chosen').notNull().default(false),
+    /** When the player accepted the chat rules (decision 228), before their first message; null until then. */
+    chatRulesAt: timestamp('chat_rules_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

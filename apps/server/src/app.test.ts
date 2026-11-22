@@ -78,7 +78,9 @@ describe('the scaffold examples are gone', () => {
     // `/api/profile` is the player's own profile now (social/); the demo's sub-routes stay gone.
     'profile/audit',
     'profile/anonymous',
+    // The scaffold's chat lobby; decision 228's chat lives under /api/chat/global, /direct and the rest.
     'chat',
+    'chat/lobby',
   ];
 
   for (const path of removed) {
@@ -89,7 +91,7 @@ describe('the scaffold examples are gone', () => {
     });
   }
 
-  it('documents exactly the game, account, profile, friends, heroes, player, board, cloud save and realm routes', async () => {
+  it('documents exactly the game, account, profile, friends, heroes, player, board, cloud save, realm, chat and moderation routes', async () => {
     const response = await fetch(`${base}/api/openapi.json`);
     expect(response.status).toBe(200);
     const document = (await response.json()) as {
@@ -109,9 +111,22 @@ describe('the scaffold examples are gone', () => {
       '/api/account/game-sign-in/exchange',
       '/api/account/methods',
       '/api/account/reset-password',
+      '/api/admin/chat/messages',
+      '/api/admin/chat/messages/{id}/hide',
+      '/api/admin/chat/mutes',
+      '/api/admin/chat/mutes/{userId}/remove',
+      '/api/admin/chat/reports',
+      '/api/admin/chat/reports/{id}/resolve',
       '/api/blocks',
       '/api/blocks/{userId}/remove',
       '/api/builds/{id}',
+      '/api/chat/direct',
+      '/api/chat/direct/{userId}',
+      '/api/chat/direct/{userId}/read',
+      '/api/chat/global',
+      '/api/chat/messages/{id}/report',
+      '/api/chat/rules/accept',
+      '/api/chat/unread',
       '/api/friends',
       '/api/friends/requests',
       '/api/friends/requests/incoming',

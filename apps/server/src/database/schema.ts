@@ -10,3 +10,4 @@ export * from './heroes.schema.js';
 export * from './boards.schema.js';
 export * from './saves.schema.js';
 export * from './realms.schema.js';
+export * from './chat.schema.js';

@@ -19,6 +19,7 @@ import { HeroesModule } from './heroes/heroes.module.js';
 import { BoardsModule } from './boards/boards.module.js';
 import { SavesModule } from './saves/saves.module.js';
 import { RealmModule } from './realm/realm.module.js';
+import { ChatModule } from './chat/chat.module.js';
 import { WebModule } from './web/web.module.js';
 import { RealmSync } from './realm/realm-sync.js';
 
@@ -57,6 +58,7 @@ import { RealmSync } from './realm/realm-sync.js';
     BoardsModule,
     SavesModule,
     RealmModule,
+    ChatModule,
     WebModule,
   ],
   // Better Auth serves its own routes, so the document is the only place they

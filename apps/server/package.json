@@ -10,7 +10,9 @@
     "db:generate": "drizzle-kit generate",
     "mail:preview": "dunx-email preview ./src/mail/templates",
     "typecheck": "tsc --noEmit",
-    "backup:now": "bun scripts/backup-now.ts"
+    "backup:now": "bun scripts/backup-now.ts",
+    "admin:grant": "bun scripts/admin-role.ts grant",
+    "admin:revoke": "bun scripts/admin-role.ts revoke"
   },
   "dependencies": {
     "@dunx/auth": "^3.10.6",

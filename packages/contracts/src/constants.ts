@@ -276,6 +276,46 @@ export type RealmReason = (typeof REALM_REASONS)[number];
 /** Decision 226: the most heroes `POST /api/heroes/active` lists (a save holds six; room for later). */
 export const MAX_ACTIVE_HEROES = 64;
 
+/**
+ * Decision 228: chat's limits, channels, report reasons and a report's outcomes (the shapes are chat.ts's).
+ */
+export const CHAT_LIMITS = {
+  /** The longest message, after trimming. */
+  MAX_BODY: 300,
+  /** Messages a page holds by default, and at most. */
+  DEFAULT_TAKE: 50,
+  MAX_TAKE: 100,
+  /** Messages a player may send in a minute, both channels together (then 429 `TOO_MANY_REQUESTS`). */
+  SENDS_PER_MINUTE: 10,
+  /** The same text as the sender's last message in that channel, within this many seconds, is refused (`CHAT_REPEAT`). */
+  REPEAT_SECONDS: 30,
+  /** Days a message is kept (one under an open report stays until the report is closed). */
+  KEEP_DAYS: 30,
+  /** Distinct players reporting one global message hide it until the developer looks. */
+  AUTO_HIDE_REPORTS: 3,
+  /** The longest mute, in hours (ten years: for good). */
+  MAX_MUTE_HOURS: 87_600,
+} as const;
+
+/** The one site a chat message may link to (a build or a player page); any other link is `LINKS_NOT_ALLOWED`. */
+export const CHAT_LINK_HOST = 'gravoth.petarzarkov.com';
+
+export const CHAT_CHANNELS = ['global', 'direct'] as const;
+export type ChatChannel = (typeof CHAT_CHANNELS)[number];
+
+export const REPORT_REASONS = [
+  'spam',
+  'harassment',
+  'hate',
+  'sexual',
+  'cheating',
+  'other',
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export const REPORT_ACTIONS = ['dismiss', 'hide', 'mute'] as const;
+export type ReportAction = (typeof REPORT_ACTIONS)[number];
+
 export const ERROR_CODES = [
   // Any route that needs a session.
   'UNAUTHENTICATED',
@@ -321,7 +361,9 @@ export const ERROR_CODES = [
   'REVISION_MISMATCH',
   'ALREADY_TRANSFERRED',
   'CHECKER_UNAVAILABLE',
-  // Chat (/api/chat, decision 228): a guest gets GUEST_ACCOUNT, a fast sender 429 TOO_MANY_REQUESTS.
+  // Chat (/api/chat, decision 228): a guest gets GUEST_ACCOUNT. TOO_MANY_REQUESTS is a player's 11th message in a
+  // minute (429, with Retry-After), counted per player in both channels, whatever their address.
+  'TOO_MANY_REQUESTS',
   'CHAT_RULES',
   'CHAT_MUTED',
   'CHAT_REPEAT',

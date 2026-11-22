@@ -1,4 +1,4 @@
-import { Auth, AuthContext } from '@dunx/auth';
+import { Auth, AuthContext, rolesOf } from '@dunx/auth';
 import { HttpError, HttpStatusCode } from '@dunx/http';
 import { and, eq, lt } from 'drizzle-orm';
 import { Db } from '../database/db.js';
@@ -10,6 +10,9 @@ export type { AccountView };
 
 /** better-auth's provider id for a password. */
 const CREDENTIAL = 'credential';
+
+/** The role the moderation routes need (`@Roles('admin')`, given by `bun run admin:grant`). */
+export const ADMIN_ROLE = 'admin';
 
 /**
  * The game's view of the caller's account, and the deletion Google Play requires of a
@@ -50,6 +53,7 @@ export class Accounts {
         )
         .sort(),
       createdAt: new Date(user.createdAt).toISOString(),
+      admin: rolesOf(user).includes(ADMIN_ROLE),
     };
   }
 
@@ -74,8 +78,8 @@ export class Accounts {
 
   /**
    * Deletes the caller's account: one `DELETE` of the user row, and the foreign keys take everything kept for it with
-   * it (its sign-ins and sessions, its profile, heroes, builds and board entries, its cloud save, its friendships,
-   * requests and blocks either way). An account with a password has to give it; a guest or a Google- or Discord-only account is proven by
+   * it (its sign-ins and sessions, its profile, heroes, builds and board entries, its cloud save and realm, its
+   * friendships, requests and blocks either way, and its chat: messages, read marks, reports by or about it, a mute). An account with a password has to give it; a guest or a Google- or Discord-only account is proven by
    * its session, the same one that signs it in. A confirmed address then gets one last mail saying so.
    */
   async delete(password: string | undefined): Promise<void> {

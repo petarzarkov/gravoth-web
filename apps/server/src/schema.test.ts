@@ -11,6 +11,10 @@ import {
 import {
   account,
   block,
+  chatMessage,
+  chatMute,
+  chatRead,
+  chatReport,
   cloudSave,
   friendship,
   hero,
@@ -690,5 +694,138 @@ describe('cloud saves', () => {
         ),
       ),
     ).toBe(true);
+  });
+});
+
+describe('chat', () => {
+  it('keeps global messages without a recipient and direct ones between two players, at most 300 characters', async () => {
+    const from = await newUser('Talker');
+    const to = await newUser('Hearer');
+    const [stored] = await db
+      .insert(chatMessage)
+      .values({
+        channel: 'direct',
+        senderId: from.id,
+        recipientId: to.id,
+        body: 'hi',
+      })
+      .returning();
+    for (const [constraint, values] of [
+      [
+        'chat_messages_recipient',
+        { channel: 'global', senderId: from.id, recipientId: to.id, body: 'x' },
+      ],
+      [
+        'chat_messages_recipient',
+        { channel: 'direct', senderId: from.id, body: 'x' },
+      ],
+      [
+        'chat_messages_not_self',
+        {
+          channel: 'direct',
+          senderId: from.id,
+          recipientId: from.id,
+          body: 'x',
+        },
+      ],
+      [
+        'chat_messages_body',
+        { channel: 'global', senderId: from.id, body: '' },
+      ],
+      [
+        'chat_messages_body',
+        { channel: 'global', senderId: from.id, body: 'x'.repeat(301) },
+      ],
+      [
+        'chat_messages_hidden',
+        {
+          channel: 'global',
+          senderId: from.id,
+          body: 'x',
+          hiddenAt: new Date(),
+        },
+      ],
+    ] as const)
+      expect(
+        checkViolation(await failure(db.insert(chatMessage).values(values))),
+      ).toBe(constraint);
+    expect(
+      checkViolation(
+        await failure(
+          db
+            .insert(chatRead)
+            .values({ userId: from.id, peerId: from.id, lastReadId: 1 }),
+        ),
+      ),
+    ).toBe('chat_reads_not_self');
+
+    const reportRow = {
+      messageId: stored!.id,
+      reporterId: to.id,
+      reason: 'spam' as const,
+      channel: 'direct' as const,
+      senderId: from.id,
+      recipientId: to.id,
+      body: 'hi',
+      sentAt: stored!.createdAt,
+    };
+    await db.insert(chatReport).values(reportRow);
+    expect(
+      isUniqueViolation(
+        await failure(db.insert(chatReport).values(reportRow)),
+        'chat_reports_message_reporter_key',
+      ),
+    ).toBe(true);
+    expect(
+      checkViolation(
+        await failure(
+          db.insert(chatReport).values({
+            ...reportRow,
+            reporterId: from.id,
+            resolvedAt: new Date(),
+          }),
+        ),
+      ),
+    ).toBe('chat_reports_resolution');
+    expect(
+      checkViolation(
+        await failure(
+          db
+            .insert(chatMute)
+            .values({ userId: to.id, until: new Date(Date.now() - 1000) }),
+        ),
+      ),
+    ).toBe('chat_mutes_until');
+
+    // The messages, read marks, reports and mutes of a player go with them; a moderator's leaves their mutes in place.
+    await db
+      .insert(chatRead)
+      .values({ userId: to.id, peerId: from.id, lastReadId: stored!.id });
+    await db.insert(chatMute).values({
+      userId: to.id,
+      until: new Date(Date.now() + 60_000),
+      mutedBy: from.id,
+    });
+    await db.delete(user).where(eq(user.id, from.id));
+    expect(
+      await db
+        .select()
+        .from(chatMessage)
+        .where(eq(chatMessage.recipientId, to.id)),
+    ).toEqual([]);
+    expect(
+      await db.select().from(chatRead).where(eq(chatRead.userId, to.id)),
+    ).toEqual([]);
+    expect(
+      await db
+        .select()
+        .from(chatReport)
+        .where(eq(chatReport.reporterId, to.id)),
+    ).toEqual([]);
+    const [mute] = await db
+      .select()
+      .from(chatMute)
+      .where(eq(chatMute.userId, to.id));
+    expect(mute?.mutedBy).toBeNull();
   });
 });

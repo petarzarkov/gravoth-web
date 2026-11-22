@@ -18,6 +18,8 @@ export interface AccountView {
   /** How this account can sign in: `email` for a password, else the provider. */
   readonly signIn: readonly SignInMethod[];
   readonly createdAt: string;
+  /** Holds the `admin` role (decision 228's moderation: the website's /admin/chat). */
+  readonly admin: boolean;
 }
 
 /** `POST /api/account/delete`. */

@@ -5,8 +5,19 @@ import {
   AVATAR_BORDER_NAMES,
   AVATAR_IMAGE_SOURCES,
   AVATAR_PORTRAITS,
+  AdminChatQuery,
   AroundMe,
   BOARDS,
+  CHAT_LIMITS,
+  ChatQuery,
+  ERROR_CODES,
+  MarkRead,
+  MutePlayer,
+  REPORT_REASONS,
+  ReportMessage,
+  ReportsQuery,
+  ResolveReport,
+  SendMessage,
   BuildSnapshot,
   CLOUD_SAVE_MAX_BASE64,
   CLOUD_SAVE_MAX_BYTES,
@@ -318,6 +329,87 @@ describe('the online realm', () => {
     });
     expect(RealmRelease.safeParse({}).success).toBe(false);
     expect(REALM_LEASE_SECONDS).toBe(300);
+  });
+});
+
+describe('chat', () => {
+  test('a message is trimmed text of 1 to 300 characters', () => {
+    expect(SendMessage.parse({ body: '  hello  ' }).body).toBe('hello');
+    expect(SendMessage.safeParse({ body: '   ' }).success).toBe(false);
+    expect(SendMessage.safeParse({ body: 'x'.repeat(301) }).success).toBe(
+      false,
+    );
+    expect(
+      SendMessage.safeParse({ body: ` ${'x'.repeat(300)} ` }).success,
+    ).toBe(true);
+    expect(CHAT_LIMITS.MAX_BODY).toBe(300);
+  });
+
+  test('a page takes 50 by default and 100 at most, after or before an id', () => {
+    expect(ChatQuery.parse({})).toEqual({ take: 50 });
+    expect(ChatQuery.parse({ after: '0', take: '5' })).toEqual({
+      after: 0,
+      take: 5,
+    });
+    expect(ChatQuery.safeParse({ take: '101' }).success).toBe(false);
+    expect(ChatQuery.safeParse({ before: '0' }).success).toBe(false);
+    expect(MarkRead.safeParse({ upTo: -1 }).success).toBe(false);
+    expect(AdminChatQuery.parse({ around: '7' })).toEqual({
+      around: 7,
+      take: 50,
+    });
+    expect(AdminChatQuery.safeParse({ userId: 'nobody' }).success).toBe(false);
+  });
+
+  test('a report names one of the reasons, with a short note', () => {
+    expect(REPORT_REASONS).toEqual([
+      'spam',
+      'harassment',
+      'hate',
+      'sexual',
+      'cheating',
+      'other',
+    ]);
+    expect(ReportMessage.parse({ reason: 'spam' })).toEqual({ reason: 'spam' });
+    expect(ReportMessage.safeParse({ reason: 'rude' }).success).toBe(false);
+    expect(
+      ReportMessage.safeParse({ reason: 'other', note: 'x'.repeat(201) })
+        .success,
+    ).toBe(false);
+    expect(ReportsQuery.parse({})).toEqual({ state: 'open', take: 50 });
+  });
+
+  test('a mute needs its hours, ten years at most', () => {
+    expect(ResolveReport.safeParse({ action: 'dismiss' }).success).toBe(true);
+    expect(ResolveReport.safeParse({ action: 'mute' }).success).toBe(false);
+    expect(ResolveReport.safeParse({ action: 'mute', hours: 24 }).success).toBe(
+      true,
+    );
+    const player = '00000000-0000-4000-8000-000000000001';
+    expect(MutePlayer.parse({ userId: player, hours: 1 }).reason).toBe('');
+    expect(
+      MutePlayer.safeParse({
+        userId: player,
+        hours: CHAT_LIMITS.MAX_MUTE_HOURS + 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  test('its error codes are listed', () => {
+    for (const code of [
+      'TOO_MANY_REQUESTS',
+      'CHAT_RULES',
+      'CHAT_MUTED',
+      'CHAT_REPEAT',
+      'MESSAGE_NOT_ALLOWED',
+      'LINKS_NOT_ALLOWED',
+      'NOT_FRIENDS',
+      'MESSAGE_NOT_FOUND',
+      'CANNOT_REPORT_SELF',
+      'REPORT_NOT_FOUND',
+      'MUTE_NOT_FOUND',
+    ])
+      expect(ERROR_CODES as readonly string[]).toContain(code);
   });
 });
 

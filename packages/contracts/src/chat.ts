@@ -1,41 +1,22 @@
 import { z } from 'zod';
 import type { AvatarView } from './avatar.js';
+import {
+  CHAT_LIMITS,
+  REPORT_ACTIONS,
+  REPORT_REASONS,
+  type ChatChannel,
+  type ReportAction,
+  type ReportReason,
+} from './constants.js';
 
 /**
  * Decision 228: chat (decision 226's "friends' direct messages and a global channel", with moderation). Read by polling:
  * no socket, the game asks for what is new while the chat page is open. Every route needs an account that can sign in
  * again (a guest gets 403 `GUEST_ACCOUNT`), and every message is plain text: clients show it without markup.
+ *
+ * The plain facts (`CHAT_LIMITS`, `CHAT_CHANNELS`, `REPORT_REASONS`, `REPORT_ACTIONS`) are in constants.ts, so the
+ * website's admin page reads them without zod.
  */
-export const CHAT_LIMITS = {
-  /** The longest message, after trimming. */
-  MAX_BODY: 300,
-  /** Messages a page holds by default, and at most. */
-  DEFAULT_TAKE: 50,
-  MAX_TAKE: 100,
-  /** Messages a player may send in a minute, both channels together (then 429 `TOO_MANY_REQUESTS`). */
-  SENDS_PER_MINUTE: 10,
-  /** The same text as the sender's last message in that channel, within this many seconds, is refused (`CHAT_REPEAT`). */
-  REPEAT_SECONDS: 30,
-  /** Days a message is kept (one under an open report stays until the report is closed). */
-  KEEP_DAYS: 30,
-  /** Distinct players reporting one global message hide it until the developer looks. */
-  AUTO_HIDE_REPORTS: 3,
-  /** The longest mute, in hours (ten years: for good). */
-  MAX_MUTE_HOURS: 87_600,
-} as const;
-
-export const CHAT_CHANNELS = ['global', 'direct'] as const;
-export type ChatChannel = (typeof CHAT_CHANNELS)[number];
-
-export const REPORT_REASONS = [
-  'spam',
-  'harassment',
-  'hate',
-  'sexual',
-  'cheating',
-  'other',
-] as const;
-export type ReportReason = (typeof REPORT_REASONS)[number];
 
 /** `POST /api/chat/global` and `POST /api/chat/direct/:userId`. */
 export const SendMessage = z
@@ -122,12 +103,21 @@ export interface ChatPage {
   readonly rulesAccepted: boolean;
 }
 
-/** One entry of `GET /api/chat/direct`: a friend, with the conversation's newest message and what is unread. */
+/**
+ * One entry of `GET /api/chat/direct`: a player the caller has written with (a friend, or a friend once: the history
+ * stays readable to both), with the conversation's newest message and what is unread. A player the caller blocked is
+ * left out.
+ */
 export interface ConversationView {
   readonly peer: ChatPlayer;
-  /** Null when nothing was written yet. */
+  /** Null when moderation removed every message of it. */
   readonly last: ChatMessageView | null;
   readonly unread: number;
+}
+
+/** `GET /api/chat/direct`: the newest conversation first. */
+export interface ChatConversations {
+  readonly conversations: readonly ConversationView[];
 }
 
 /** `GET /api/chat/unread`: cheap enough to poll for a badge. */
@@ -140,16 +130,21 @@ export interface ChatUnread {
 
 // The moderation routes (`/api/admin/chat`, `@Roles('admin')`), for the website's admin page.
 
-export const REPORT_ACTIONS = ['dismiss', 'hide', 'mute'] as const;
-export type ReportAction = (typeof REPORT_ACTIONS)[number];
-
-/** `POST /api/admin/chat/reports/:id/resolve`: `hide` removes the message, `mute` removes it and mutes its writer. */
+/**
+ * `POST /api/admin/chat/reports/:id/resolve`: `dismiss` closes it (and shows again a message the reports' own threshold
+ * hid), `hide` removes the message, `mute` removes it and mutes its writer for `hours` (required). Every open report of
+ * the same message closes with it.
+ */
 export const ResolveReport = z
   .object({
     action: z.enum(REPORT_ACTIONS),
-    /** For `mute`. */
+    /** For `mute`, where it is required. */
     hours: z.number().int().min(1).max(CHAT_LIMITS.MAX_MUTE_HOURS).optional(),
     reason: z.string().trim().max(200).optional(),
+  })
+  .refine((value) => value.action !== 'mute' || value.hours !== undefined, {
+    message: 'a mute needs its hours',
+    path: ['hours'],
   })
   .meta({ id: 'ResolveReport', description: "A report's outcome" });
 
@@ -171,9 +166,42 @@ export const ReportsQuery = z.object({
   before: z.coerce.number().int().min(1).optional(),
 });
 
+/**
+ * `GET /api/admin/chat/messages`, hidden ones too, oldest first in the answer. No `userId`: the global channel. A
+ * `userId`: that player's own messages in both channels. With `peerId` as well: the direct conversation of the two.
+ * `around`: the messages either side of that id (half of `take` each way, the id among them); else `before` as in
+ * `ChatQuery`, or the newest.
+ */
+export const AdminChatQuery = z.object({
+  userId: z.uuid().optional(),
+  peerId: z.uuid().optional(),
+  around: z.coerce.number().int().min(1).optional(),
+  before: z.coerce.number().int().min(1).optional(),
+  take: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(CHAT_LIMITS.MAX_TAKE)
+    .default(CHAT_LIMITS.DEFAULT_TAKE),
+});
+
 export type ResolveReport = z.infer<typeof ResolveReport>;
 export type MutePlayer = z.infer<typeof MutePlayer>;
 export type ReportsQuery = z.infer<typeof ReportsQuery>;
+export type AdminChatQuery = z.infer<typeof AdminChatQuery>;
+
+/** A message as moderation sees it: either channel, hidden or not, with the other player of a direct message. */
+export interface ChatModeratedMessage {
+  readonly id: number;
+  readonly channel: ChatChannel;
+  readonly from: ChatPlayer;
+  /** The other player of a direct message. */
+  readonly to: ChatPlayer | null;
+  readonly body: string;
+  readonly at: string;
+  /** Removed by moderation (or by the reports' own threshold). */
+  readonly hidden: boolean;
+}
 
 export interface ChatReportView {
   readonly id: number;
@@ -181,17 +209,7 @@ export interface ChatReportView {
   readonly note: string;
   readonly reporter: ChatPlayer;
   /** The message as it was reported (kept with the report, so it outlives the message's 30 days). */
-  readonly message: {
-    readonly id: number;
-    readonly channel: ChatChannel;
-    readonly from: ChatPlayer;
-    /** The other player of a direct message. */
-    readonly to: ChatPlayer | null;
-    readonly body: string;
-    readonly at: string;
-    /** Removed by moderation (or by the reports' own threshold). */
-    readonly hidden: boolean;
-  };
+  readonly message: ChatModeratedMessage;
   /** Distinct players who reported this message. */
   readonly reports: number;
   readonly createdAt: string;
@@ -206,4 +224,19 @@ export interface ChatReportView {
 export interface ChatMuteView extends ChatMute {
   readonly player: ChatPlayer;
   readonly createdAt: string;
+}
+
+/** `GET /api/admin/chat/reports`: newest first; the next page is `before` the last one's id. */
+export interface ChatReportList {
+  readonly reports: readonly ChatReportView[];
+}
+
+/** `GET /api/admin/chat/mutes`: the mutes in force, newest first. */
+export interface ChatMuteList {
+  readonly mutes: readonly ChatMuteView[];
+}
+
+/** `GET /api/admin/chat/messages`. */
+export interface ChatModeratedMessages {
+  readonly messages: readonly ChatModeratedMessage[];
 }
