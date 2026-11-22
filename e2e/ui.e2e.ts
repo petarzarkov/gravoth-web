@@ -1,5 +1,5 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
-// the local stack. Screenshots of the account, friends and delete pages land in e2e/.tmp/ui.
+// the local stack. Screenshots of the account, friends, board, build and delete pages land in e2e/.tmp/ui.
 // The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
 const base = 'http://localhost:3001';
 const apiBase = 'http://localhost:3000';
@@ -359,6 +359,15 @@ ok(
   await until(`${has('Signed in as ' + darName)} && ${has('Saved.')}`),
   await js(`document.querySelector('.page-sub')?.textContent`),
 );
+ok(
+  'the account page hides "Show when online" until friends can see who plays',
+  (await js(
+    `!${has('Show when online')} && document.querySelectorAll('.toggles input[type=checkbox]').length === 3`,
+  )) === true,
+  await js(
+    `[...document.querySelectorAll('.toggles label')].map(l => l.textContent)`,
+  ),
+);
 await js(`document.querySelector('.toggles input[type=checkbox]').click()`);
 await until(`!document.querySelector('.toggles input[type=checkbox]').checked`);
 const prof = await js(
@@ -424,6 +433,91 @@ ok(
   'the hardcore twin opens',
   await until(`${has('Hardcore deepest Bone Pit floor')}`),
 );
+
+// 5b. Decision 224: Eli's hardcore hero, wearing an avatar border. Its row on the hardcore board shows the HARDCORE
+// badge beside the class and the border's frame round Eli's picture; its build page shows them and the rest.
+const ember = await api(
+  'POST',
+  '/api/heroes',
+  { name: `Ember${run}`, class: 'templar', hardcore: true },
+  eli.token!,
+);
+const posted = await api(
+  'POST',
+  '/api/leaderboards/hc_pit_floor/scores',
+  {
+    heroId: ember.body.hero?.id,
+    score: 4321,
+    build: {
+      revision: 1,
+      gameVersion: '0.13.0',
+      level: 88,
+      skills: [
+        {
+          id: 'judgement',
+          level: 20,
+          slot: 0,
+          supports: [{ id: 'melee_phys', level: 18 }],
+        },
+      ],
+      gear: [
+        {
+          slot: 'MainHand',
+          name: 'Oath Hammer',
+          base: 'War Maul',
+          rarity: 'Rare',
+          itemLevel: 80,
+          lines: [{ text: '+40 to Strength', kind: 'suffix', tier: 2 }],
+        },
+      ],
+      talents: { version: 3, points: 80, earned: 84, nodes: [1, 2, 3] },
+      extras: {
+        border: 'pit_50',
+        marks: 210,
+        attributes: { strength: 250 },
+        rites: [{ slot: 1, id: 'oathbound', name: 'Oathbound', nodes: ['a'] }],
+      },
+      summary: { dps: 98_000, clearDps: 70_000, ehp: 40_000, life: 4_800 },
+    },
+  },
+  eli.token!,
+);
+ok(
+  'a hardcore record with an avatar border posts',
+  posted.status < 300 && typeof posted.body.entry?.buildId === 'string',
+  [posted.status, posted.body],
+);
+const emberRow = `[...document.querySelectorAll('.board-table tbody tr')].find(tr => tr.textContent.includes(${JSON.stringify(`Ember${run}`)}))`;
+const frameLoads = (scope: string) =>
+  `(() => { const img = ${scope}?.querySelector('.avatar-frame[data-border="pit_50"] img.avatar-frame-img'); if (!img) return false; img.loading = 'eager'; return img.decode().then(() => img.naturalWidth === 256, () => false); })()`;
+await go('/boards/pit_floor?hardcore=true');
+ok(
+  "the hardcore hero's row shows the HARDCORE badge beside its class",
+  await until(
+    `!!(${emberRow})?.querySelector('.hero-badges .class-badge + .hardcore-badge')`,
+  ),
+  await js(`(${emberRow})?.innerText`),
+);
+ok(
+  "the row frames Eli's picture with the hero's border, and the frame loads",
+  (await js(frameLoads(`(${emberRow})`))) === true,
+);
+await fullShot('board-hardcore');
+await phone();
+await go('/boards/pit_floor?hardcore=true');
+await until(`!!(${emberRow})`);
+await js(frameLoads(`(${emberRow})`));
+await fullShot('board-hardcore-phone');
+await desktop();
+await go(`/builds/${posted.body.entry?.buildId}`);
+ok(
+  'its build page shows the badge, the framed picture and the character',
+  await until(
+    `!!document.querySelector('.page-sub .hardcore-badge') && !!document.querySelector('.build-player .avatar-frame[data-border="pit_50"]') && ${has('Avatar border')} && ${has('Oathbound')}`,
+  ),
+);
+await js(frameLoads('document'));
+await fullShot('build');
 
 // 6. Remove Eli, sign out, sign back in.
 await go('/friends');

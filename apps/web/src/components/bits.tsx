@@ -102,7 +102,7 @@ export const HardcoreBadge = ({ size }: { size?: 'xs' | 'sm' }) => (
   </Badge>
 );
 
-/** A hero's class and, when it is hardcore, the hardcore badge beside it. */
+/** A hero's class and, when it is hardcore, the hardcore badge beside it (under it where a phone's row is too narrow). */
 export const HeroBadges = ({
   hero,
   size,
@@ -116,7 +116,7 @@ export const HeroBadges = ({
   return (
     <Group
       gap={6}
-      wrap="nowrap"
+      style={{ rowGap: 4 }}
       className="hero-badges"
       {...(mt === undefined ? {} : { mt })}
     >
