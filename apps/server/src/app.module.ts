@@ -4,6 +4,7 @@ import { StaticOptions } from '@dunx/http';
 import { LoggerModule } from '@dunx/infra/logger';
 import { AppConfigService, validate } from './config.js';
 import { HttpModule } from './http/http.module.js';
+import { redactSignInSecrets } from './http/log-redaction.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AccountsModule } from './auth/auth.module.js';
 import { CacheModule } from './cache/cache.module.js';
@@ -33,6 +34,8 @@ import { WebModule } from './web/web.module.js';
         useFactory: (config: AppConfigService) => ({
           name: config.get('appName'),
           level: config.get('log').level,
+          // A sign-in's one-time code and state never reach a request line (http/log-redaction.ts).
+          filters: [redactSignInSecrets],
         }),
         inject: [AppConfigService] as const,
       },
