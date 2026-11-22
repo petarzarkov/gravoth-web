@@ -179,7 +179,10 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                   // Decision 223: a session made for the game lasts until the player signs out of it.
                   before: async (
                     session: { expiresAt: Date },
-                    ctx?: { headers?: Headers; request?: Request } | null,
+                    ctx?: {
+                      headers?: Headers | undefined;
+                      request?: Request | undefined;
+                    } | null,
                   ) =>
                     isGameClient(ctx?.headers ?? ctx?.request?.headers)
                       ? { data: { ...session, expiresAt: gameSessionExpiry() } }
