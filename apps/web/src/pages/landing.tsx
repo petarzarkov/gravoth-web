@@ -65,7 +65,8 @@ export const LandingPage = () => {
           height={500}
         />
         <div className="hero-copy">
-          <h1 className="hero-title">Gravoth</h1>
+          {/* The art carries the logo; the heading is for screen readers and search. */}
+          <h1 className="visually-hidden">Gravoth</h1>
           <p className="hero-sub">
             A dark-fantasy action RPG for Android phones
           </p>
