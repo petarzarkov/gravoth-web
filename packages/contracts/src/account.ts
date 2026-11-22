@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SignInMethod } from './constants.js';
+import { SOCIAL_PROVIDERS, type SignInMethod } from './constants.js';
 
 /** `GET /api/account/methods`: which sign-in buttons this server can honour, so a client shows no dead one. */
 export interface SignInMethods {
@@ -43,4 +43,40 @@ export interface SessionView {
     readonly isAnonymous?: boolean | null;
   };
   readonly session: { readonly id: string; readonly expiresAt: string };
+}
+
+/**
+ * The game's browser sign-in (Google, Discord): the game opens the system browser at
+ * `GET /api/account/game-sign-in` with these, the player signs in at the provider, and
+ * the server sends the browser back to `return` with a one-time `code` and the same
+ * `state`. `return` is the phone's `gravoth://auth` or a loopback address the game
+ * listens on (`http://127.0.0.1:<port>/<path>`, the Editor and PC).
+ */
+export const GameSignInStart = z
+  .object({
+    provider: z.enum(SOCIAL_PROVIDERS),
+    return: z.string().min(1).max(200),
+    /** The game's own random value, handed back unchanged so it knows the answer is to its request. */
+    state: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/),
+  })
+  .meta({
+    id: 'GameSignInStart',
+    description: "Start a game's sign-in with a provider in the browser",
+  });
+
+export type GameSignInStart = z.infer<typeof GameSignInStart>;
+
+/** `POST /api/account/game-sign-in/exchange`: the one-time code (two minutes, once) for a session. */
+export const GameSignInExchange = z
+  .object({ code: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/) })
+  .meta({
+    id: 'GameSignInExchange',
+    description: 'Trade the one-time code from a browser sign-in for a session',
+  });
+
+export type GameSignInExchange = z.infer<typeof GameSignInExchange>;
+
+/** What the exchange answers: the session token the game sends as `Authorization: Bearer <token>`. */
+export interface GameSignInToken {
+  readonly token: string;
 }

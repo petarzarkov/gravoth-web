@@ -19,6 +19,8 @@ import { Profiles } from '../players/profiles.service.js';
 import { AccountController } from './account.controller.js';
 import { AccountPagesController } from './account-pages.controller.js';
 import { AccountServicesModule } from './account-services.module.js';
+import { GameSignIn } from './game-sign-in.js';
+import { GameSignInController } from './game-sign-in.controller.js';
 import { Accounts } from './accounts.service.js';
 import { SignInProviders } from './sign-in-providers.js';
 
@@ -205,8 +207,12 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
       '/auth',
     ),
   ],
-  controllers: [AccountController, AccountPagesController],
-  providers: [Accounts],
+  controllers: [
+    AccountController,
+    AccountPagesController,
+    GameSignInController,
+  ],
+  providers: [Accounts, GameSignIn],
   // `Auth` is exported because `OpenApiModule` wraps the root and can only inject
   // what the root exports (main.ts); the rest for the features that need the caller.
   exports: [Auth, AuthContext, SessionGuard, Accounts],

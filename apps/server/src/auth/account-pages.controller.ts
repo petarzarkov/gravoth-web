@@ -106,7 +106,7 @@ export class AccountPagesController {
   }
 }
 
-const page = (
+export const page = (
   title: string,
   lines: readonly string[],
   extra = '',

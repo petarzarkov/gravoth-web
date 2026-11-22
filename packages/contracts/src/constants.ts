@@ -137,6 +137,9 @@ export const ERROR_CODES = [
   // The account (POST /api/account/delete).
   'PASSWORD_REQUIRED',
   'INVALID_PASSWORD',
+  // The game's browser sign-in (/api/account/game-sign-in).
+  'RETURN_NOT_ALLOWED',
+  'CODE_INVALID',
   // Profile (PATCH /api/profile).
   'NAME_FORMAT',
   'NAME_TAKEN',
