@@ -73,8 +73,9 @@
       <p class="meta">
         Effective 17 November 2026; updated 22 November 2026 for version 0.13,
         which removes Google Play Games, and for Gravoth Online, the optional
-        accounts, leaderboards, friends and cloud save at
-        gravoth.petarzarkov.com. Applies to the Android game Gravoth (package
+        accounts, leaderboards, player pages, friends, cloud save and online
+        heroes at gravoth.petarzarkov.com. Applies to the Android game Gravoth
+        (package
         <code>com.petarzarkov.gravoth</code>) and to Gravoth Online, both made
         by their independent developer, petarzarkov.
       </p>
@@ -87,12 +88,12 @@
         </li>
         <li>
           Gravoth Online, at gravoth.petarzarkov.com, is optional: an account
-          (or a guest) for the online leaderboards, whose records show each
-          hero's full build, a friends list and a cloud save. It keeps your
-          account, your profile, the heroes and records you post and, once you
-          sign in to it in the game with Google, Discord or email, a copy of
-          your save (unless you turn that off) on the developer's own server.
-          See "Gravoth Online".
+          (or a guest) for a player page showing your heroes' builds, online
+          heroes whose records stand on the leaderboards, a friends list and a
+          cloud save. It keeps your account, your profile, your heroes and their
+          builds, your online heroes' save and, once you sign in to it in the
+          game with Google, Discord or email, a copy of your save (unless you
+          turn that off) on the developer's own server. See "Gravoth Online".
         </li>
         <li>
           From version 0.13 the game no longer uses Google Play Games: it does
@@ -108,8 +109,8 @@
         <li>
           Nobody's personal data is sold. Apart from Gravoth Online, the game
           does not send your game data to the developer; Gravoth Online keeps
-          only what you give it or post to it, and the cloud save while it is
-          on.
+          only what you give it or post to it: your heroes' builds, your online
+          heroes' save, and the cloud save while it is on.
         </li>
         <li>
           There are no ads and no tracking in the game, and no analytics or
@@ -139,8 +140,10 @@
         data deletes them there. If you sign in to Gravoth Online in the game
         with Google, Discord or email, the game also keeps a copy of your save
         on Gravoth Online's server, unless you turn it off (see "Cloud save"
-        under "Gravoth Online"). Otherwise the developer cannot see or access
-        them.
+        under "Gravoth Online"). Online heroes are the exception: they live on
+        the server, and the game keeps only a working copy of them while you
+        play (see "Online heroes" under "Gravoth Online"). Otherwise the
+        developer cannot see or access them.
       </p>
       <p>
         If you have Android's backup turned on, Android may include the game's
@@ -236,13 +239,14 @@
 
       <h2>Gravoth Online</h2>
       <p>
-        Gravoth Online is optional: accounts, online leaderboards whose records
-        show each hero's full build, a friends list and a cloud save. It runs on
-        the developer's own server (gravoth-api.petarzarkov.com, in the European
-        Union) and is used by the website gravoth.petarzarkov.com and by the
-        game, from its GRAVOTH ONLINE page. Nothing in the game needs it. You
-        can look at the leaderboards without an account; what follows applies
-        once you sign in or play as a guest. Its rules are in the
+        Gravoth Online is optional: accounts, player pages, online heroes and
+        the leaderboards their records stand on (each with the hero's full
+        build), a friends list and a cloud save. It runs on the developer's own
+        server (gravoth-api.petarzarkov.com, in the European Union) and is used
+        by the website gravoth.petarzarkov.com and by the game, from its GRAVOTH
+        ONLINE page. Nothing in the game needs it. You can look at the
+        leaderboards and public player pages without an account; what follows
+        applies once you sign in or play as a guest. Its rules are in the
         <a href="/terms/">terms of service</a>.
       </p>
       <ul>
@@ -297,18 +301,48 @@
           from Google's or Discord's servers.
         </li>
         <li>
-          <strong>Heroes and records:</strong> when you post a record (such as
-          the deepest Bone Pit floor or a chart clear), the server keeps the
-          hero's name, class, level and whether it is hardcore; a snapshot of
-          its whole build at that time (skills and supports, gear with every
-          modifier, talents, atlas, auras, rites and cosmetics, and computed
-          figures such as damage per second and life); the score; and when it
-          was set. A record can come with the hero's save, so that the rules
-          checker on the same server (the game's own rules) can confirm it. The
-          save sent with a record is read in memory for that check and not kept;
-          only the checker's figures and its build card are. (The cloud save,
-          below, is a separate copy, kept only while cloud saving is on.) A
-          record that fails the check is kept for review and never shown.
+          <strong>Heroes and their builds:</strong> while you are signed in to
+          Gravoth Online in the game, the game sends each of your heroes' builds
+          whenever one changes, for every hero on the phone, so your player page
+          shows them all: the hero's name, class, level and whether it is
+          hardcore, and a snapshot of its whole build (skills and supports, gear
+          with every modifier, talents, atlas, auras, rites, cosmetics and
+          avatar border, and computed figures such as damage per second and
+          life). The game also tells the server which heroes are still on the
+          phone, so a deleted one leaves your page (its builds and records are
+          kept). A build can come with your save, or the server can use your
+          cloud save, for the rules checker on the same server (the game's own
+          rules) to make its build card; a save sent for this is read in memory
+          and not kept.
+        </li>
+        <li>
+          <strong>Online heroes:</strong> a hero you make online, or move online
+          from the phone (once per hero), lives on the server: all your online
+          heroes are one save there (their characters, items, bag, shared stash
+          and codex, and progress), which the game uploads while you play (at
+          area changes, town visits, finished floors and charts, every 2
+          minutes, and on pause), up to 3 MB, with the device's own id that
+          holds the one-device lease. The server keeps only the latest copy,
+          with a revision number; guests have no online heroes. For each hero
+          moved online it keeps a fingerprint (a one-way hash of the hero's
+          class, look and its first levels' play times, or its name), so the
+          same hero cannot be moved twice. Each upload is read by the rules
+          checker: each online hero's build and its records (such as the deepest
+          Bone Pit floor or a chart clear, with the score and when the server
+          first saw it) come from it, and a hero the checker finds implausible
+          is kept for review and never shown on the leaderboards. Like the cloud
+          save, the online save is deleted with the account and, like the rest
+          of the database, is in the nightly backups for 30 days.
+        </li>
+        <li>
+          <strong>Records:</strong> the leaderboards show online heroes' records
+          only. A record the game sends for a hero on the phone (as version
+          0.13.0 does) is still checked and kept, with the hero's build and the
+          score and when it was set, but it is not shown on the leaderboards. A
+          record can come with the hero's save, so that the rules checker can
+          confirm it; the save sent with a record is read in memory for that
+          check and not kept, only the checker's figures and its build card are.
+          A record that fails the check is kept for review and never shown.
         </li>
         <li>
           <strong>Cloud save:</strong> when you are signed in to Gravoth Online
@@ -334,13 +368,16 @@
         </li>
         <li>
           <strong>What other players see:</strong> on the leaderboards, your
-          display name, each hero's name, class and full build, the score and
-          its date. If you hide your name (Account, privacy settings), the
-          leaderboards show "A hidden player" in its place, without your
-          picture, but the hero's name and build still show. Friends see your
-          display name and picture. Where your picture is your Google or Discord
-          one, a player's browser loads it from that service, which then sees
-          their IP address (the website sends no referrer with it).
+          display name, each online hero's name, class and full build, the score
+          and its date. Your player page shows anyone your display name, your
+          picture and every hero of yours that is still on your phone or online,
+          each with its full build and its records. If you hide your name
+          (Account, privacy settings), the leaderboards show "A hidden player"
+          in its place, without your picture, but the hero's name and build
+          still show, and your player page shows only to your friends. Friends
+          see your display name and picture. Where your picture is your Google
+          or Discord one, a player's browser loads it from that service, which
+          then sees their IP address (the website sends no referrer with it).
         </li>
         <li>
           <strong>Mail:</strong> the server sends mail through Resend, an email
@@ -377,10 +414,12 @@
           <a href="mailto:gravoth.arpg@gmail.com">gravoth.arpg@gmail.com</a>
           (done within 30 days). It removes at once the account and its sign-ins
           and sessions, your profile, heroes, builds and records, your cloud
-          save, and your friends, requests and blocks. The nightly copies that
-          still hold them are deleted as they turn 30 days old, and log lines
-          naming the account's id are overwritten as the logs fill. The heroes
-          on your phone are not affected.
+          save, your online heroes' save with the fingerprints of the heroes you
+          moved online, and your friends, requests and blocks. The nightly
+          copies that still hold them are deleted as they turn 30 days old, and
+          log lines naming the account's id are overwritten as the logs fill.
+          The heroes on your phone are not affected; online heroes live on the
+          server and go with the account.
         </li>
         <li>
           <strong>Your rights:</strong> you can see and change your display name
