@@ -73,8 +73,8 @@
       <p class="meta">
         Effective 17 November 2026; updated 22 November 2026 for version 0.13,
         which removes Google Play Games, and for Gravoth Online, the optional
-        accounts, leaderboards and friends at gravoth.petarzarkov.com. Applies
-        to the Android game Gravoth (package
+        accounts, leaderboards, friends and cloud save at
+        gravoth.petarzarkov.com. Applies to the Android game Gravoth (package
         <code>com.petarzarkov.gravoth</code>) and to Gravoth Online, both made
         by their independent developer, petarzarkov.
       </p>
@@ -88,9 +88,11 @@
         <li>
           Gravoth Online, at gravoth.petarzarkov.com, is optional: an account
           (or a guest) for the online leaderboards, whose records show each
-          hero's full build, and a friends list. It keeps your account, your
-          profile and the heroes and records you post on the developer's own
-          server. See "Gravoth Online".
+          hero's full build, a friends list and a cloud save. It keeps your
+          account, your profile, the heroes and records you post and, once you
+          sign in to it in the game with Google, Discord or email, a copy of
+          your save (unless you turn that off) on the developer's own server.
+          See "Gravoth Online".
         </li>
         <li>
           From version 0.13 the game no longer uses Google Play Games: it does
@@ -104,9 +106,10 @@
           "Google Play Games (versions up to 0.12, and the one last read)".
         </li>
         <li>
-          Nobody's personal data is sold. The game itself does not send your
-          game data to the developer; Gravoth Online keeps only what you give it
-          or post to it.
+          Nobody's personal data is sold. Apart from Gravoth Online, the game
+          does not send your game data to the developer; Gravoth Online keeps
+          only what you give it or post to it, and the cloud save while it is
+          on.
         </li>
         <li>
           There are no ads and no tracking in the game, and no analytics or
@@ -121,17 +124,23 @@
         <li>
           In the game, apart from the one read of an earlier cloud save (see
           above) and what Google Play handles when you buy a supporter tier (see
-          below), the only data that leaves your phone is the Unity engine's
-          anonymous hardware statistics (the device's model and specs), which go
-          to Unity, not to the developer. See "The game engine".
+          below), the only data that leaves your phone is what you send to
+          Gravoth Online if you sign in to it there (see "Gravoth Online") and
+          the Unity engine's anonymous hardware statistics (the device's model
+          and specs), which go to Unity, not to the developer. See "The game
+          engine".
         </li>
       </ul>
 
       <h2>What stays on your phone</h2>
       <p>
-        Your characters, items, progress and settings are saved only in the
-        game's private storage on your device. The developer cannot see or
-        access them. Uninstalling the game or clearing its data deletes them.
+        Your characters, items, progress and settings are saved in the game's
+        private storage on your device; uninstalling the game or clearing its
+        data deletes them there. If you sign in to Gravoth Online in the game
+        with Google, Discord or email, the game also keeps a copy of your save
+        on Gravoth Online's server, unless you turn it off (see "Cloud save"
+        under "Gravoth Online"). Otherwise the developer cannot see or access
+        them.
       </p>
       <p>
         If you have Android's backup turned on, Android may include the game's
@@ -228,13 +237,12 @@
       <h2>Gravoth Online</h2>
       <p>
         Gravoth Online is optional: accounts, online leaderboards whose records
-        show each hero's full build, and a friends list. It runs on the
-        developer's own server (gravoth-api.petarzarkov.com, in the European
-        Union) and is used by the website gravoth.petarzarkov.com. A later
-        version of the game will use it too, and this policy will be updated
-        before that version is released. Nothing in the game needs it. You can
-        look at the leaderboards without an account; what follows applies once
-        you sign in or play as a guest. Its rules are in the
+        show each hero's full build, a friends list and a cloud save. It runs on
+        the developer's own server (gravoth-api.petarzarkov.com, in the European
+        Union) and is used by the website gravoth.petarzarkov.com and by the
+        game, from its GRAVOTH ONLINE page. Nothing in the game needs it. You
+        can look at the leaderboards without an account; what follows applies
+        once you sign in or play as a guest. Its rules are in the
         <a href="/terms/">terms of service</a>.
       </p>
       <ul>
@@ -297,9 +305,27 @@
           figures such as damage per second and life); the score; and when it
           was set. A record can come with the hero's save, so that the rules
           checker on the same server (the game's own rules) can confirm it. The
-          save is read in memory and not kept; only the checker's figures and
-          its build card are. A record that fails the check is kept for review
-          and never shown.
+          save sent with a record is read in memory for that check and not kept;
+          only the checker's figures and its build card are. (The cloud save,
+          below, is a separate copy, kept only while cloud saving is on.) A
+          record that fails the check is kept for review and never shown.
+        </li>
+        <li>
+          <strong>Cloud save:</strong> when you are signed in to Gravoth Online
+          in the game with Google, Discord or email, the game keeps a copy of
+          its whole save on the server (your characters, items, stash, codex and
+          progress, and the time you have played), with a short description such
+          as "Grom, level 24 (3 characters)" and the game's version, so your
+          heroes survive a lost or replaced phone. It is on by default; CLOUD
+          SAVE ON/OFF on the game's GRAVOTH ONLINE page turns it off. There is
+          one copy per account, replaced whole each time the game uploads one
+          (at most once a minute while you play, and when the game is paused),
+          up to 3 MB; when the copy and the save on your phone differ, the game
+          shows both and asks which one to keep. Guests have no cloud save. The
+          website's Account page shows the copy (its description, play time,
+          size, game version and when it was last updated) and deletes it. It is
+          deleted with the account and, like the rest of the database, is in the
+          nightly backups for 30 days.
         </li>
         <li>
           <strong>Friends and blocks:</strong> the friend requests you send and
@@ -350,11 +376,11 @@
           account's address to
           <a href="mailto:gravoth.arpg@gmail.com">gravoth.arpg@gmail.com</a>
           (done within 30 days). It removes at once the account and its sign-ins
-          and sessions, your profile, heroes, builds and records, and your
-          friends, requests and blocks. The nightly copies that still hold them
-          are deleted as they turn 30 days old, and log lines naming the
-          account's id are overwritten as the logs fill. The heroes on your
-          phone are not affected.
+          and sessions, your profile, heroes, builds and records, your cloud
+          save, and your friends, requests and blocks. The nightly copies that
+          still hold them are deleted as they turn 30 days old, and log lines
+          naming the account's id are overwritten as the logs fill. The heroes
+          on your phone are not affected.
         </li>
         <li>
           <strong>Your rights:</strong> you can see and change your display name
