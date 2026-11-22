@@ -12,8 +12,15 @@ import {
 } from '../database/schema.js';
 import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Mailer } from '../mail/mailer.js';
+import { avatarView } from '../players/avatars.js';
 import { Profiles } from '../players/profiles.service.js';
-import { displayNames, requireAccount, type Caller } from './players.js';
+import {
+  NO_CARD,
+  playerCards,
+  requireAccount,
+  type Caller,
+  type PlayerCard,
+} from './players.js';
 import type {
   FriendView,
   RequestOutcome,
@@ -54,6 +61,7 @@ export class Friends {
         guest: user.isAnonymous,
         email: user.email,
         emailVerified: user.emailVerified,
+        image: user.image,
       })
       .from(user)
       .where(eq(user.id, target.userId))
@@ -101,7 +109,10 @@ export class Friends {
     }
     return {
       status: 'pending',
-      request: this.requestView(row, me.id, target.displayName),
+      request: this.requestView(row, me.id, {
+        displayName: target.displayName,
+        avatar: avatarView(target, targetUser.image),
+      }),
     };
   }
 
@@ -123,8 +134,8 @@ export class Friends {
     return this.friendView(
       row,
       me.id,
-      (await displayNames(this.db, [row.requesterId])).get(row.requesterId) ??
-        '',
+      (await playerCards(this.db, [row.requesterId])).get(row.requesterId) ??
+        NO_CARD,
     );
   }
 
@@ -169,12 +180,16 @@ export class Friends {
       orderBy: 'respondedAt',
     });
     return mapPage(rows, async (data) => {
-      const names = await displayNames(
+      const cards = await playerCards(
         this.db,
         data.map((row) => this.other(row, me.id)),
       );
       return data.map((row) =>
-        this.friendView(row, me.id, names.get(this.other(row, me.id)) ?? ''),
+        this.friendView(
+          row,
+          me.id,
+          cards.get(this.other(row, me.id)) ?? NO_CARD,
+        ),
       );
     });
   }
@@ -201,12 +216,16 @@ export class Friends {
       orderBy: 'createdAt',
     });
     return mapPage(rows, async (data) => {
-      const names = await displayNames(
+      const cards = await playerCards(
         this.db,
         data.map((row) => this.other(row, me.id)),
       );
       return data.map((row) =>
-        this.requestView(row, me.id, names.get(this.other(row, me.id)) ?? ''),
+        this.requestView(
+          row,
+          me.id,
+          cards.get(this.other(row, me.id)) ?? NO_CARD,
+        ),
       );
     });
   }
@@ -247,11 +266,12 @@ export class Friends {
   private friendView(
     row: Friendship,
     me: string,
-    displayName: string,
+    card: PlayerCard,
   ): FriendView {
     return {
       userId: this.other(row, me),
-      displayName,
+      displayName: card.displayName,
+      avatar: card.avatar,
       since: (row.respondedAt ?? row.createdAt).toISOString(),
     };
   }
@@ -259,12 +279,13 @@ export class Friends {
   private requestView(
     row: Friendship,
     me: string,
-    displayName: string,
+    card: PlayerCard,
   ): RequestView {
     return {
       id: row.id,
       userId: this.other(row, me),
-      displayName,
+      displayName: card.displayName,
+      avatar: card.avatar,
       direction: row.addresseeId === me ? 'incoming' : 'outgoing',
       createdAt: row.createdAt.toISOString(),
     };

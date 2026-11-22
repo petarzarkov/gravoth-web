@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { AVATAR_PORTRAITS } from '@gravoth/contracts';
 import { and, eq, sql } from 'drizzle-orm';
 import { Db } from './database/db.js';
 import {
@@ -194,6 +195,40 @@ describe('profiles', () => {
         ),
       ),
     ).toBe('profiles_display_name_format');
+  });
+
+  it("keeps a picture one of the game's portraits, shown as a portrait or the photo", async () => {
+    const a = await newUser();
+    const [row] = await db
+      .select({ kind: profile.avatarKind, portrait: profile.avatarPortrait })
+      .from(profile)
+      .where(eq(profile.userId, a.id));
+    // Made without one: the portrait is the column's own random default.
+    expect(row?.kind).toBe('portrait');
+    expect(AVATAR_PORTRAITS as readonly string[]).toContain(
+      row?.portrait ?? '',
+    );
+
+    expect(
+      checkViolation(
+        await failure(
+          db
+            .update(profile)
+            .set({ avatarPortrait: 'nobody' })
+            .where(eq(profile.userId, a.id)),
+        ),
+      ),
+    ).toBe('profiles_avatar_portrait');
+    expect(
+      checkViolation(
+        await failure(
+          db
+            .update(profile)
+            .set({ avatarKind: 'upload' as 'portrait' })
+            .where(eq(profile.userId, a.id)),
+        ),
+      ),
+    ).toBe('profiles_avatar_kind');
   });
 });
 

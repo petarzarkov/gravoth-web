@@ -110,6 +110,62 @@ export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
 /** A sign-in method a client can offer, as `GET /api/account/methods` lists it. */
 export type SignInMethod = 'guest' | 'email' | SocialProvider;
 
+/**
+ * The character portraits a player can pick (the game's NPC portrait atlas, `NpcLooks.PortraitIds`; append only, never
+ * reorder). The website has each at `/img/portraits/<id>.webp`.
+ */
+export const AVATAR_PORTRAITS = [
+  'warden',
+  'quartermaster',
+  'blacksmith',
+  'sithgeek',
+  'marto',
+  'pip',
+  'gambler',
+  'debora',
+  'brand',
+  'wenna',
+  'brute',
+  'tamsin',
+  'orrin',
+  'brannoc',
+  'wren',
+  'odric',
+  'hild',
+  'mott',
+  'signe',
+  'pell',
+  'quill',
+  'keel',
+  'tern',
+  'kindle',
+  'debora_freed',
+  'gravelord',
+  'first_cantor',
+  'lucan',
+  'maren',
+  'ardith',
+  'aveline',
+  'wick',
+  'warden_shade',
+  'twice_sworn',
+  'first_king',
+  'the_chorus',
+  'kings_herald',
+  'rib_speaker',
+  'kneeling_kingsguard',
+  'swallowed_cantor',
+  'ash_herald',
+  'oathspeaker',
+] as const;
+export type AvatarPortrait = (typeof AVATAR_PORTRAITS)[number];
+
+/** Where a linked provider photo may load from (the site's img-src). */
+export const AVATAR_IMAGE_SOURCES = [
+  'https://*.googleusercontent.com',
+  'https://cdn.discordapp.com',
+] as const;
+
 /** better-auth's limits on a password (`emailAndPassword` in the server's auth module). */
 export const PASSWORD_LIMITS = { min: 8, max: 128 } as const;
 
@@ -144,6 +200,7 @@ export const ERROR_CODES = [
   'NAME_FORMAT',
   'NAME_TAKEN',
   'NAME_NOT_ALLOWED',
+  'NO_PROVIDER_PHOTO',
   // Friends and blocks: a guest has neither.
   'GUEST_ACCOUNT',
   'PLAYER_NOT_FOUND',

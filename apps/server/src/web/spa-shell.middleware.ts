@@ -7,6 +7,7 @@ import {
   type Next,
   type RouteContext,
 } from '@dunx/http';
+import { AVATAR_IMAGE_SOURCES } from '@gravoth/contracts';
 
 /**
  * The website's page for every path the website owns (`/`, `/boards/pit_floor`,
@@ -92,13 +93,14 @@ export class SpaShell implements Middleware {
 
 /**
  * The website's policy: scripts, connections and everything else from the site only. Styles may also be inline:
- * Mantine (the website's UI kit) writes its theme as a `<style>` element and sets element styles.
+ * Mantine (the website's UI kit) writes its theme as a `<style>` element and sets element styles. Images may also be
+ * a player's linked Google or Discord photo (`AVATAR_IMAGE_SOURCES`).
  */
 export const SITE_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  `img-src 'self' data: ${AVATAR_IMAGE_SOURCES.join(' ')}`,
   "connect-src 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",

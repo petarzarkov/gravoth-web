@@ -17,11 +17,7 @@ import {
   ToPlayer,
   UpdateProfile,
 } from '@gravoth/contracts';
-import {
-  Profiles,
-  toProfileView,
-  type ProfileView,
-} from '../players/profiles.service.js';
+import { Profiles, type ProfileView } from '../players/profiles.service.js';
 import { Blocks, type BlockView } from './blocks.service.js';
 import {
   Friends,
@@ -51,21 +47,13 @@ export class ProfileController {
   @Get('/')
   async mine(): Promise<ProfileView> {
     const { user } = this.context.require();
-    return toProfileView(
-      await this.profiles.ensure(
-        user.id,
-        user.name,
-        callerOf(this.context).guest,
-      ),
-    );
+    return this.profiles.view(user.id, user.name, callerOf(this.context).guest);
   }
 
-  /** 409 `NAME_TAKEN`, 422 `NAME_NOT_ALLOWED` (the word filter). */
+  /** 409 `NAME_TAKEN`, 422 `NAME_NOT_ALLOWED` (the word filter), 409 `NO_PROVIDER_PHOTO` (`avatar: 'provider'` without one). */
   @Patch('/', updateProfile)
-  async update({ body }: Input<typeof updateProfile>): Promise<ProfileView> {
-    return toProfileView(
-      await this.profiles.update(callerOf(this.context).id, body),
-    );
+  update({ body }: Input<typeof updateProfile>): Promise<ProfileView> {
+    return this.profiles.update(callerOf(this.context).id, body);
   }
 }
 

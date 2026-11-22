@@ -5,6 +5,7 @@ import {
   type BoardSort,
   type HeroClass,
 } from './constants.js';
+import type { AvatarView } from './avatar.js';
 import { BuildSnapshot, type BuildView } from './build.js';
 import { PageQuery, type Page } from './pagination.js';
 
@@ -96,6 +97,8 @@ export interface EntryView {
   readonly player: {
     readonly userId: string | null;
     readonly displayName: string;
+    /** Null for a hidden player, like their name. */
+    readonly avatar: AvatarView | null;
     readonly hidden: boolean;
   };
   readonly hero: {

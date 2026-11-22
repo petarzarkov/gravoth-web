@@ -6,9 +6,11 @@ import {
   hero,
   heroBuild,
   profile,
+  user,
   type Hero,
   type HeroBuild,
 } from '../database/schema.js';
+import { avatarView } from '../players/avatars.js';
 import type * as schema from '../database/schema.js';
 import type { BuildSnapshot, BuildSummary, CardPage } from '@gravoth/contracts';
 import { toHeroView } from './heroes.service.js';
@@ -140,11 +142,12 @@ export class Builds {
       .select({
         build: heroBuild,
         hero,
-        displayName: profile.displayName,
-        publicProfile: profile.publicProfile,
+        profile,
+        image: user.image,
       })
       .from(heroBuild)
       .innerJoin(hero, eq(hero.id, heroBuild.heroId))
+      .innerJoin(user, eq(user.id, hero.userId))
       .leftJoin(profile, eq(profile.userId, hero.userId))
       .where(eq(heroBuild.id, id))
       .limit(1);
@@ -155,8 +158,11 @@ export class Builds {
       card: row.build.card,
       hero: toHeroView(row.hero),
       player:
-        row.publicProfile === true && row.displayName !== null
-          ? { displayName: row.displayName }
+        row.profile?.publicProfile === true
+          ? {
+              displayName: row.profile.displayName,
+              avatar: avatarView(row.profile, row.image),
+            }
           : null,
     };
   }

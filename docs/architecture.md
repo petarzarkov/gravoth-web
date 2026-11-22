@@ -44,12 +44,21 @@ together. The tables (`apps/server/src/database/`):
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | `users`, `accounts`         | better-auth's user, and one row per linked sign-in (`credential`, `google`, `discord`)                                           |
 | `sessions`, `verifications` | sessions (the bearer token) and mail-link codes                                                                                  |
-| `profiles`                  | the display name (unique in any case, format-checked, word-filtered) and the privacy flags                                       |
+| `profiles`                  | the display name (unique in any case, format-checked, word-filtered), the picture (a portrait or the sign-in's photo), the flags |
 | `friendships`, `blocks`     | one row per pair whichever asked (`pending` or `accepted`), never oneself; blocks one way                                        |
 | `heroes`                    | a hero the server knows: name (once per player), class, hardcore, online                                                         |
 | `hero_builds`               | an immutable snapshot of a hero's whole build at a revision (a trigger refuses any update); the sorted numbers lifted to columns |
 | `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                          |
 | `leaderboard_entries`       | a hero's best on a board with the build that set it; the database checks that build is the hero's and the hero the player's      |
+
+A player's picture is one of the game's 42 portraits (`AVATAR_PORTRAITS`, a
+random one at sign-up) or their Google or Discord photo. The photo is linked,
+never copied: `users.image` holds the provider's own address, which every
+sign-in with that provider brings up to date (`auth/provider-photos.ts`, on the
+providers' user-info step, so the redirect and Android's ID token both do it),
+and the site's image policy allows those hosts (`AVATAR_IMAGE_SOURCES`). Only
+an address on those hosts is ever shown (`players/avatars.ts`); a `provider`
+picture whose photo is gone shows its portrait.
 
 ## The website, and its copy on the API
 

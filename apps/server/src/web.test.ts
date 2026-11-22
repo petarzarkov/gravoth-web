@@ -60,6 +60,10 @@ describe('the website', () => {
       expect(response.headers.get('content-security-policy')).toContain(
         "script-src 'self'",
       );
+      // Images from the site, and the players' linked Google and Discord photos only.
+      expect(response.headers.get('content-security-policy')).toContain(
+        "img-src 'self' data: https://*.googleusercontent.com https://cdn.discordapp.com;",
+      );
       expect(await response.text()).toContain('<div id="root">');
     }
   });

@@ -10,7 +10,13 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { AVATAR_PORTRAITS } from '@gravoth/contracts';
 import { user } from './auth.schema.js';
+
+/** The portraits as a SQL list (`'warden', 'quartermaster', ...`): the ids are lowercase letters and `_` only. */
+const portraitList = sql.raw(
+  AVATAR_PORTRAITS.map((id) => `'${id.replace(/[^a-z_]/g, '')}'`).join(', '),
+);
 
 /**
  * The player as other players see them: one profile per user, made when the user is (auth.module.ts), gone with it.
@@ -40,6 +46,22 @@ export const profile = pgTable(
     emailFriendRequests: boolean('email_friend_requests')
       .notNull()
       .default(true),
+    /**
+     * The picture: `provider` shows the sign-in's photo (`users.image`, linked from Google or Discord and refreshed at
+     * every sign-in with them), `portrait` one of the game's portraits. A `provider` profile whose user has no photo
+     * shows its portrait, so the photo comes back by itself once the user has one again.
+     */
+    avatarKind: text('avatar_kind', { enum: ['provider', 'portrait'] })
+      .notNull()
+      .default('portrait'),
+    /** The portrait shown, and for `provider` the one shown when the photo is missing. Random at sign-up. */
+    avatarPortrait: text('avatar_portrait')
+      .notNull()
+      .default(
+        sql`(ARRAY[${portraitList}])[floor(random() * ${sql.raw(String(AVATAR_PORTRAITS.length))})::int + 1]`,
+      ),
+    /** False while the picture is the one made at sign-up; a guest's chosen one moves to the account it becomes. */
+    avatarChosen: boolean('avatar_chosen').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -52,6 +74,14 @@ export const profile = pgTable(
     check(
       'profiles_display_name_format',
       sql`${t.displayName} ~ '^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$'`,
+    ),
+    check(
+      'profiles_avatar_kind',
+      sql`${t.avatarKind} IN ('provider', 'portrait')`,
+    ),
+    check(
+      'profiles_avatar_portrait',
+      sql`${t.avatarPortrait} IN (${portraitList})`,
     ),
   ],
 );

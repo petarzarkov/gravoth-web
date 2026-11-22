@@ -7,7 +7,13 @@ import {
   type CardPage,
   type SaveReport,
 } from './gravoth/validator.client.js';
-import type { BuildSnapshot, SubmitResult } from '@gravoth/contracts';
+import {
+  AVATAR_PORTRAITS,
+  type AvatarView,
+  type BuildSnapshot,
+  type ProfileView,
+  type SubmitResult,
+} from '@gravoth/contracts';
 import { startTestApp, type TestApp } from './testing/app.js';
 import { call, guest, signUp, type Player } from './testing/http.js';
 
@@ -155,7 +161,12 @@ interface Entry {
   id: string;
   score: number;
   verdict: string;
-  player: { userId: string | null; displayName: string; hidden: boolean };
+  player: {
+    userId: string | null;
+    displayName: string;
+    avatar: AvatarView | null;
+    hidden: boolean;
+  };
   hero: { id: string; name: string; class: string; hardcore: boolean };
   build: {
     id: string;
@@ -322,14 +333,15 @@ describe('posting a score with its build', () => {
       dps: number;
       card: { title: string }[];
       hero: { name: string };
-      player: { displayName: string };
+      player: { displayName: string; avatar: AvatarView };
     }>(`/api/builds/${posted.body.entry.buildId}`);
     expect(card.status).toBe(200);
     expect(card.body).toMatchObject({
       dps: 2_222,
       hero: { name: 'Kriso' },
-      player: { displayName: 'Ana' },
+      player: { displayName: 'Ana', avatar: { kind: 'portrait', url: null } },
     });
+    expect(AVATAR_PORTRAITS).toContain(card.body.player.avatar.portrait);
     expect(card.body.card[0]?.title).toBe('Build');
   });
 
@@ -560,6 +572,14 @@ describe('reading a board', () => {
       [2, 'Mott', 55, 'Bodhi'],
       [3, 'Vex', 40, 'Cyra'],
     ]);
+    // Each player's picture, as their own profile shows it.
+    for (const [row, who] of [
+      [rows[0], ana],
+      [rows[1], bo],
+    ] as const) {
+      const mine = await get<ProfileView>('/api/profile', who);
+      expect(row?.player.avatar).toEqual(mine.body.avatar);
+    }
     expect(rows[0]?.build).toMatchObject({ revision: 2, dps: 3_000 });
     expect(rows[0]?.build.skills[0]).toMatchObject({
       id: 'cleave',
@@ -713,12 +733,19 @@ describe('reading a board', () => {
     expect(seen?.player).toEqual({
       userId: null,
       displayName: 'A hidden player',
+      avatar: null,
       hidden: true,
     });
     const own = (
       await get<BoardPage>('/api/leaderboards/pit_floor', cy)
     ).body.entries.data.find((r) => r.hero.name === 'Vex');
     expect(own?.player).toMatchObject({ displayName: 'Cyra', hidden: false });
+    expect(own?.player.avatar?.kind).toBe('portrait');
+    // A private player's build card names nobody, picture included.
+    const card = await get<{ player: unknown }>(
+      `/api/builds/${seen?.build.id}`,
+    );
+    expect(card.body.player).toBeNull();
     await call(base, 'PATCH', '/api/profile', {
       token: cy.token,
       body: { publicProfile: true },
@@ -727,11 +754,11 @@ describe('reading a board', () => {
 });
 
 describe('accounts and the boards', () => {
-  it("moves a guest's heroes and places, and its chosen name, to the account it becomes", async () => {
+  it("moves a guest's heroes and places, and its chosen name and picture, to the account it becomes", async () => {
     const visitor = await guest(base);
     await call(base, 'PATCH', '/api/profile', {
       token: visitor.token,
-      body: { displayName: 'Wanderer' },
+      body: { displayName: 'Wanderer', avatar: 'the_chorus' },
     });
     const hero = await post<{ hero: { id: string } }>('/api/heroes', visitor, {
       name: 'Ash',
@@ -756,14 +783,18 @@ describe('accounts and the boards', () => {
         await get<{ heroes: { id: string }[] }>('/api/heroes', account)
       ).body.heroes.map((h) => h.id),
     ).toEqual([hero.body.hero.id]);
-    expect(
-      (await get<{ displayName: string }>('/api/profile', account)).body
-        .displayName,
-    ).toBe('Wanderer');
+    const moved = (await get<ProfileView>('/api/profile', account)).body;
+    expect(moved.displayName).toBe('Wanderer');
+    expect(moved.avatar).toEqual({
+      kind: 'portrait',
+      portrait: 'the_chorus',
+      url: null,
+    });
     const row = (
       await get<BoardPage>('/api/leaderboards/pit_floor')
     ).body.entries.data.find((r) => r.hero.name === 'Ash');
     expect(row?.player.displayName).toBe('Wanderer');
+    expect(row?.player.avatar?.portrait).toBe('the_chorus');
   });
 
   it('takes a deleted player off every board, with their heroes and builds', async () => {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ITEM_SLOTS, RARITIES } from './constants.js';
+import type { AvatarView } from './avatar.js';
 import type { HeroView } from './heroes.js';
 
 /**
@@ -40,7 +41,7 @@ export const GearItem = z.object({
   name: label,
   base: label,
   rarity: z.enum(RARITIES),
-  itemLevel: z.number().int().min(1).max(100),
+  itemLevel: z.number().int().min(1).max(130),
   quality: count(40).optional(),
   sockets: count(6).optional(),
   corrupted: z.boolean().optional(),
@@ -50,13 +51,13 @@ export const GearItem = z.object({
 export const SupportGem = z.object({
   id: key,
   name: label.optional(),
-  level: z.number().int().min(1).max(40),
+  level: z.number().int().min(1).max(60),
 });
 
 export const SkillGem = z.object({
   id: key,
   name: label.optional(),
-  level: z.number().int().min(1).max(40),
+  level: z.number().int().min(1).max(60),
   quality: count(40).optional(),
   /** The skill bar's slot, when it is on the bar. */
   slot: count(15).optional(),
@@ -66,7 +67,7 @@ export const SkillGem = z.object({
 export const Aura = z.object({
   id: key,
   name: label.optional(),
-  level: z.number().int().min(1).max(40),
+  level: z.number().int().min(1).max(60),
   reservedPercent: z.number().min(0).max(100).optional(),
 });
 
@@ -163,5 +164,8 @@ export interface BuildView {
 export interface BuildCard extends BuildView {
   readonly card: CardPage[] | null;
   readonly hero: HeroView;
-  readonly player: { readonly displayName: string } | null;
+  readonly player: {
+    readonly displayName: string;
+    readonly avatar: AvatarView;
+  } | null;
 }

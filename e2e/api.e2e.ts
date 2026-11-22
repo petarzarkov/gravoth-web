@@ -249,6 +249,34 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     renamed.body,
   );
   players[who] = { token: r.token!, id: r.id, email, name };
+  if (who === 'Bo') {
+    ok(
+      'an email account starts on a portrait, with no photo to offer',
+      renamed.body.avatar?.kind === 'portrait' &&
+        typeof renamed.body.avatar?.portrait === 'string' &&
+        renamed.body.avatar?.url === null &&
+        renamed.body.hasProviderPhoto === false,
+      renamed.body.avatar,
+    );
+    const photo = await call('PATCH', '/api/profile', {
+      token: r.token!,
+      body: { avatar: 'provider' },
+    });
+    ok(
+      'and is refused the photo it has not got',
+      photo.status === 409 && photo.body.error === 'NO_PROVIDER_PHOTO',
+      photo.body,
+    );
+    const picked = await call('PATCH', '/api/profile', {
+      token: r.token!,
+      body: { avatar: 'gravelord' },
+    });
+    ok(
+      'picks another portrait',
+      picked.status === 200 && picked.body.avatar?.portrait === 'gravelord',
+      picked.body,
+    );
+  }
   if (who === 'Ana') {
     const m = await mail(/Confirm your Gravoth account/, since);
     ok(
@@ -596,18 +624,23 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     (e: any) => e.hero.name === `Bodhi${run.slice(-3)}`,
   );
   ok(
-    'a private profile shows as hidden to the public',
-    boRow?.player.hidden === true && boRow.player.displayName !== bo!.name,
+    'a private profile shows as hidden to the public, without its picture',
+    boRow?.player.hidden === true &&
+      boRow.player.displayName !== bo!.name &&
+      boRow.player.avatar === null,
     boRow?.player,
   );
   const own = await call('GET', '/api/leaderboards/pit_floor?take=50', {
     token: bo!.token,
   });
+  const ownRow = own.body.entries.data.find(
+    (e: any) => e.hero.name === `Bodhi${run.slice(-3)}`,
+  );
   ok(
-    '…and as their own name to themselves',
-    own.body.entries.data.find(
-      (e: any) => e.hero.name === `Bodhi${run.slice(-3)}`,
-    )?.player.displayName === bo!.name,
+    '…and as their own name and picture to themselves',
+    ownRow?.player.displayName === bo!.name &&
+      ownRow?.player.avatar?.portrait === 'gravelord',
+    ownRow?.player,
   );
   const bad = await call(
     'GET',

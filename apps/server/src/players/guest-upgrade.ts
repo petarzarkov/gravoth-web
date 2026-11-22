@@ -7,7 +7,8 @@ import { hero, profile } from '../database/schema.js';
  * A guest who signs up or signs in (email, Google, Discord) becomes that account, and better-auth then deletes the
  * guest. Before it does, this moves what the guest made: its heroes, with their builds and board entries (the entries
  * follow their hero through `ON UPDATE CASCADE` on `(hero_id, user_id)`), renaming a hero whose name the account
- * already uses; and its chosen display name, when the account's own is still the one made at sign-up. Guests have no
+ * already uses; its chosen display name, when the account's own is still the one made at sign-up; and its chosen
+ * picture (a portrait: a guest has no photo), when the account's is still the one made at sign-up. Guests have no
  * friends (friends need an account), so there is nothing else to move. Step 3 moves the cloud saves here too.
  */
 export class GuestUpgrade {
@@ -52,18 +53,30 @@ export class GuestUpgrade {
         .from(profile)
         .where(eq(profile.userId, userId))
         .limit(1);
-      if (
-        guestProfile?.nameChosen &&
+      const name =
+        guestProfile?.nameChosen === true &&
         ownProfile !== undefined &&
-        !ownProfile.nameChosen
-      ) {
+        !ownProfile.nameChosen;
+      const picture =
+        guestProfile?.avatarChosen === true &&
+        ownProfile !== undefined &&
+        !ownProfile.avatarChosen;
+      if (guestProfile !== undefined && (name || picture)) {
         // The guest's row goes first, so the name is free for the unique index.
         await tx.delete(profile).where(eq(profile.userId, guestId));
         await tx
           .update(profile)
           .set({
-            displayName: guestProfile.displayName,
-            nameChosen: true,
+            ...(name
+              ? { displayName: guestProfile.displayName, nameChosen: true }
+              : {}),
+            ...(picture
+              ? {
+                  avatarKind: guestProfile.avatarKind,
+                  avatarPortrait: guestProfile.avatarPortrait,
+                  avatarChosen: true,
+                }
+              : {}),
             updatedAt: new Date(),
           })
           .where(eq(profile.userId, userId));

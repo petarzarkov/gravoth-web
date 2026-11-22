@@ -22,6 +22,7 @@ import { AccountServicesModule } from './account-services.module.js';
 import { GameSignIn } from './game-sign-in.js';
 import { GameSignInController } from './game-sign-in.controller.js';
 import { Accounts } from './accounts.service.js';
+import { ProviderPhotos } from './provider-photos.js';
 import { SignInProviders } from './sign-in-providers.js';
 
 /** Where the mail links land: the API's own small pages (account-pages.controller.ts). */
@@ -60,6 +61,7 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
           connection: DbConnection,
           mail: Mailer,
           providers: SignInProviders,
+          photos: ProviderPhotos,
           profiles: Profiles,
           upgrade: GuestUpgrade,
           logger: Logger,
@@ -142,8 +144,9 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                 ),
             },
             // Google (an ID token from the device, or a browser redirect with PKCE) and Discord (the redirect). Each
-            // only while its client is configured.
-            socialProviders: providers.social(),
+            // only while its client is configured. Every sign-in with one refreshes the player's photo (`users.image`,
+            // linked from the provider, never copied): provider-photos.ts.
+            socialProviders: photos.watch(providers.social()),
             account: {
               accountLinking: {
                 enabled: true,
@@ -167,6 +170,19 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                       user.name,
                       user.isAnonymous === true,
                     );
+                  },
+                },
+              },
+              account: {
+                create: {
+                  // A Google or Discord account linked to an existing user (the same confirmed address) brings its
+                  // photo, as a sign-in with it does.
+                  after: async (row: {
+                    userId: string;
+                    providerId: string;
+                    accountId: string;
+                  }) => {
+                    await photos.linked(row);
                   },
                 },
               },
@@ -199,6 +215,7 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
           DbConnection,
           Mailer,
           SignInProviders,
+          ProviderPhotos,
           Profiles,
           GuestUpgrade,
           Logger,

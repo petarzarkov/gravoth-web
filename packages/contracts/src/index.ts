@@ -1,5 +1,6 @@
 export * from './constants.js';
 export * from './account.js';
+export * from './avatar.js';
 export * from './boards.js';
 export * from './build.js';
 export * from './heroes.js';

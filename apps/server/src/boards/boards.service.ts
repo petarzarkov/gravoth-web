@@ -24,12 +24,14 @@ import {
   leaderboard,
   leaderboardEntry,
   profile,
+  user,
   type HeroClass,
   type Leaderboard,
 } from '../database/schema.js';
 import { Builds, toBuildView } from '../heroes/builds.service.js';
 import { Heroes } from '../heroes/heroes.service.js';
 import type { PageQuery } from '../http/page-query.js';
+import { avatarView } from '../players/avatars.js';
 import { BuildCheck } from './build-check.js';
 import { HARDCORE_PREFIX } from '@gravoth/contracts';
 import type {
@@ -383,10 +385,14 @@ export class Boards {
         build: buildColumns,
         displayName: profile.displayName,
         publicProfile: profile.publicProfile,
+        avatarKind: profile.avatarKind,
+        avatarPortrait: profile.avatarPortrait,
+        image: user.image,
       })
       .from(e)
       .innerJoin(hero, eq(hero.id, e.heroId))
       .innerJoin(heroBuild, eq(heroBuild.id, e.buildId))
+      .innerJoin(user, eq(user.id, e.userId))
       .leftJoin(profile, eq(profile.userId, e.userId))
       .where(and(this.scoped(scope), query.where))
       .orderBy(
@@ -452,9 +458,16 @@ export class Boards {
         ? {
             userId: row.entry.userId,
             displayName: row.displayName ?? HIDDEN,
+            avatar: avatarView(
+              {
+                avatarKind: row.avatarKind ?? 'portrait',
+                avatarPortrait: row.avatarPortrait ?? 'warden',
+              },
+              row.image,
+            ),
             hidden: false,
           }
-        : { userId: null, displayName: HIDDEN, hidden: true },
+        : { userId: null, displayName: HIDDEN, avatar: null, hidden: true },
       hero: {
         id: row.hero.id,
         name: row.hero.name,

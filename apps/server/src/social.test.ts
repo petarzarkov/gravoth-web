@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { provide } from '@dunx/core';
 import { EmailTransport, MemoryTransport } from '@dunx/infra/email';
+import {
+  AVATAR_PORTRAITS,
+  type AvatarView,
+  type ProfileView,
+} from '@gravoth/contracts';
+import { providerPhoto } from './players/avatars.js';
 import { displayNameProblem } from './players/display-names.js';
 import { startTestApp, type TestApp } from './testing/app.js';
 import { call, guest, signUp, type Player } from './testing/http.js';
@@ -47,6 +53,7 @@ interface RequestView {
   id: string;
   userId: string;
   displayName: string;
+  avatar: AvatarView;
   direction: 'incoming' | 'outgoing';
 }
 
@@ -99,6 +106,70 @@ describe('profiles', () => {
     });
   });
 
+  it('starts an email or guest account on a random portrait, with no photo to offer', async () => {
+    const seen = new Set<string>();
+    for (const who of [ana, bo, cy, await guest(base)]) {
+      const profile = (await get<ProfileView>('/api/profile', who)).body;
+      expect(profile.avatar.kind).toBe('portrait');
+      expect(profile.avatar.url).toBeNull();
+      expect(AVATAR_PORTRAITS).toContain(profile.avatar.portrait);
+      expect(profile.hasProviderPhoto).toBe(false);
+      seen.add(profile.avatar.portrait);
+    }
+    // Random, not one for everyone: four the same would be a 1 in 74,088 chance.
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('changes the picture to a portrait, and refuses the photo without one and an unknown portrait', async () => {
+    const pick = (avatar: string) =>
+      call<ProfileView & { error?: string }>(base, 'PATCH', '/api/profile', {
+        token: cy.token,
+        body: { avatar },
+      });
+
+    const picked = await pick('gravelord');
+    expect(picked.status).toBe(200);
+    expect(picked.body.avatar).toEqual({
+      kind: 'portrait',
+      portrait: 'gravelord',
+      url: null,
+    });
+    expect(
+      (await get<ProfileView>('/api/profile', cy)).body.avatar.portrait,
+    ).toBe('gravelord');
+
+    const photo = await pick('provider');
+    expect(photo.status).toBe(409);
+    expect(photo.body.error).toBe('NO_PROVIDER_PHOTO');
+    expect((await pick('nobody')).status).toBe(400);
+    expect((await pick('Gravelord')).status).toBe(400);
+    expect(
+      (await get<ProfileView>('/api/profile', cy)).body.avatar.portrait,
+    ).toBe('gravelord');
+  });
+
+  it("shows only a photo from Google's or Discord's own hosts, and not Discord's default", () => {
+    expect(
+      providerPhoto('https://lh3.googleusercontent.com/a/ACg8ocK=s96-c'),
+    ).toBe('https://lh3.googleusercontent.com/a/ACg8ocK=s96-c');
+    expect(
+      providerPhoto('https://cdn.discordapp.com/avatars/1001/abc.png'),
+    ).toBe('https://cdn.discordapp.com/avatars/1001/abc.png');
+    for (const no of [
+      null,
+      '',
+      'https://cdn.discordapp.com/embed/avatars/3.png',
+      'http://lh3.googleusercontent.com/a/x',
+      'https://googleusercontent.com.evil.test/a/x',
+      'https://evilgoogleusercontent.com/a/x',
+      'https://media.discordapp.net/avatars/1/x.png',
+      'https://cdn.discordapp.com:8443/avatars/1/x.png',
+      'javascript:alert(1)',
+      'data:image/png;base64,AAAA',
+    ])
+      expect(providerPhoto(no)).toBeNull();
+  });
+
   it('filters look-alikes and whole words, and lets ordinary names through', () => {
     expect(displayNameProblem('Fvck_you')).toBe('not-allowed');
     expect(displayNameProblem('Admin_7')).toBe('not-allowed');
@@ -126,6 +197,10 @@ describe('friend requests', () => {
       displayName: 'Bodhi',
       direction: 'outgoing',
     });
+    const boPicture = (await get<ProfileView>('/api/profile', bo)).body.avatar;
+    const anaPicture = (await get<ProfileView>('/api/profile', ana)).body
+      .avatar;
+    expect(request.avatar).toEqual(boPicture);
 
     const incoming = await get<Page<RequestView>>(
       '/api/friends/requests/incoming',
@@ -136,9 +211,14 @@ describe('friend requests', () => {
         id: request.id,
         userId: ana.id,
         displayName: 'Ana',
+        avatar: anaPicture,
         direction: 'incoming',
       }),
     ]);
+    expect(
+      (await get<Page<RequestView>>('/api/friends/requests/outgoing', ana)).body
+        .data[0]?.avatar,
+    ).toEqual(boPicture);
     expect(
       (
         await get<Page<RequestView>>('/api/friends/requests/outgoing', ana)
@@ -168,18 +248,27 @@ describe('friend requests', () => {
       (await post(`/api/friends/requests/${request.id}/accept`, ana)).status,
     ).toBe(404);
 
-    const accepted = await post<{ userId: string; displayName: string }>(
-      `/api/friends/requests/${request.id}/accept`,
-      bo,
-    );
+    const anaPicture = (await get<ProfileView>('/api/profile', ana)).body
+      .avatar;
+    const boPicture = (await get<ProfileView>('/api/profile', bo)).body.avatar;
+    const accepted = await post<{
+      userId: string;
+      displayName: string;
+      avatar: AvatarView;
+    }>(`/api/friends/requests/${request.id}/accept`, bo);
     expect(accepted.status).toBe(200);
-    expect(accepted.body).toMatchObject({ userId: ana.id, displayName: 'Ana' });
+    expect(accepted.body).toMatchObject({
+      userId: ana.id,
+      displayName: 'Ana',
+      avatar: anaPicture,
+    });
 
-    expect(
-      (await get<Page<{ userId: string }>>('/api/friends', ana)).body.data.map(
-        (f) => f.userId,
-      ),
-    ).toEqual([bo.id]);
+    const anaFriends = await get<Page<{ userId: string; avatar: AvatarView }>>(
+      '/api/friends',
+      ana,
+    );
+    expect(anaFriends.body.data.map((f) => f.userId)).toEqual([bo.id]);
+    expect(anaFriends.body.data[0]?.avatar).toEqual(boPicture);
     expect(
       (await get<Page<{ userId: string }>>('/api/friends', bo)).body.data.map(
         (f) => f.userId,

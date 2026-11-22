@@ -15,6 +15,20 @@
       "when": 1795330919960,
       "tag": "0001_hero_builds_immutable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795345481801,
+      "tag": "0002_profile_avatars",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795345498380,
+      "tag": "0003_profile_avatars_backfill",
+      "breakpoints": true
     }
   ]
 }

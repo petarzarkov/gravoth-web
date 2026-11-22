@@ -1,12 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { provide } from '@dunx/core';
 import { EmailTransport, MemoryTransport } from '@dunx/infra/email';
-import { AppConfigService } from './config.js';
-import {
-  SignInProviders,
-  type SocialProviders,
-} from './auth/sign-in-providers.js';
+import type { ProfileView } from '@gravoth/contracts';
 import { startTestApp, type TestApp } from './testing/app.js';
+import {
+  answerDiscordTokens,
+  discordSignIn as discordSignInAt,
+  standInProviders,
+  type DiscordStandIn,
+  type GoogleStandIn,
+} from './testing/stand-ins.js';
 
 /**
  * Step 2, accounts, end to end over HTTP the way the game calls them: a bearer token
@@ -16,10 +19,7 @@ import { startTestApp, type TestApp } from './testing/app.js';
  */
 
 /** ID tokens the stand-in Google accepts, and the profile each one carries. */
-const GOOGLE_TOKENS = new Map<
-  string,
-  { id: string; email: string; name: string; emailVerified: boolean }
->([
+const GOOGLE_TOKENS = new Map<string, GoogleStandIn>([
   [
     'google-ana',
     {
@@ -71,10 +71,7 @@ const GOOGLE_TOKENS = new Map<
  * Discord's side of the redirect: the access token each authorization code is exchanged for, and the profile behind
  * it. Discord's token endpoint is answered locally (below); everything on our side of it is the real flow.
  */
-const DISCORD_CODES = new Map<
-  string,
-  { id: string; email: string; global_name: string; verified: boolean }
->([
+const DISCORD_CODES = new Map<string, DiscordStandIn>([
   [
     'code-rin',
     {
@@ -91,6 +88,7 @@ const DISCORD_CODES = new Map<
       email: 'ana@example.test',
       global_name: 'Ana D',
       verified: true,
+      image: 'https://cdn.discordapp.com/avatars/1002/ana.png',
     },
   ],
   [
@@ -104,139 +102,33 @@ const DISCORD_CODES = new Map<
   ],
 ]);
 
-class StandInProviders extends SignInProviders {
-  override social(): SocialProviders {
-    return {
-      google: {
-        clientId: 'test-web-client',
-        clientSecret: 'test-web-secret',
-        verifyIdToken: async (token: string) => GOOGLE_TOKENS.has(token),
-        getUserInfo: async (tokens: { idToken?: string | undefined }) => {
-          const profile = GOOGLE_TOKENS.get(tokens.idToken ?? '');
-          return profile === undefined
-            ? null
-            : { user: profile, data: profile };
-        },
-      },
-      discord: {
-        clientId: 'test-discord-client',
-        clientSecret: 'test-discord-secret',
-        getUserInfo: async (tokens: { accessToken?: string | undefined }) => {
-          const profile = DISCORD_CODES.get(
-            tokens.accessToken?.replace(/^token-/, '') ?? '',
-          );
-          if (profile === undefined) return null;
-          return {
-            user: {
-              id: profile.id,
-              name: profile.global_name,
-              email: profile.email,
-              emailVerified: profile.verified,
-            },
-            data: profile,
-          };
-        },
-      },
-    };
-  }
-}
-
 /** The public origin the server builds its redirect URIs from in this suite. */
 const PUBLIC_URL = 'https://gravoth-api.example.test';
 
 const mail = new MemoryTransport();
 let started: TestApp;
 let base = '';
-const realFetch = globalThis.fetch;
+let restoreFetch = () => {};
 
 beforeAll(async () => {
-  // Discord's token endpoint, answered here: code `code-x` becomes access token `token-code-x`.
-  globalThis.fetch = (async (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    if (url.startsWith('https://discord.com/api/oauth2/token')) {
-      const code =
-        new URLSearchParams(
-          init?.body instanceof URLSearchParams ||
-            typeof init?.body === 'string'
-            ? init.body
-            : '',
-        ).get('code') ?? '';
-      return Response.json({
-        access_token: `token-${code}`,
-        token_type: 'Bearer',
-        expires_in: 604_800,
-        refresh_token: 'refresh',
-        scope: 'identify email',
-      });
-    }
-    return realFetch(input, init);
-  }) as typeof fetch;
+  restoreFetch = answerDiscordTokens();
   started = await startTestApp({
     config: { PUBLIC_URL },
     overrides: [
       provide(EmailTransport, { useValue: mail }),
-      // A class override is built lazily by the container, so it is handed its config.
-      provide(SignInProviders, {
-        useFactory: (config: AppConfigService) => new StandInProviders(config),
-        inject: [AppConfigService],
-      }),
+      standInProviders(GOOGLE_TOKENS, DISCORD_CODES),
     ],
   });
   base = started.base;
 });
 
 afterAll(async () => {
-  globalThis.fetch = realFetch;
+  restoreFetch();
   await started.close();
 });
 
-/**
- * The browser half of a Discord sign-in: ask for the authorization URL, "come back" from Discord with a code to the
- * callback (with the state cookie the first step set), and read the session token off the redirect.
- */
-const discordSignIn = async (
-  code: string,
-  token?: string,
-): Promise<{ location: string; token: string | null; url: URL }> => {
-  const start = await fetch(`${base}/api/auth/sign-in/social`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
-    },
-    body: JSON.stringify({
-      provider: 'discord',
-      callbackURL: '/api/account/email-verified',
-    }),
-  });
-  expect(start.status).toBe(200);
-  const { url } = (await start.json()) as { url: string };
-  const authorize = new URL(url);
-  const cookies = start.headers
-    .getSetCookie()
-    .map((cookie) => cookie.split(';')[0])
-    .join('; ');
-  const back = await fetch(
-    `${base}/api/auth/callback/discord?code=${code}&state=${authorize.searchParams.get('state')}`,
-    {
-      headers: { cookie: cookies },
-      redirect: 'manual',
-    },
-  );
-  return {
-    location: back.headers.get('location') ?? '',
-    token: back.headers.get('set-auth-token'),
-    url: authorize,
-  };
-};
+const discordSignIn = (code: string, token?: string) =>
+  discordSignInAt(base, code, token);
 
 interface Reply<T = Record<string, unknown>> {
   status: number;
@@ -281,6 +173,28 @@ const account = async (
     headers: { authorization: `Bearer ${token}` },
   });
   return { status: response.status, body: (await response.json()) as Account };
+};
+
+const profileOf = async (token: string): Promise<ProfileView> =>
+  (await (
+    await fetch(`${base}/api/profile`, {
+      headers: { authorization: `Bearer ${token}` },
+    })
+  ).json()) as ProfileView;
+
+const pickAvatar = async (token: string, avatar: string) => {
+  const response = await fetch(`${base}/api/profile`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ avatar }),
+  });
+  return {
+    status: response.status,
+    body: (await response.json()) as ProfileView,
+  };
 };
 
 const deleteAccount = async (
@@ -717,10 +631,23 @@ describe('Discord', () => {
     });
     const mine = (await account(google.token ?? '')).body;
 
+    expect((await profileOf(google.token ?? '')).hasProviderPhoto).toBe(false);
+
     const discord = await discordSignIn('code-ana');
     const joined = (await account(discord.token ?? '')).body;
     expect(joined.id).toBe(mine.id);
     expect(joined.signIn).toEqual(['discord', 'google']);
+    // The Discord account brought its photo: offered, not forced on a picture made without one.
+    const profile = await profileOf(discord.token ?? '');
+    expect(profile.hasProviderPhoto).toBe(true);
+    expect(profile.avatar.kind).toBe('portrait');
+    expect(
+      (await pickAvatar(discord.token ?? '', 'provider')).body.avatar,
+    ).toEqual({
+      kind: 'provider',
+      portrait: profile.avatar.portrait,
+      url: 'https://cdn.discordapp.com/avatars/1002/ana.png',
+    });
   });
 
   it("never joins an address Discord has not confirmed to someone else's account", async () => {

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  AVATAR_IMAGE_SOURCES,
+  AVATAR_PORTRAITS,
   AroundMe,
   BOARDS,
   BuildSnapshot,
@@ -71,6 +73,30 @@ describe('BuildSnapshot', () => {
     ).toBe(false);
   });
 
+  test("takes the game's own ranges: gems and auras to 60, items to level 130", () => {
+    const skill = build.skills[0];
+    const gear = build.gear[0];
+    const ok = BuildSnapshot.safeParse({
+      ...build,
+      skills: [
+        { ...skill, level: 60, supports: [{ id: 'melee_phys', level: 60 }] },
+      ],
+      gear: [{ ...gear, itemLevel: 130 }],
+      auras: [{ id: 'anger', level: 60 }],
+    });
+    expect(ok.success).toBe(true);
+    expect(
+      BuildSnapshot.safeParse({ ...build, skills: [{ ...skill, level: 61 }] })
+        .success,
+    ).toBe(false);
+    expect(
+      BuildSnapshot.safeParse({
+        ...build,
+        gear: [{ ...gear, itemLevel: 131 }],
+      }).success,
+    ).toBe(false);
+  });
+
   test('bounds the free-form documents', () => {
     const huge = { blob: 'x'.repeat(40_000) };
     expect(BuildSnapshot.safeParse({ ...build, talents: huge }).success).toBe(
@@ -120,6 +146,27 @@ describe('players', () => {
       expect(DISPLAY_NAME_PATTERN.test(bad)).toBe(false);
     }
     expect(UpdateProfile.safeParse({ displayName: '-x-' }).success).toBe(false);
+  });
+
+  test('a picture is the sign-in photo or a portrait by id', () => {
+    expect(UpdateProfile.parse({ avatar: 'provider' }).avatar).toBe('provider');
+    expect(UpdateProfile.parse({ avatar: 'gravelord' }).avatar).toBe(
+      'gravelord',
+    );
+    expect(UpdateProfile.safeParse({ avatar: 'Gravelord' }).success).toBe(
+      false,
+    );
+    expect(UpdateProfile.safeParse({ avatar: 'nobody' }).success).toBe(false);
+  });
+
+  test('the portraits are 42 distinct ids, as the game numbers them', () => {
+    expect(AVATAR_PORTRAITS).toHaveLength(42);
+    expect(new Set(AVATAR_PORTRAITS).size).toBe(42);
+    expect(AVATAR_PORTRAITS[0]).toBe('warden');
+    expect(AVATAR_PORTRAITS[41]).toBe('oathspeaker');
+    for (const id of AVATAR_PORTRAITS) expect(id).toMatch(/^[a-z][a-z_]*$/);
+    for (const source of AVATAR_IMAGE_SOURCES)
+      expect(source).toMatch(/^https:\/\/[a-z0-9.*-]+$/);
   });
 
   test('a hero class is read in any case', () => {

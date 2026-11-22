@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AvatarChoice, type AvatarView } from './avatar.js';
 import { DISPLAY_NAME_PATTERN, DISPLAY_NAME_RULE } from './constants.js';
 
 export const DisplayName = z
@@ -13,11 +14,13 @@ export const UpdateProfile = z
     allowFriendRequests: z.boolean().optional(),
     showOnline: z.boolean().optional(),
     emailFriendRequests: z.boolean().optional(),
+    /** `provider`: the sign-in's own photo (409 `NO_PROVIDER_PHOTO` without one); else a portrait's id. */
+    avatar: AvatarChoice.optional(),
   })
   .meta({
     id: 'UpdateProfile',
     description:
-      "The caller's display name and privacy flags; what is left out stays as it is",
+      "The caller's display name, picture and privacy flags; what is left out stays as it is",
   });
 
 /** A player, by display name (any case): a friend request or a block. */
@@ -42,11 +45,16 @@ export interface ProfileView {
   readonly allowFriendRequests: boolean;
   readonly showOnline: boolean;
   readonly emailFriendRequests: boolean;
+  /** The picture others see. */
+  readonly avatar: AvatarView;
+  /** The sign-in has a photo (Google or Discord), so "use my photo" can be offered. */
+  readonly hasProviderPhoto: boolean;
 }
 
 export interface FriendView {
   readonly userId: string;
   readonly displayName: string;
+  readonly avatar: AvatarView;
   /** When the request was accepted. */
   readonly since: string;
 }
@@ -58,6 +66,7 @@ export interface RequestView {
   /** The other player. */
   readonly userId: string;
   readonly displayName: string;
+  readonly avatar: AvatarView;
   readonly direction: RequestDirection;
   readonly createdAt: string;
 }
