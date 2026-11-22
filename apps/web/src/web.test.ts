@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { AVATAR_PORTRAITS } from '@gravoth/contracts/constants';
+import { Glob } from 'bun';
 import { errorCode, withQuery } from './api.js';
+import { portraitSrc } from './components/avatar.js';
 import { formatCompact, formatScore, messageFor, titleOf } from './format.js';
 import { matchPath } from './router.js';
 import { safeNext } from './pages/sign-in.js';
@@ -77,5 +80,21 @@ describe('router', () => {
     expect(safeNext('//evil.example')).toBe('/account');
     expect(safeNext('https://evil.example')).toBe('/account');
     expect(safeNext(null)).toBe('/account');
+  });
+});
+
+describe('pictures', () => {
+  test('every portrait a player can pick has its image, and no other image is there', async () => {
+    const files = [
+      ...new Glob('*.webp').scanSync({
+        cwd: `${import.meta.dir}/../public/img/portraits`,
+      }),
+    ].sort();
+    expect(files).toEqual(AVATAR_PORTRAITS.map((id) => `${id}.webp`).sort());
+    expect(portraitSrc('gravelord')).toBe('/img/portraits/gravelord.webp');
+  });
+
+  test('a missing photo says how to get one', () => {
+    expect(messageFor('NO_PROVIDER_PHOTO')).toContain('Google or Discord');
   });
 });

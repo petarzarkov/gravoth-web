@@ -8,10 +8,12 @@
  * - With `GRAVOTH_API_BASE` set (the Cloudflare Pages build, CI's `site` job:
  *   https://gravoth-api.petarzarkov.com), the site calls the API there and gets
  *   a `_headers` file for Pages: the content security policy (scripts and styles
- *   from the site only, calls to the site and the API only), the other security
+ *   from the site only, calls to the site and the API only, images from the site
+ *   and the players' Google and Discord photos), the other security
  *   headers and the asset cache. Without it the site calls its own origin: the
  *   API serves that build itself (`WEB_ROOT`).
  */
+import { AVATAR_IMAGE_SOURCES } from '@gravoth/contracts/constants';
 import { cp, rm } from 'node:fs/promises';
 
 const outdir = Bun.env['GRAVOTH_WEB_OUT'] ?? `${import.meta.dir}/dist`;
@@ -56,7 +58,8 @@ if (apiBase !== '') {
     "script-src 'self'",
     // Mantine writes its theme as a <style> element and sets element styles.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    // A player's linked Google or Discord photo.
+    `img-src 'self' data: ${AVATAR_IMAGE_SOURCES.join(' ')}`,
     `connect-src 'self' ${apiBase}`,
     "form-action 'self'",
     "frame-ancestors 'none'",

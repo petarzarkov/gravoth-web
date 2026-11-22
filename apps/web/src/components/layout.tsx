@@ -12,6 +12,7 @@ import { api } from '../api.js';
 import { PLAY_URL } from '../links.js';
 import { Link, useNavigation } from '../router.js';
 import { isGuest, useSession } from '../session.js';
+import { PlayerAvatar } from './avatar.js';
 
 /** Boards stays lit on a board and a build card, which are its pages. */
 const sectionOf = (pathname: string): string =>
@@ -21,7 +22,15 @@ const sectionOf = (pathname: string): string =>
     ? '/boards'
     : pathname;
 
-const NavLink = ({ to, children }: { to: string; children: ReactNode }) => {
+const NavLink = ({
+  to,
+  children,
+  label,
+}: {
+  to: string;
+  children: ReactNode;
+  label?: string;
+}) => {
   const { location } = useNavigation();
   const active =
     to === '/boards'
@@ -37,9 +46,26 @@ const NavLink = ({ to, children }: { to: string; children: ReactNode }) => {
       color={active ? 'gold' : 'gray'}
       className={active ? 'nav-link active' : 'nav-link'}
       aria-current={active ? 'page' : undefined}
+      aria-label={label}
     >
       {children}
     </Button>
+  );
+};
+
+/** The signed-in player in the bar: their picture, and their name from `sm` up. */
+const AccountLink = () => {
+  const { profile } = useSession();
+  if (profile === null) return <NavLink to="/account">Account</NavLink>;
+  return (
+    <NavLink to="/account" label={`Account: ${profile.displayName}`}>
+      <Group gap={8} wrap="nowrap" className="account-link">
+        <PlayerAvatar avatar={profile.avatar} size={24} />
+        <Text span inherit visibleFrom="sm" maw={140} truncate>
+          {profile.displayName}
+        </Text>
+      </Group>
+    </NavLink>
   );
 };
 
@@ -79,7 +105,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
               {session === undefined ? null : session === null ? (
                 <NavLink to="/sign-in">Sign in</NavLink>
               ) : (
-                <NavLink to="/account">Account</NavLink>
+                <AccountLink />
               )}
             </Group>
           </Group>

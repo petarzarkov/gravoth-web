@@ -9,7 +9,9 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import type { AvatarView } from '@gravoth/contracts';
 import { ApiError, api } from '../api.js';
+import { PlayerAvatar } from '../components/avatar.js';
 import { Empty, Loaded, Panel } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
@@ -97,17 +99,20 @@ const ByName = ({
   );
 };
 
-/** One player's row: the name, when, then the actions at the far end. */
+/** One player's row: the picture and name, when, then the actions at the far end. */
 const Person = ({
   name,
+  avatar,
   when,
   children,
 }: {
   name: string;
+  avatar?: AvatarView;
   when: string;
   children: ReactNode;
 }) => (
   <Group gap="sm" py={6} className="person-row" wrap="nowrap">
+    {avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />}
     <Text fw={600} className="person">
       {name}
     </Text>
@@ -195,6 +200,7 @@ export const FriendsPage = () => {
                       <Person
                         key={item.id}
                         name={item.displayName}
+                        avatar={item.avatar}
                         when={formatDate(item.createdAt)}
                       >
                         <Button
@@ -228,6 +234,7 @@ export const FriendsPage = () => {
                       <Person
                         key={item.id}
                         name={item.displayName}
+                        avatar={item.avatar}
                         when={formatDate(item.createdAt)}
                       >
                         <Button
@@ -259,6 +266,7 @@ export const FriendsPage = () => {
                       <Person
                         key={friend.userId}
                         name={friend.displayName}
+                        avatar={friend.avatar}
                         when={`since ${formatDate(friend.since)}`}
                       >
                         <Button

@@ -76,6 +76,8 @@ const MESSAGES: Record<string, string> = {
     'Names are 3 to 20 letters, digits, _ or -, starting with a letter or digit.',
   NAME_TAKEN: 'That name is taken.',
   NAME_NOT_ALLOWED: "That name isn't allowed.",
+  NO_PROVIDER_PHOTO:
+    'Your sign-in has no photo. Sign in with Google or Discord to use theirs.',
   GUEST_ACCOUNT:
     'Guest accounts have no friends list. Create an account first.',
   PLAYER_NOT_FOUND: 'No player has that name.',
@@ -102,6 +104,15 @@ const MESSAGES: Record<string, string> = {
   INVALID_EMAIL: "That email doesn't look right.",
   TOO_MANY_REQUESTS: 'Too many tries. Wait a minute and try again.',
   HTTP_429: 'Too many tries. Wait a minute and try again.',
+  // better-auth's, on the way back from Google or Discord (`/sign-in?error=`).
+  account_not_linked:
+    'An account already uses that email. Sign in to it with email and confirm the address, then this sign-in joins it.',
+  access_denied: 'The sign-in was cancelled.',
+  email_not_found:
+    'That sign-in shared no email address, which an account needs.',
+  unable_to_create_user: "The account couldn't be made. Try again.",
+  please_restart_the_process: 'The sign-in took too long. Start it again.',
+  state_mismatch: 'The sign-in took too long. Start it again.',
 };
 
 /** Words for an error code; an unknown one is shown as is. */

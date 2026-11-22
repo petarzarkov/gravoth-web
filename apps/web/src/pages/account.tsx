@@ -27,6 +27,7 @@ import {
   Panel,
 } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
+import { PicturePicker } from '../components/picture-picker.js';
 import { useLoad } from '../components/use-load.js';
 import { formatDate, messageFor } from '../format.js';
 import { useNavigation } from '../router.js';
@@ -160,7 +161,7 @@ const METHOD_NAMES: Record<string, string> = {
 };
 
 export const AccountPage = () => {
-  const { session, refresh } = useSession();
+  const { session, refresh, setProfile: setSessionProfile } = useSession();
   const { navigate } = useNavigation();
   const [account, reloadAccount] = useLoad(`account:${session?.user.id}`, () =>
     api.account(),
@@ -182,6 +183,11 @@ export const AccountPage = () => {
 
   const profile =
     saved ?? (profileLoad.state === 'ready' ? profileLoad.value : null);
+  // A change shows here and in the bar at once.
+  const onSaved = (changed: ProfileView) => {
+    setProfile(changed);
+    setSessionProfile(changed);
+  };
 
   if (session === null || session === undefined) return null;
 
@@ -232,7 +238,16 @@ export const AccountPage = () => {
           {profile === null ? (
             <Loaded load={profileLoad}>{() => null}</Loaded>
           ) : (
-            <ProfileForm profile={profile} onSaved={setProfile} />
+            <>
+              <PicturePicker
+                profile={profile}
+                signIn={
+                  account.state === 'ready' ? account.value.signIn : undefined
+                }
+                onSaved={onSaved}
+              />
+              <ProfileForm profile={profile} onSaved={onSaved} />
+            </>
           )}
           <Panel title="Your heroes">
             <Loaded load={heroes}>

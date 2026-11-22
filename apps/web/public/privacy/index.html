@@ -273,10 +273,16 @@
         </li>
         <li>
           <strong>Your profile:</strong> a display name other players see (3 to
-          20 letters, digits, _ or -, checked against a word filter), and your
-          settings: whether your name shows on the leaderboards, whether others
-          may send you friend requests, whether friends may see that you are
-          online, and whether friend requests are mailed to you.
+          20 letters, digits, _ or -, checked against a word filter), your
+          picture, and your settings: whether your name shows on the
+          leaderboards, whether others may send you friend requests, whether
+          friends may see that you are online, and whether friend requests are
+          mailed to you. Your picture is one of the game's character portraits
+          (a random one to begin with) or, if you choose it, your Google or
+          Discord profile picture. Nothing is uploaded: for the profile picture
+          the server keeps only its web address at Google or Discord, updated
+          each time you sign in with that service, and the picture itself loads
+          from Google's or Discord's servers.
         </li>
         <li>
           <strong>Heroes and records:</strong> when you post a record (such as
@@ -300,8 +306,11 @@
           <strong>What other players see:</strong> on the leaderboards, your
           display name, each hero's name, class and full build, the score and
           its date. If you hide your name (Account, privacy settings), the
-          leaderboards show "A hidden player" in its place, but the hero's name
-          and build still show. Friends see your display name.
+          leaderboards show "A hidden player" in its place, without your
+          picture, but the hero's name and build still show. Friends see your
+          display name and picture. Where your picture is your Google or Discord
+          one, a player's browser loads it from that service, which then sees
+          their IP address (the website sends no referrer with it).
         </li>
         <li>
           <strong>Mail:</strong> the server sends mail through Resend, an email

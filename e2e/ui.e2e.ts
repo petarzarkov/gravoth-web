@@ -159,6 +159,29 @@ const shot = async (name: string) => {
   const r = await send('Page.captureScreenshot', { format: 'png' });
   await Bun.write(`${out}/${name}.png`, Buffer.from(r.data, 'base64'));
 };
+const desktop = () =>
+  send('Emulation.setDeviceMetricsOverride', {
+    width: 1280,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+const phone = () =>
+  send('Emulation.setDeviceMetricsOverride', {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 2,
+    mobile: true,
+  });
+/** The whole page at the current width, for the record (e2e/.tmp/ui). */
+const fullShot = async (name: string) => {
+  await Bun.sleep(400);
+  const r = await send('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: true,
+  });
+  await Bun.write(`${out}/${name}.png`, Buffer.from(r.data, 'base64'));
+};
 const has = (text: string) => `__t.text().includes(${JSON.stringify(text)})`;
 
 const email = `dara-${run}@example.test`;
@@ -227,8 +250,33 @@ ok(
   [preflight.status, preflight.headers.get('access-control-allow-origin')],
 );
 
-// 1. Create an account through the form.
+// 1. Create an account through the form, behind "Continue with email".
 await go('/sign-in');
+ok(
+  "the sign-in page offers its ways in as dark buttons, email with Gravoth's icon",
+  await until(
+    `[...document.querySelectorAll('button.way-in')].some(b => b.textContent.trim() === 'Continue with email' && b.querySelector('img[src="/img/icon-192.png"]'))`,
+  ),
+  await js(
+    `[...document.querySelectorAll('button.way-in')].map(b => b.textContent.trim())`,
+  ),
+);
+await js(
+  `Promise.all([...document.querySelectorAll('.way-in img')].map(i => i.decode().then(() => true, () => false)))`,
+);
+await fullShot('sign-in');
+await phone();
+await go('/sign-in');
+await fullShot('sign-in-phone');
+await desktop();
+await go('/sign-in');
+await js(`__t.click('Continue with email')`);
+ok(
+  'continuing with email opens the form on its email box',
+  await until(
+    `!!document.querySelector('input[type=email]') && document.activeElement === document.querySelector('input[type=email]')`,
+  ),
+);
 await js(`__t.click('Create account')`);
 ok(
   'the sign-up form links the terms of service and the privacy policy',
@@ -249,7 +297,58 @@ ok(
   await js('location.pathname'),
 );
 
-// 2. Pick a display name, and turn the public profile off.
+// 2. The picture: a random portrait to begin with, in the bar and on the page; pick another.
+const portraitIn = (selector: string) =>
+  `(document.querySelector(${JSON.stringify(selector)} + ' img')?.getAttribute('src') ?? '').replace(/^.*\\/portraits\\/|\\.webp$/g, '')`;
+ok(
+  'a new account starts on a portrait, shown in the bar and on the page',
+  await until(
+    `${portraitIn('.account-link')} !== '' && ${portraitIn('.account-link')} === ${portraitIn('.picture-panel .player-avatar')}`,
+  ),
+  await js(`[${portraitIn('.account-link')}, ${portraitIn('.picture-panel')}]`),
+);
+const before = await js(portraitIn('.picture-panel .player-avatar'));
+const choice = await js(
+  `document.querySelector('.portrait-choice[aria-pressed="false"]').dataset.portrait`,
+);
+await js(
+  `document.querySelector('.portrait-choice[data-portrait="${choice}"]').click()`,
+);
+ok(
+  'picking a portrait changes the picture on the page and in the bar',
+  await until(
+    `${portraitIn('.picture-panel .player-avatar')} === ${JSON.stringify(choice)} && ${portraitIn('.account-link')} === ${JSON.stringify(choice)} && document.querySelector('.portrait-choice[data-portrait="${choice}"]').getAttribute('aria-pressed') === 'true'`,
+  ),
+  [before, choice, await js(portraitIn('.picture-panel .player-avatar'))],
+);
+const picked = await js(
+  `fetch('http://localhost:3000/api/profile', { credentials: 'include' }).then(r => r.json())`,
+);
+ok(
+  'the picked portrait is saved, with no photo to offer an email account',
+  picked.avatar?.kind === 'portrait' &&
+    picked.avatar?.portrait === choice &&
+    picked.hasProviderPhoto === false,
+  picked.avatar,
+);
+ok(
+  'every portrait in the picker loads',
+  await js(
+    `Promise.all([...document.querySelectorAll('.portrait-choice img')].map(i => { i.loading = 'eager'; return i.decode().then(() => i.naturalWidth > 0, () => false); })).then(r => r.length === 42 && r.every(Boolean))`,
+  ),
+);
+await fullShot('account-picture');
+await phone();
+await go('/account');
+await until(`!!document.querySelector('.picture-panel')`);
+await js(
+  `Promise.all([...document.querySelectorAll('.portrait-choice img')].map(i => { i.loading = 'eager'; return i.decode().catch(() => null); }))`,
+);
+await fullShot('account-picture-phone');
+await desktop();
+await go('/account');
+
+// 3. Pick a display name, and turn the public profile off.
 await until(`!!document.querySelector('input[autocomplete=nickname]')`);
 await js(
   `__t.type('input[autocomplete=nickname]', ${JSON.stringify(darName)})`,
@@ -272,7 +371,7 @@ ok(
 );
 await shot('account');
 
-// 3. Ask Eli to be friends; Eli accepts (through the API, as the game would).
+// 4. Ask Eli to be friends; Eli accepts (through the API, as the game would).
 await go('/friends');
 await js(`__t.type('.panel input', ${JSON.stringify(eliName.toLowerCase())})`);
 await js(`__t.click('Send request')`);
@@ -297,14 +396,14 @@ await api(
 );
 await go('/friends');
 ok(
-  "after Eli accepts, Eli is on Dara's friends list",
+  "after Eli accepts, Eli is on Dara's friends list, with Eli's picture",
   await until(
-    `[...document.querySelectorAll('.friend-list .person-row')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && li.textContent.includes('since'))`,
+    `[...document.querySelectorAll('.friend-list .person-row')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && li.textContent.includes('since') && /\\/img\\/portraits\\/[a-z_]+\\.webp$/.test(li.querySelector('.player-avatar img')?.getAttribute('src') ?? ''))`,
   ),
 );
 await shot('friends');
 
-// 4. A board with the filters.
+// 5. A board with the filters.
 await go('/boards/pit_floor');
 await js(
   `(() => { const s = document.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'templar'); s.dispatchEvent(new Event('change', { bubbles: true })); })()`,
@@ -326,7 +425,7 @@ ok(
   await until(`${has('Hardcore deepest Bone Pit floor')}`),
 );
 
-// 5. Remove Eli, sign out, sign back in.
+// 6. Remove Eli, sign out, sign back in.
 await go('/friends');
 await js(`__t.click('Remove')`);
 ok('removing a friend empties the list', await until(has('No friends yet.')));
@@ -343,6 +442,9 @@ ok(
   'the account page sends a signed-out visitor to sign in',
   await until(`location.pathname === '/sign-in'`),
 );
+await until(`!!document.querySelector('button.way-in')`);
+await js(`__t.click('Continue with email')`);
+await until(`!!document.querySelector('input[type=email]')`);
 await js(
   `__t.type('input[type=email]', ${JSON.stringify(email)}); __t.type('input[type=password]', 'not the password')`,
 );
@@ -355,7 +457,7 @@ ok(
   await until(`location.pathname === '/account' && ${has(darName)}`, 8000),
 );
 
-// 6. Delete the account from the page.
+// 7. Delete the account from the page.
 await js(`__t.click('Delete my account')`);
 await until(`!!document.querySelector('.panel-danger input[type=password]')`);
 await js(

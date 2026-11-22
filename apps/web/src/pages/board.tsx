@@ -11,6 +11,7 @@ import {
   Text,
 } from '@mantine/core';
 import { api, withQuery } from '../api.js';
+import { PlayerAvatar } from '../components/avatar.js';
 import {
   ClassBadge,
   Empty,
@@ -78,18 +79,23 @@ const EntryTable = ({
               </Text>
             </Table.Td>
             <Table.Td>
-              <Anchor
-                component={Link}
-                to={`/builds/${entry.build.id}`}
-                c="gray.0"
-                fw={600}
-                className="hero-link"
-              >
-                {entry.hero.name}
-              </Anchor>
-              <Text size="xs" c="dimmed">
-                {entry.player.displayName}
-              </Text>
+              <Group gap="sm" wrap="nowrap">
+                <PlayerAvatar avatar={entry.player.avatar} size={34} />
+                <div style={{ minWidth: 0 }}>
+                  <Anchor
+                    component={Link}
+                    to={`/builds/${entry.build.id}`}
+                    c="gray.0"
+                    fw={600}
+                    className="hero-link"
+                  >
+                    {entry.hero.name}
+                  </Anchor>
+                  <Text size="xs" c="dimmed">
+                    {entry.player.displayName}
+                  </Text>
+                </div>
+              </Group>
             </Table.Td>
             <Table.Td visibleFrom="sm">
               <ClassBadge heroClass={entry.hero.class} />

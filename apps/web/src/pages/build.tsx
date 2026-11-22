@@ -20,6 +20,7 @@ import {
   Title,
 } from '@mantine/core';
 import { api } from '../api.js';
+import { PlayerAvatar } from '../components/avatar.js';
 import {
   ClassBadge,
   Empty,
@@ -289,11 +290,17 @@ export const BuildPage = ({ id }: { id: string }) => {
                   Level {card.level}{' '}
                   {card.ascendancy ?? CLASS_NAMES[card.hero.class]}
                 </Text>
-                <Text span c="dimmed">
-                  {card.player === null
-                    ? 'A hidden player'
-                    : card.player.displayName}
-                </Text>
+                <Group gap={6} wrap="nowrap" className="build-player">
+                  <PlayerAvatar
+                    avatar={card.player?.avatar ?? null}
+                    size={24}
+                  />
+                  <Text span c="dimmed">
+                    {card.player === null
+                      ? 'A hidden player'
+                      : card.player.displayName}
+                  </Text>
+                </Group>
               </Group>
             }
           >

@@ -191,3 +191,121 @@ body {
   background: #070608;
   font-size: 12px;
 }
+
+/* A player's picture: round, with a thin gold edge in the game's palette. */
+.player-avatar {
+  flex: none;
+  border: 1px solid rgba(255, 199, 89, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 10px rgba(255, 199, 89, 0.12);
+  background: #0e0c10;
+}
+
+.player-avatar img {
+  object-fit: cover;
+}
+
+/* The sign-in page's ways in: dark buttons (Google's dark-theme colours), the brand's mark on the left. */
+.way-in {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1px solid #8e918f;
+  border-radius: var(--mantine-radius-md);
+  background: #131314;
+  color: #e3e3e3;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.way-in:hover:not(:disabled) {
+  background: #1d1c20;
+  border-color: #b3ada3;
+}
+
+.way-in:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.way-in:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.way-in-mark,
+.way-in-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.way-in-label {
+  text-align: center;
+}
+
+/* A brand's mark on a rounded square (Discord's blurple, Gravoth's icon). */
+.brand-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 7px;
+}
+
+.brand-tile-gravoth {
+  box-shadow: inset 0 0 0 1px rgba(255, 199, 89, 0.45);
+}
+
+.brand-tile-gravoth img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The account page's picture picker. */
+.portrait-choice {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 2px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition:
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.portrait-choice img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 199, 89, 0.25);
+}
+
+.portrait-choice:hover:not(:disabled) {
+  border-color: rgba(255, 199, 89, 0.45);
+}
+
+.portrait-choice:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.portrait-choice[aria-pressed='true'] {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(255, 199, 89, 0.45);
+}

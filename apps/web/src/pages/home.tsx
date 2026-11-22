@@ -11,6 +11,7 @@ import {
   UnstyledButton,
 } from '@mantine/core';
 import { api } from '../api.js';
+import { PlayerAvatar } from '../components/avatar.js';
 import { ClassBadge, Empty, Loaded } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
@@ -60,6 +61,7 @@ const BoardCard = ({ board }: { board: BoardView }) => {
                     >
                       {entry.rank}
                     </Text>
+                    <PlayerAvatar avatar={entry.player.avatar} size={30} />
                     <UnstyledButton
                       component={Link}
                       to={`/builds/${entry.build.id}`}
