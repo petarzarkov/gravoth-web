@@ -108,9 +108,13 @@ describe('the website', () => {
 });
 
 describe('a folder page', () => {
-  it('serves /privacy and /privacy/ as the policy page, with its own policy', async () => {
-    for (const path of ['/privacy', '/privacy/']) {
-      const response = await fetch(`${base}${path}`, { headers: html });
+  it('serves /privacy and /privacy/ as the policy page, with its own policy, to any caller', async () => {
+    for (const [path, headers] of [
+      ['/privacy', html],
+      ['/privacy/', html],
+      ['/privacy/', {}],
+    ] as const) {
+      const response = await fetch(`${base}${path}`, { headers });
       expect(response.status).toBe(200);
       expect(await response.text()).toContain('<p>policy</p>');
       expect(response.headers.get('content-security-policy')).toContain(

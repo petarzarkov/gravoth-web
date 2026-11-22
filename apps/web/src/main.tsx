@@ -1,3 +1,6 @@
+import '@mantine/core/styles.css';
+import './styles.css';
+import { MantineProvider } from '@mantine/core';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Empty } from './components/bits.js';
@@ -5,13 +8,14 @@ import { Layout, PageTitle } from './components/layout.js';
 import { AccountPage } from './pages/account.js';
 import { BoardPage } from './pages/board.js';
 import { BuildPage } from './pages/build.js';
+import { DeleteAccountPage } from './pages/delete-account.js';
 import { FriendsPage } from './pages/friends.js';
 import { BoardsPage } from './pages/home.js';
-import { DeleteAccountPage } from './pages/delete-account.js';
 import { LandingPage } from './pages/landing.js';
 import { SignInPage } from './pages/sign-in.js';
 import { Link, Router, Routes, type RouteDefinition } from './router.js';
 import { SessionProvider } from './session.js';
+import { theme } from './theme.js';
 
 const routes: readonly RouteDefinition[] = [
   { pattern: '/', render: () => <LandingPage /> },
@@ -44,12 +48,14 @@ if (root === null) throw new Error('#root is missing from index.html');
 
 createRoot(root).render(
   <StrictMode>
-    <Router>
-      <SessionProvider>
-        <Layout>
-          <Routes routes={routes} fallback={<NotFound />} />
-        </Layout>
-      </SessionProvider>
-    </Router>
+    <MantineProvider theme={theme} forceColorScheme="dark">
+      <Router>
+        <SessionProvider>
+          <Layout>
+            <Routes routes={routes} fallback={<NotFound />} />
+          </Layout>
+        </SessionProvider>
+      </Router>
+    </MantineProvider>
   </StrictMode>,
 );

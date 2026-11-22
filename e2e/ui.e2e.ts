@@ -132,7 +132,7 @@ const helpers = `
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value);
       el.dispatchEvent(new Event('input', { bubbles: true }));
     },
-    click(text, scope = 'button, a') {
+    click(text, scope = 'button, a, label') {
       const el = [...document.querySelectorAll(scope)].find((e) => e.textContent.trim() === text);
       if (!el) throw new Error('no ' + scope + ' reading ' + text);
       el.click();
@@ -243,8 +243,8 @@ ok(
   await until(`${has('Signed in as ' + darName)} && ${has('Saved.')}`),
   await js(`document.querySelector('.page-sub')?.textContent`),
 );
-await js(`document.querySelector('.toggle input').click()`);
-await until(`!document.querySelector('.toggle input').checked`);
+await js(`document.querySelector('.toggles input[type=checkbox]').click()`);
+await until(`!document.querySelector('.toggles input[type=checkbox]').checked`);
 const prof = await js(
   `fetch('http://localhost:3000/api/profile', { credentials: 'include' }).then(r => r.json())`,
 );
@@ -282,7 +282,7 @@ await go('/friends');
 ok(
   "after Eli accepts, Eli is on Dara's friends list",
   await until(
-    `[...document.querySelectorAll('.people li')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && li.textContent.includes('since'))`,
+    `[...document.querySelectorAll('.friend-list .person-row')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && li.textContent.includes('since'))`,
   ),
 );
 await shot('friends');
@@ -296,14 +296,14 @@ ok(
   'the class filter goes into the address',
   await until(`location.search.includes('class=templar')`),
 );
-await js(`__t.click('Friends', '.filters button')`);
+await js(`__t.click('Friends', '.filters label')`);
 ok(
   'the friends view goes into the address and the board answers',
   await until(
     `location.search.includes('view=friends') && !${has("Can't reach")}`,
   ),
 );
-await js(`__t.click('Hardcore', '.filters button')`);
+await js(`__t.click('Hardcore', '.filters label')`);
 ok(
   'the hardcore twin opens',
   await until(`${has('Hardcore deepest Bone Pit floor')}`),

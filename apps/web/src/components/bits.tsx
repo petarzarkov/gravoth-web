@@ -1,14 +1,24 @@
 import type { HeroClass, ShownVerdict } from '@gravoth/contracts';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Group,
+  Loader,
+  Text,
+  Title,
+} from '@mantine/core';
 import type { ReactNode } from 'react';
 import type { ApiError } from '../api.js';
 import { CLASS_NAMES, messageFor } from '../format.js';
 import type { Load } from './use-load.js';
 
 export const Spinner = ({ label = 'Loading' }: { label?: string }) => (
-  <div className="spinner" role="status" aria-live="polite">
-    <span className="spinner-mark" aria-hidden="true" />
-    {label}
-  </div>
+  <Group className="spinner" gap="sm" py="lg" role="status" aria-live="polite">
+    <Loader size="sm" type="dots" />
+    <Text c="dimmed">{label}</Text>
+  </Group>
 );
 
 export const ErrorNote = ({
@@ -18,18 +28,20 @@ export const ErrorNote = ({
   error: ApiError;
   retry?: () => void;
 }) => (
-  <div className="note note-error" role="alert">
-    <span>
-      {error.status === 0
-        ? "Can't reach the server. Check your connection."
-        : messageFor(error.code)}
-    </span>
-    {retry === undefined ? null : (
-      <button type="button" className="button button-quiet" onClick={retry}>
-        Try again
-      </button>
-    )}
-  </div>
+  <Alert color="red" variant="light" role="alert">
+    <Group justify="space-between" gap="sm">
+      <Text size="sm">
+        {error.status === 0
+          ? "Can't reach the server. Check your connection."
+          : messageFor(error.code)}
+      </Text>
+      {retry === undefined ? null : (
+        <Button size="xs" variant="default" onClick={retry}>
+          Try again
+        </Button>
+      )}
+    </Group>
+  </Alert>
 );
 
 /** The three states of a load, with the ready one rendered by `children`. */
@@ -53,35 +65,38 @@ export const Loaded = <T,>({
   return <>{children(load.value)}</>;
 };
 
+/** Each class's colour, as the game tints its class badges. */
+export const CLASS_COLOURS: Record<HeroClass, string> = {
+  barbarian: '#ff8c6b',
+  ranger: '#8fe07a',
+  sorcerer: '#7fb2ff',
+  templar: '#f2d27a',
+};
+
 export const ClassBadge = ({ heroClass }: { heroClass: HeroClass }) => (
-  <span className={`class-badge class-${heroClass}`}>
+  <Badge className="class-badge" color={CLASS_COLOURS[heroClass]}>
     {CLASS_NAMES[heroClass]}
-  </span>
+  </Badge>
 );
 
 export const HardcoreBadge = () => (
-  <span className="badge badge-hardcore" title="Hardcore: one life">
+  <Badge color="red" title="Hardcore: one life">
     HC
-  </span>
+  </Badge>
 );
 
 export const VerdictBadge = ({ verdict }: { verdict: ShownVerdict }) =>
   verdict === 'verified' ? (
-    <span
-      className="badge badge-verified"
-      title="Checked against the save by the rules checker"
-    >
+    <Badge color="green" title="Checked against the save by the rules checker">
       Verified
-    </span>
+    </Badge>
   ) : (
-    <span
-      className="badge badge-pending"
-      title="Not checked against a save yet"
-    >
+    <Badge color="gray" title="Not checked against a save yet">
       Pending
-    </span>
+    </Badge>
   );
 
+/** A card with an optional small-caps title and actions on its right. */
 export const Panel = ({
   title,
   actions,
@@ -93,17 +108,28 @@ export const Panel = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <section className={`panel${className === undefined ? '' : ` ${className}`}`}>
+  <Card
+    className={`panel${className === undefined ? '' : ` ${className}`}`}
+    mb="lg"
+  >
     {title === undefined && actions === undefined ? null : (
-      <header className="panel-head">
-        {title === undefined ? <span /> : <h2>{title}</h2>}
+      <Group justify="space-between" mb="md">
+        {title === undefined ? (
+          <span />
+        ) : (
+          <Title order={2} size="h5" className="panel-title">
+            {title}
+          </Title>
+        )}
         {actions}
-      </header>
+      </Group>
     )}
     {children}
-  </section>
+  </Card>
 );
 
 export const Empty = ({ children }: { children: ReactNode }) => (
-  <p className="empty">{children}</p>
+  <Text c="dimmed" py="xs">
+    {children}
+  </Text>
 );

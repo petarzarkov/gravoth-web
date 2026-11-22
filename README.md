@@ -8,12 +8,12 @@ privacy policy, the boards with every record's build, sign-in, friends). A Bun m
 format, hooks and conventions) with the server moved in from the game's
 repository.
 
-| Path                 | What it is                                                                                                                                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups                |
-| `apps/web`           | `@gravoth/web`: the website (React on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Deployed to Cloudflare Pages by CI; the API serves a copy too |
-| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                           |
-| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                             |
+| Path                 | What it is                                                                                                                                                                                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups                            |
+| `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Deployed to Cloudflare Pages by CI; the API serves a copy too |
+| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                                       |
+| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                         |
 
 The game itself (Unity, `Gravoth.Core`, the rules checker in
 `dotnet/Gravoth.Validator`) lives in its own repository. The product plan and

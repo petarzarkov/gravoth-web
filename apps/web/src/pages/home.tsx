@@ -1,6 +1,17 @@
 import type { BoardPage, BoardView } from '@gravoth/contracts';
+import {
+  Anchor,
+  Card,
+  Group,
+  SegmentedControl,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+  UnstyledButton,
+} from '@mantine/core';
 import { api } from '../api.js';
-import { ClassBadge, Empty, Loaded, Panel } from '../components/bits.js';
+import { ClassBadge, Empty, Loaded } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
 import { formatScore } from '../format.js';
@@ -9,51 +20,73 @@ import { Link, useNavigation, useQuery } from '../router.js';
 export const boardHref = (board: Pick<BoardView, 'key' | 'hardcore'>) =>
   `/boards/${board.key}${board.hardcore ? '?hardcore=true' : ''}`;
 
+const RANK_COLOURS = ['var(--gold)', '#d9d9d9', '#d98f52'];
+
 /** One board's card: its top three, and the way in. */
 const BoardCard = ({ board }: { board: BoardView }) => {
   const [top] = useLoad<BoardPage>(`${board.key}:${board.hardcore}`, () =>
     api.board(board.key, { hardcore: board.hardcore, take: 3 }),
   );
   return (
-    <Panel className="board-card">
-      <Link to={boardHref(board)} className="board-card-title">
-        <h2>{board.title}</h2>
-        <span className="board-card-hint">
+    <Card className="board-card">
+      <UnstyledButton component={Link} to={boardHref(board)} mb="md">
+        <Title order={2} size="h4">
+          {board.title}
+        </Title>
+        <Text size="xs" c="dimmed" tt="uppercase" lts="0.12em">
           {board.sort === 'asc' ? 'Fastest first' : 'Highest first'}
-        </span>
-      </Link>
+        </Text>
+      </UnstyledButton>
       <Loaded load={top}>
         {(page) =>
           page.entries.data.length === 0 ? (
             <Empty>No records yet. Be the first.</Empty>
           ) : (
-            <ol className="podium">
+            <Stack gap={6}>
               {page.entries.data.map((entry) => (
-                <li
+                <Card
                   key={entry.id}
-                  className={`podium-row podium-${entry.rank}`}
+                  padding="xs"
+                  bg="dark.7"
+                  withBorder={false}
                 >
-                  <span className="podium-rank">{entry.rank}</span>
-                  <Link to={`/builds/${entry.build.id}`} className="podium-who">
-                    <span className="podium-hero">{entry.hero.name}</span>
-                    <span className="podium-player">
-                      {entry.player.displayName}
-                    </span>
-                  </Link>
-                  <ClassBadge heroClass={entry.hero.class} />
-                  <span className="podium-score">
-                    {formatScore(entry.score, board.format)}
-                  </span>
-                </li>
+                  <Group gap="sm" wrap="nowrap">
+                    <Text
+                      ff="heading"
+                      fz="lg"
+                      w={24}
+                      ta="center"
+                      c={RANK_COLOURS[entry.rank - 1] ?? 'dimmed'}
+                    >
+                      {entry.rank}
+                    </Text>
+                    <UnstyledButton
+                      component={Link}
+                      to={`/builds/${entry.build.id}`}
+                      style={{ flex: 1, minWidth: 0 }}
+                    >
+                      <Text fw={600} truncate>
+                        {entry.hero.name}
+                      </Text>
+                      <Text size="xs" c="dimmed" truncate>
+                        {entry.player.displayName}
+                      </Text>
+                    </UnstyledButton>
+                    <ClassBadge heroClass={entry.hero.class} />
+                    <Text className="score">
+                      {formatScore(entry.score, board.format)}
+                    </Text>
+                  </Group>
+                </Card>
               ))}
-            </ol>
+            </Stack>
           )
         }
       </Loaded>
-      <Link to={boardHref(board)} className="board-card-more">
+      <Anchor component={Link} to={boardHref(board)} size="sm" mt="md">
         Whole board
-      </Link>
-    </Panel>
+      </Anchor>
+    </Card>
   );
 };
 
@@ -72,38 +105,37 @@ export const BoardsPage = () => {
         title="Leaderboards"
         sub="Every record on the boards, with the whole build that set it: skills, gear, every affix."
       >
-        <div className="segmented" role="group" aria-label="Mode">
-          <button
-            type="button"
-            className={hardcore ? 'segment' : 'segment active'}
-            aria-pressed={!hardcore}
-            onClick={() => navigate('/boards', { replace: true })}
-          >
-            Normal
-          </button>
-          <button
-            type="button"
-            className={hardcore ? 'segment active' : 'segment'}
-            aria-pressed={hardcore}
-            onClick={() => navigate('/boards?hardcore=true', { replace: true })}
-          >
-            Hardcore
-          </button>
-        </div>
+        <SegmentedControl
+          className="filters"
+          radius="xl"
+          value={hardcore ? 'hardcore' : 'normal'}
+          onChange={(value) =>
+            navigate(
+              value === 'hardcore' ? '/boards?hardcore=true' : '/boards',
+              {
+                replace: true,
+              },
+            )
+          }
+          data={[
+            { value: 'normal', label: 'Normal' },
+            { value: 'hardcore', label: 'Hardcore' },
+          ]}
+        />
       </PageTitle>
       <Loaded load={boards} retry={reload}>
         {(list) =>
           list.boards.length === 0 ? (
             <Empty>No boards yet.</Empty>
           ) : (
-            <div className="board-grid">
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="lg">
               {list.boards.map((board) => (
                 <BoardCard
                   key={`${board.key}:${board.hardcore}`}
                   board={board}
                 />
               ))}
-            </div>
+            </SimpleGrid>
           )
         }
       </Loaded>

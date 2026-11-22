@@ -38,6 +38,10 @@ what CI runs.
 - **The website imports values only from `@gravoth/contracts/constants`**, and
   everything else with `import type`. `constants.ts` imports nothing, so the
   bundle carries no zod (`contracts.test.ts` holds it to that).
+- **The website's UI is Mantine** (React 19, `apps/web/src/theme.ts` in the
+  game's palette); `styles.css` holds only what Mantine does not (rarity and
+  item cards, the art). Mantine writes inline styles, so the site's policy
+  allows `style-src 'unsafe-inline'`; scripts stay `'self'` only.
 - **The website is gravoth.petarzarkov.com, on Cloudflare Pages** (CI deploys
   `main`), calling the API at gravoth-api.petarzarkov.com with credentials
   (`API_BASE` from `GRAVOTH_API_BASE` at build). The API serves a same-origin

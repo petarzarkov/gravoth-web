@@ -1,7 +1,6 @@
 import { normalize, resolve, sep } from 'node:path';
 import type { BunRequest } from 'bun';
 import {
-  STRICT_CSP,
   StaticOptions,
   UNMATCHED,
   type Middleware,
@@ -37,13 +36,9 @@ export class SpaShell implements Middleware {
     )
       return next();
     const { pathname } = new URL(req.url);
-    if (
-      !SpaShell.owns(pathname) ||
-      !(req.headers.get('accept') ?? '').includes('text/html')
-    )
-      return next();
+    if (!SpaShell.owns(pathname)) return next();
 
-    // A folder with a page of its own (/privacy/, the policy Play links to) is served as that page.
+    // A folder with a page of its own (/privacy/, the policy Play links to) is that page, for any caller.
     const own = this.folderPage(pathname);
     if (own !== undefined && (await own.exists())) {
       return new Response(req.method === 'HEAD' ? null : own, {
@@ -56,6 +51,8 @@ export class SpaShell implements Middleware {
       });
     }
 
+    // The app's page, for a browser only: a script asking for a path no route has still gets the API's 404.
+    if (!(req.headers.get('accept') ?? '').includes('text/html')) return next();
     const index = Bun.file(`${this.options.root}/index.html`);
     if (!(await index.exists())) return next();
 
@@ -64,7 +61,7 @@ export class SpaShell implements Middleware {
         'content-type': 'text/html; charset=utf-8',
         // The page names the hashed bundles, so a cached copy would outlive a deploy.
         'cache-control': 'no-cache',
-        'content-security-policy': STRICT_CSP,
+        'content-security-policy': SITE_POLICY,
       },
     });
   }
@@ -92,6 +89,22 @@ export class SpaShell implements Middleware {
     return !last.includes('.');
   }
 }
+
+/**
+ * The website's policy: scripts, connections and everything else from the site only. Styles may also be inline:
+ * Mantine (the website's UI kit) writes its theme as a `<style>` element and sets element styles.
+ */
+export const SITE_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "object-src 'none'",
+].join('; ');
 
 /** The policy a folder's own page gets: its inline styles and images from the site, nothing else. */
 const FOLDER_PAGE_POLICY =

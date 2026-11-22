@@ -1,3 +1,13 @@
+import {
+  Anchor,
+  Button,
+  Card,
+  Group,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
 import { useEffect } from 'react';
 import { PLAY_URL } from '../links.js';
 import { Link } from '../router.js';
@@ -55,8 +65,8 @@ export const LandingPage = () => {
   }, []);
 
   return (
-    <div className="landing">
-      <section className="hero">
+    <Stack gap="xl">
+      <Card className="hero" padding={0}>
         <img
           className="hero-art"
           src="/img/feature-1024x500.jpg"
@@ -64,32 +74,39 @@ export const LandingPage = () => {
           width={1024}
           height={500}
         />
-        <div className="hero-copy">
-          {/* The art carries the logo; the heading is for screen readers and search. */}
-          <h1 className="visually-hidden">Gravoth</h1>
-          <p className="hero-sub">
-            A dark-fantasy action RPG for Android phones
-          </p>
-          <div className="row-buttons">
-            <a className="button button-primary" href={PLAY_URL}>
+        {/* The art carries the logo; the heading is for screen readers and search. */}
+        <Title order={1} className="visually-hidden">
+          Gravoth
+        </Title>
+        <Group
+          justify="space-between"
+          gap="md"
+          p="md"
+          style={{ borderTop: '1px solid var(--edge)' }}
+        >
+          <Text size="lg">A dark-fantasy action RPG for Android phones</Text>
+          <Group gap="sm">
+            <Button component="a" href={PLAY_URL}>
               Get it on Google Play
-            </a>
-            <Link to="/boards" className="button">
+            </Button>
+            <Button component={Link} to="/boards" variant="default">
               See the leaderboards
-            </Link>
-          </div>
-        </div>
-      </section>
+            </Button>
+          </Group>
+        </Group>
+      </Card>
 
-      <section className="panel prose">
-        <h2>What Gravoth is</h2>
-        <p>
+      <Card className="prose">
+        <Title order={2} mb="sm">
+          What Gravoth is
+        </Title>
+        <Text mb="sm">
           The dead are walking the roads around Ashfall, and the one you love
           was carried past them, further down. Gravoth is a single-player action
           RPG made for phones, with thumb-sized controls, landscape play and a
           story you follow below ground, one act at a time.
-        </p>
-        <p>
+        </Text>
+        <Text>
           Fight through the crypts under Ashfall, the buried city of lamps
           beneath them and the Silent Sea, a frozen ocean deep under the world,
           then go down into Gravoth itself and end the story by speaking its
@@ -98,45 +115,61 @@ export const LandingPage = () => {
           rematch. Build a classless hero from five styles, swear three
           ascendancy rites, forge your gear and hire a sell-sword to fight
           beside you.
-        </p>
-      </section>
+        </Text>
+      </Card>
 
-      <section className="shots" aria-label="Screenshots">
+      <SimpleGrid
+        cols={{ base: 1, xs: 2, md: 4 }}
+        spacing="sm"
+        aria-label="Screenshots"
+        component="section"
+      >
         {SHOTS.map(([file, alt]) => (
           <a key={file} href={`/img/${file}.jpg`} className="shot">
             <img src={`/img/${file}.jpg`} alt={alt} loading="lazy" />
           </a>
         ))}
-      </section>
+      </SimpleGrid>
 
-      <section className="features">
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
         {FEATURES.map(([title, text]) => (
-          <article key={title} className="panel feature">
-            <h3>{title}</h3>
-            <p>{text}</p>
-          </article>
+          <Card key={title}>
+            <Title order={3} size="h4" c="gold" mb={6}>
+              {title}
+            </Title>
+            <Text c="dimmed">{text}</Text>
+          </Card>
         ))}
-      </section>
+      </SimpleGrid>
 
-      <section className="panel prose">
-        <h2>Offline first, no ads</h2>
-        <p>
+      <Card className="prose">
+        <Title order={2} mb="sm">
+          Offline first, no ads
+        </Title>
+        <Text mb="sm">
           Gravoth plays fully offline. There are no ads and nothing pay-to-win.
           Optional supporter packs through Google Play are thank-yous with a
           cosmetic item to wear and no gameplay advantage; they help one
           developer keep making it. Your progress is saved on your phone.
-        </p>
-        <p>
+        </Text>
+        <Text mb="sm">
           Gravoth Online is optional: sign in with the same account as in the
-          game to put your records on the <Link to="/boards">leaderboards</Link>
+          game to put your records on the{' '}
+          <Anchor component={Link} to="/boards">
+            leaderboards
+          </Anchor>
           , each with the whole build that set it, and to keep a friends list.
-        </p>
-        <p className="muted small">
+        </Text>
+        <Text size="sm" c="dimmed">
           What the game does and does not collect:{' '}
-          <a href="/privacy/">privacy policy</a>. To delete an account:{' '}
-          <Link to="/delete-account">delete your account</Link>.
-        </p>
-      </section>
-    </div>
+          <Anchor href="/privacy/">privacy policy</Anchor>. To delete an
+          account:{' '}
+          <Anchor component={Link} to="/delete-account">
+            delete your account
+          </Anchor>
+          .
+        </Text>
+      </Card>
+    </Stack>
   );
 };

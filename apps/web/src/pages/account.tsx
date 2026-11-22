@@ -3,7 +3,21 @@ import {
   DISPLAY_NAME_PATTERN,
   DISPLAY_NAME_RULE,
 } from '@gravoth/contracts/constants';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  Alert,
+  Anchor,
+  Badge,
+  Button,
+  Grid,
+  Group,
+  PasswordInput,
+  Stack,
+  Switch,
+  Table,
+  Text,
+  TextInput,
+} from '@mantine/core';
+import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, api } from '../api.js';
 import {
   ClassBadge,
@@ -23,33 +37,6 @@ const problem = (caught: unknown): string =>
     ? messageFor(caught.code)
     : "Can't reach the server.";
 
-const Toggle = ({
-  label,
-  hint,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (value: boolean) => void;
-}) => (
-  <label className="toggle">
-    <input
-      type="checkbox"
-      checked={checked}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.checked)}
-    />
-    <span className="toggle-text">
-      <span>{label}</span>
-      <span className="muted">{hint}</span>
-    </span>
-  </label>
-);
-
 const ProfileForm = ({
   profile,
   onSaved,
@@ -60,7 +47,6 @@ const ProfileForm = ({
   // What the box shows: the player's edit, or the saved name when there is none.
   const [draft, setDraft] = useState<string | null>(null);
   const name = draft ?? profile.displayName;
-  const setName = (value: string) => setDraft(value);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -93,71 +79,74 @@ const ProfileForm = ({
     void save({ displayName: name });
   };
 
+  const toggles: readonly [
+    keyof UpdateProfile & keyof ProfileView,
+    string,
+    string,
+  ][] = [
+    [
+      'publicProfile',
+      'Public profile',
+      'Off: your name shows as hidden on the boards.',
+    ],
+    [
+      'allowFriendRequests',
+      'Friend requests',
+      'Let players ask to be your friend.',
+    ],
+    ['showOnline', 'Show when online', 'Friends see when you play.'],
+    [
+      'emailFriendRequests',
+      'Mail me friend requests',
+      'An email when someone asks.',
+    ],
+  ];
+
   return (
     <Panel title="Profile">
-      <form className="form form-inline" onSubmit={rename}>
-        <label className="field">
-          <span>Display name</span>
-          <input
+      <form onSubmit={rename}>
+        <Group align="flex-end" gap="sm" wrap="nowrap">
+          <TextInput
+            label="Display name"
+            description={
+              profile.nameChosen
+                ? 'What boards and friends see.'
+                : 'Made from your sign-in. Pick your own: boards and friends see it.'
+            }
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => setDraft(event.currentTarget.value)}
             maxLength={20}
             autoComplete="nickname"
-            aria-describedby="name-rule"
+            style={{ flex: 1 }}
           />
-        </label>
-        <button
-          type="submit"
-          className="button button-primary"
-          disabled={busy || name === profile.displayName}
-        >
-          Save
-        </button>
+          <Button type="submit" disabled={busy || name === profile.displayName}>
+            Save
+          </Button>
+        </Group>
       </form>
-      <p id="name-rule" className="muted small">
-        {profile.nameChosen
-          ? 'What boards and friends see.'
-          : 'Made from your sign-in. Pick your own: boards and friends see it.'}
-      </p>
-      <div className="toggles">
-        <Toggle
-          label="Public profile"
-          hint="Off: your name shows as hidden on the boards."
-          checked={profile.publicProfile}
-          disabled={busy}
-          onChange={(value) => void save({ publicProfile: value })}
-        />
-        <Toggle
-          label="Friend requests"
-          hint="Let players ask to be your friend."
-          checked={profile.allowFriendRequests}
-          disabled={busy}
-          onChange={(value) => void save({ allowFriendRequests: value })}
-        />
-        <Toggle
-          label="Show when online"
-          hint="Friends see when you play."
-          checked={profile.showOnline}
-          disabled={busy}
-          onChange={(value) => void save({ showOnline: value })}
-        />
-        <Toggle
-          label="Mail me friend requests"
-          hint="An email when someone asks."
-          checked={profile.emailFriendRequests}
-          disabled={busy}
-          onChange={(value) => void save({ emailFriendRequests: value })}
-        />
-      </div>
+      <Stack gap="sm" mt="lg" className="toggles">
+        {toggles.map(([key, label, hint]) => (
+          <Switch
+            key={key}
+            label={label}
+            description={hint}
+            checked={profile[key] === true}
+            disabled={busy}
+            onChange={(event) =>
+              void save({ [key]: event.currentTarget.checked })
+            }
+          />
+        ))}
+      </Stack>
       {error === null ? null : (
-        <p className="note note-error" role="alert">
+        <Alert color="red" variant="light" mt="md" role="alert">
           {error}
-        </p>
+        </Alert>
       )}
       {saved && error === null ? (
-        <p className="note" role="status">
+        <Alert variant="light" mt="md" role="status">
           Saved.
-        </p>
+        </Alert>
       ) : null}
     </Panel>
   );
@@ -169,13 +158,6 @@ const METHOD_NAMES: Record<string, string> = {
   discord: 'Discord',
   guest: 'Guest',
 };
-
-const Row = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="kv">
-    <dt>{label}</dt>
-    <dd>{children}</dd>
-  </div>
-);
 
 export const AccountPage = () => {
   const { session, refresh } = useSession();
@@ -241,16 +223,12 @@ export const AccountPage = () => {
           profile === null ? undefined : `Signed in as ${profile.displayName}`
         }
       >
-        <button
-          type="button"
-          className="button button-quiet"
-          onClick={() => void signOut()}
-        >
+        <Button variant="default" onClick={() => void signOut()}>
           Sign out
-        </button>
+        </Button>
       </PageTitle>
-      <div className="two-col">
-        <div>
+      <Grid gap="lg">
+        <Grid.Col span={{ base: 12, md: 6 }}>
           {profile === null ? (
             <Loaded load={profileLoad}>{() => null}</Loaded>
           ) : (
@@ -265,122 +243,139 @@ export const AccountPage = () => {
                     first record.
                   </Empty>
                 ) : (
-                  <ul className="hero-list">
+                  <Stack gap="xs" className="hero-list">
                     {list.map((hero) => (
-                      <li key={hero.id}>
-                        <span className="hero-list-name">{hero.name}</span>
+                      <Group key={hero.id} gap="sm">
+                        <Text fw={600} style={{ flex: 1 }}>
+                          {hero.name}
+                        </Text>
                         <ClassBadge heroClass={hero.class} />
                         {hero.hardcore ? <HardcoreBadge /> : null}
-                        <span className="muted small">
+                        <Text size="xs" c="dimmed">
                           since {formatDate(hero.createdAt)}
-                        </span>
-                      </li>
+                        </Text>
+                      </Group>
                     ))}
-                  </ul>
+                  </Stack>
                 )
               }
             </Loaded>
           </Panel>
-        </div>
-        <div>
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 6 }}>
           <Loaded load={account} retry={reloadAccount}>
             {(view) => {
               const hasPassword = view.signIn.includes('email');
               return (
                 <>
                   <Panel title="Sign-in">
-                    <dl className="kvs">
-                      <Row label="Email">
-                        {view.email ?? (
-                          <span className="muted">None (guest)</span>
-                        )}
-                        {view.email === null ? null : view.emailVerified ? (
-                          <span className="badge badge-verified">
-                            Confirmed
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="link"
-                            onClick={() => void verify(view.email ?? '')}
-                          >
-                            Send a confirmation link
-                          </button>
-                        )}
-                      </Row>
-                      <Row label="Signs in with">
-                        {view.signIn
-                          .map((method) => METHOD_NAMES[method] ?? method)
-                          .join(', ')}
-                      </Row>
-                      <Row label="Since">{formatDate(view.createdAt)}</Row>
-                    </dl>
+                    <Table verticalSpacing="xs">
+                      <Table.Tbody>
+                        <Table.Tr>
+                          <Table.Td c="dimmed">Email</Table.Td>
+                          <Table.Td>
+                            <Group gap="xs" justify="flex-end">
+                              <Text
+                                size="sm"
+                                style={{ overflowWrap: 'anywhere' }}
+                              >
+                                {view.email ?? 'None (guest)'}
+                              </Text>
+                              {view.email ===
+                              null ? null : view.emailVerified ? (
+                                <Badge color="green">Confirmed</Badge>
+                              ) : (
+                                <Anchor
+                                  component="button"
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => void verify(view.email ?? '')}
+                                >
+                                  Send a confirmation link
+                                </Anchor>
+                              )}
+                            </Group>
+                          </Table.Td>
+                        </Table.Tr>
+                        <Table.Tr>
+                          <Table.Td c="dimmed">Signs in with</Table.Td>
+                          <Table.Td ta="right">
+                            {view.signIn
+                              .map((method) => METHOD_NAMES[method] ?? method)
+                              .join(', ')}
+                          </Table.Td>
+                        </Table.Tr>
+                        <Table.Tr>
+                          <Table.Td c="dimmed">Since</Table.Td>
+                          <Table.Td ta="right">
+                            {formatDate(view.createdAt)}
+                          </Table.Td>
+                        </Table.Tr>
+                      </Table.Tbody>
+                    </Table>
                     {notice === null ? null : (
-                      <p className="note" role="status">
+                      <Alert variant="light" mt="md" role="status">
                         {notice}
-                      </p>
+                      </Alert>
                     )}
                   </Panel>
                   <Panel title="Delete account" className="panel-danger">
                     {deleting ? (
                       <form
-                        className="form"
                         onSubmit={(event) => {
                           event.preventDefault();
                           void remove(hasPassword);
                         }}
                       >
-                        <p>
-                          Your heroes, records, builds and friends are deleted
-                          with it. This can't be undone.
-                        </p>
-                        {hasPassword ? (
-                          <label className="field">
-                            <span>Password</span>
-                            <input
-                              type="password"
+                        <Stack gap="md">
+                          <Text size="sm">
+                            Your heroes, records, builds and friends are deleted
+                            with it. This can't be undone.
+                          </Text>
+                          {hasPassword ? (
+                            <PasswordInput
+                              label="Password"
                               required
                               value={password}
                               onChange={(event) =>
-                                setPassword(event.target.value)
+                                setPassword(event.currentTarget.value)
                               }
                               autoComplete="current-password"
                             />
-                          </label>
-                        ) : null}
-                        <label className="field">
-                          <span>Type DELETE to confirm</span>
-                          <input
+                          ) : null}
+                          <TextInput
+                            label="Type DELETE to confirm"
                             value={confirm}
-                            onChange={(event) => setConfirm(event.target.value)}
+                            onChange={(event) =>
+                              setConfirm(event.currentTarget.value)
+                            }
                             autoComplete="off"
                           />
-                        </label>
-                        <div className="row-buttons">
-                          <button
-                            type="submit"
-                            className="button button-danger"
-                            disabled={confirm !== 'DELETE'}
-                          >
-                            Delete everything
-                          </button>
-                          <button
-                            type="button"
-                            className="button button-quiet"
-                            onClick={() => setDeleting(false)}
-                          >
-                            Keep my account
-                          </button>
-                        </div>
+                          <Group gap="sm">
+                            <Button
+                              type="submit"
+                              color="red"
+                              disabled={confirm !== 'DELETE'}
+                            >
+                              Delete everything
+                            </Button>
+                            <Button
+                              variant="default"
+                              onClick={() => setDeleting(false)}
+                            >
+                              Keep my account
+                            </Button>
+                          </Group>
+                        </Stack>
                       </form>
                     ) : (
-                      <button
-                        type="button"
-                        className="button button-danger-quiet"
+                      <Button
+                        color="red"
+                        variant="outline"
                         onClick={() => setDeleting(true)}
                       >
                         Delete my account
-                      </button>
+                      </Button>
                     )}
                   </Panel>
                 </>
@@ -388,12 +383,12 @@ export const AccountPage = () => {
             }}
           </Loaded>
           {error === null ? null : (
-            <p className="note note-error" role="alert">
+            <Alert color="red" variant="light" role="alert">
               {error}
-            </p>
+            </Alert>
           )}
-        </div>
-      </div>
+        </Grid.Col>
+      </Grid>
     </>
   );
 };

@@ -3,9 +3,21 @@ import {
   SOCIAL_PROVIDERS,
   type SocialProvider,
 } from '@gravoth/contracts/constants';
+import {
+  Alert,
+  Anchor,
+  Box,
+  Button,
+  Card,
+  Divider,
+  PasswordInput,
+  SegmentedControl,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, api } from '../api.js';
-import { Panel } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { messageFor } from '../format.js';
 import { useNavigation, useQuery } from '../router.js';
@@ -18,7 +30,7 @@ const PROVIDER_NAMES: Record<SocialProvider, string> = {
   discord: 'Discord',
 };
 
-/** Only a path on this site: a `next` of `//evil.example` or `https://...` goes home instead. */
+/** Only a path on this site: a `next` of `//evil.example` or `https://...` goes to the account instead. */
 export const safeNext = (next: string | null): string =>
   next !== null && next.startsWith('/') && !next.startsWith('//')
     ? next
@@ -105,139 +117,116 @@ export const SignInPage = () => {
         title={title}
         sub="The same account as in the game: your heroes, records and friends."
       />
-      <div className="auth">
-        <Panel>
-          <div
-            className="segmented segmented-full"
-            role="tablist"
-            aria-label="Sign in or create an account"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'sign-in'}
-              className={mode === 'sign-in' ? 'segment active' : 'segment'}
-              onClick={() => setMode('sign-in')}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'sign-up'}
-              className={mode === 'sign-up' ? 'segment active' : 'segment'}
-              onClick={() => setMode('sign-up')}
-            >
-              Create account
-            </button>
-          </div>
+      <Box maw={440}>
+        <Card>
+          {mode === 'forgot' ? null : (
+            <SegmentedControl
+              fullWidth
+              radius="xl"
+              mb="lg"
+              value={mode}
+              onChange={(value) => setMode(value as Mode)}
+              data={[
+                { value: 'sign-in', label: 'Sign in' },
+                { value: 'sign-up', label: 'Create account' },
+              ]}
+            />
+          )}
 
           {providers.length === 0 || mode === 'forgot' ? null : (
             <>
-              <div className="providers">
+              <Stack gap="sm">
                 {providers.map((provider) => (
-                  <button
+                  <Button
                     key={provider}
-                    type="button"
-                    className={`button button-provider provider-${provider}`}
+                    variant="default"
+                    size="md"
+                    fullWidth
                     disabled={busy}
                     onClick={() => void social(provider)}
                   >
                     Continue with {PROVIDER_NAMES[provider]}
-                  </button>
+                  </Button>
                 ))}
-              </div>
-              <p className="divider">
-                <span>or with email</span>
-              </p>
+              </Stack>
+              <Divider label="or with email" labelPosition="center" my="lg" />
             </>
           )}
 
-          <form className="form" onSubmit={(event) => void submit(event)}>
-            {mode === 'sign-up' ? (
-              <label className="field">
-                <span>Name</span>
-                <input
+          <form onSubmit={(event) => void submit(event)}>
+            <Stack gap="md">
+              {mode === 'sign-up' ? (
+                <TextInput
+                  label="Name"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => setName(event.currentTarget.value)}
                   autoComplete="nickname"
                   maxLength={40}
                   placeholder="Shown until you pick a display name"
                 />
-              </label>
-            ) : null}
-            <label className="field">
-              <span>Email</span>
-              <input
+              ) : null}
+              <TextInput
+                label="Email"
                 type="email"
                 required
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => setEmail(event.currentTarget.value)}
                 autoComplete="email"
               />
-            </label>
-            {mode === 'forgot' ? null : (
-              <label className="field">
-                <span>Password</span>
-                <input
-                  type="password"
+              {mode === 'forgot' ? null : (
+                <PasswordInput
+                  label="Password"
                   required
                   minLength={PASSWORD_LIMITS.min}
                   maxLength={PASSWORD_LIMITS.max}
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => setPassword(event.currentTarget.value)}
                   autoComplete={
                     mode === 'sign-up' ? 'new-password' : 'current-password'
                   }
                 />
-              </label>
-            )}
-            {error === null ? null : (
-              <p className="note note-error" role="alert">
-                {messageFor(error)}
-              </p>
-            )}
-            {notice === null ? null : (
-              <p className="note" role="status">
-                {notice}
-              </p>
-            )}
-            <button
-              type="submit"
-              className="button button-primary"
-              disabled={busy}
-            >
-              {busy
-                ? 'One moment'
-                : mode === 'sign-up'
+              )}
+              {error === null ? null : (
+                <Alert color="red" variant="light" role="alert">
+                  {messageFor(error)}
+                </Alert>
+              )}
+              {notice === null ? null : (
+                <Alert variant="light" role="status">
+                  {notice}
+                </Alert>
+              )}
+              <Button type="submit" loading={busy} fullWidth size="md">
+                {mode === 'sign-up'
                   ? 'Create account'
                   : mode === 'forgot'
                     ? 'Send reset link'
                     : 'Sign in'}
-            </button>
+              </Button>
+            </Stack>
           </form>
 
-          <p className="auth-foot">
+          <Text ta="center" mt="md" size="sm">
             {mode === 'forgot' ? (
-              <button
+              <Anchor
+                component="button"
                 type="button"
-                className="link"
                 onClick={() => setMode('sign-in')}
               >
                 Back to sign in
-              </button>
+              </Anchor>
             ) : (
-              <button
+              <Anchor
+                component="button"
                 type="button"
-                className="link"
                 onClick={() => setMode('forgot')}
               >
                 Forgot your password?
-              </button>
+              </Anchor>
             )}
-          </p>
-        </Panel>
-      </div>
+          </Text>
+        </Card>
+      </Box>
     </>
   );
 };

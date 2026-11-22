@@ -1,5 +1,14 @@
 import { DISPLAY_NAME_PATTERN } from '@gravoth/contracts/constants';
-import { useEffect, useState, type FormEvent } from 'react';
+import {
+  Alert,
+  Button,
+  Grid,
+  Group,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError, api } from '../api.js';
 import { Empty, Loaded, Panel } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
@@ -53,43 +62,63 @@ const ByName = ({
   };
 
   return (
-    <>
-      <form
-        className="form form-inline"
-        onSubmit={(event) => void submit(event)}
-      >
-        <label className="field">
-          <span>Display name</span>
-          <input
+    <Stack gap="sm" mb="sm">
+      <form onSubmit={(event) => void submit(event)}>
+        <Group align="flex-end" gap="sm" wrap="nowrap">
+          <TextInput
+            label="Display name"
             value={name}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => setName(event.currentTarget.value)}
             maxLength={20}
             autoComplete="off"
+            style={{ flex: 1 }}
           />
-        </label>
-        <button
-          type="submit"
-          className={
-            danger === true
-              ? 'button button-danger-quiet'
-              : 'button button-primary'
-          }
-          disabled={busy || name.trim() === ''}
-        >
-          {label}
-        </button>
+          <Button
+            type="submit"
+            {...(danger === true ? { color: 'red' } : {})}
+            variant={danger === true ? 'outline' : 'filled'}
+            loading={busy}
+            disabled={name.trim() === ''}
+          >
+            {label}
+          </Button>
+        </Group>
       </form>
       {message === null ? null : (
-        <p
-          className={message.error ? 'note note-error' : 'note'}
+        <Alert
+          {...(message.error ? { color: 'red' } : {})}
+          variant="light"
           role={message.error ? 'alert' : 'status'}
         >
           {message.text}
-        </p>
+        </Alert>
       )}
-    </>
+    </Stack>
   );
 };
+
+/** One player's row: the name, when, then the actions at the far end. */
+const Person = ({
+  name,
+  when,
+  children,
+}: {
+  name: string;
+  when: string;
+  children: ReactNode;
+}) => (
+  <Group gap="sm" py={6} className="person-row" wrap="nowrap">
+    <Text fw={600} className="person">
+      {name}
+    </Text>
+    <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+      {when}
+    </Text>
+    <Group gap={6} wrap="nowrap">
+      {children}
+    </Group>
+  </Group>
+);
 
 export const FriendsPage = () => {
   const { session } = useSession();
@@ -137,13 +166,13 @@ export const FriendsPage = () => {
         sub="Friends see each other on the friends view of every board."
       />
       {error === null ? null : (
-        <p className="note note-error" role="alert">
+        <Alert color="red" variant="light" mb="lg" role="alert">
           {error}
-        </p>
+        </Alert>
       )}
-      <div className="two-col">
-        <div>
-          <Panel title="Add a friend">
+      <Grid gap="lg">
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          <Panel title="Add a friend" className="add-friend">
             <ByName
               label="Send request"
               onDone={refresh}
@@ -161,32 +190,29 @@ export const FriendsPage = () => {
                 page.data.length === 0 ? (
                   <Empty>No requests.</Empty>
                 ) : (
-                  <ul className="people">
+                  <Stack gap={0}>
                     {page.data.map((item) => (
-                      <li key={item.id}>
-                        <span className="person">{item.displayName}</span>
-                        <span className="muted small">
-                          {formatDate(item.createdAt)}
-                        </span>
-                        <span className="row-buttons">
-                          <button
-                            type="button"
-                            className="button button-primary button-small"
-                            onClick={() => void act(() => api.accept(item.id))}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            type="button"
-                            className="button button-quiet button-small"
-                            onClick={() => void act(() => api.decline(item.id))}
-                          >
-                            Decline
-                          </button>
-                        </span>
-                      </li>
+                      <Person
+                        key={item.id}
+                        name={item.displayName}
+                        when={formatDate(item.createdAt)}
+                      >
+                        <Button
+                          size="xs"
+                          onClick={() => void act(() => api.accept(item.id))}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="default"
+                          onClick={() => void act(() => api.decline(item.id))}
+                        >
+                          Decline
+                        </Button>
+                      </Person>
                     ))}
-                  </ul>
+                  </Stack>
                 )
               }
             </Loaded>
@@ -197,29 +223,29 @@ export const FriendsPage = () => {
                 page.data.length === 0 ? (
                   <Empty>Nothing pending.</Empty>
                 ) : (
-                  <ul className="people">
+                  <Stack gap={0}>
                     {page.data.map((item) => (
-                      <li key={item.id}>
-                        <span className="person">{item.displayName}</span>
-                        <span className="muted small">
-                          {formatDate(item.createdAt)}
-                        </span>
-                        <button
-                          type="button"
-                          className="button button-quiet button-small"
+                      <Person
+                        key={item.id}
+                        name={item.displayName}
+                        when={formatDate(item.createdAt)}
+                      >
+                        <Button
+                          size="xs"
+                          variant="default"
                           onClick={() => void act(() => api.cancel(item.id))}
                         >
                           Cancel
-                        </button>
-                      </li>
+                        </Button>
+                      </Person>
                     ))}
-                  </ul>
+                  </Stack>
                 )
               }
             </Loaded>
           </Panel>
-        </div>
-        <div>
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 6 }}>
           <Panel title="Friends">
             <Loaded load={friends}>
               {(page) =>
@@ -228,36 +254,35 @@ export const FriendsPage = () => {
                     No friends yet. Ask someone by their display name.
                   </Empty>
                 ) : (
-                  <ul className="people">
+                  <Stack gap={0} className="friend-list">
                     {page.data.map((friend) => (
-                      <li key={friend.userId}>
-                        <span className="person">{friend.displayName}</span>
-                        <span className="muted small">
-                          since {formatDate(friend.since)}
-                        </span>
-                        <span className="row-buttons">
-                          <button
-                            type="button"
-                            className="button button-quiet button-small"
-                            onClick={() =>
-                              void act(() => api.unfriend(friend.userId))
-                            }
-                          >
-                            Remove
-                          </button>
-                          <button
-                            type="button"
-                            className="button button-danger-quiet button-small"
-                            onClick={() =>
-                              void act(() => api.block(friend.displayName))
-                            }
-                          >
-                            Block
-                          </button>
-                        </span>
-                      </li>
+                      <Person
+                        key={friend.userId}
+                        name={friend.displayName}
+                        when={`since ${formatDate(friend.since)}`}
+                      >
+                        <Button
+                          size="xs"
+                          variant="default"
+                          onClick={() =>
+                            void act(() => api.unfriend(friend.userId))
+                          }
+                        >
+                          Remove
+                        </Button>
+                        <Button
+                          size="xs"
+                          color="red"
+                          variant="outline"
+                          onClick={() =>
+                            void act(() => api.block(friend.displayName))
+                          }
+                        >
+                          Block
+                        </Button>
+                      </Person>
                     ))}
-                  </ul>
+                  </Stack>
                 )
               }
             </Loaded>
@@ -276,31 +301,31 @@ export const FriendsPage = () => {
                 page.data.length === 0 ? (
                   <Empty>Nobody blocked.</Empty>
                 ) : (
-                  <ul className="people">
+                  <Stack gap={0}>
                     {page.data.map((block) => (
-                      <li key={block.userId}>
-                        <span className="person">{block.displayName}</span>
-                        <span className="muted small">
-                          {formatDate(block.blockedAt)}
-                        </span>
-                        <button
-                          type="button"
-                          className="button button-quiet button-small"
+                      <Person
+                        key={block.userId}
+                        name={block.displayName}
+                        when={formatDate(block.blockedAt)}
+                      >
+                        <Button
+                          size="xs"
+                          variant="default"
                           onClick={() =>
                             void act(() => api.unblock(block.userId))
                           }
                         >
                           Unblock
-                        </button>
-                      </li>
+                        </Button>
+                      </Person>
                     ))}
-                  </ul>
+                  </Stack>
                 )
               }
             </Loaded>
           </Panel>
-        </div>
-      </div>
+        </Grid.Col>
+      </Grid>
     </>
   );
 };

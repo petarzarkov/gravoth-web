@@ -28,8 +28,9 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   pool (drizzle over `Bun.SQL`). better-auth serves sign-in under `/api/auth`:
   the game sends `Authorization: Bearer`, the website a first-party cookie.
   `web/` serves the website's build.
-- **`apps/web`** is the website: React 19 on Bun's bundler, no framework
-  beyond a small history router (`router.tsx`). Pages: the boards
+- **`apps/web`** is the website: React 19 with Mantine 9 (`theme.ts`, the
+  game's palette, always dark) on Bun's bundler, and a small history router
+  (`router.tsx`). Pages: the boards
   (`/`, `/boards/:key`), a build card (`/builds/:id`), sign-in, the account and
   friends. Every request goes through `api.ts`, typed by the contracts.
 

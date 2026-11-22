@@ -53,7 +53,8 @@ if (apiBase !== '') {
   const policy = [
     "default-src 'self'",
     "script-src 'self'",
-    "style-src 'self'",
+    // Mantine writes its theme as a <style> element and sets element styles.
+    "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     `connect-src 'self' ${apiBase}`,
     "form-action 'self'",
