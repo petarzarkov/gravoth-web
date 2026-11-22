@@ -179,8 +179,8 @@ const MyPlace = ({
     <Panel title="Your place">
       {entry === null ? (
         <Empty>
-          None of your heroes is on this board yet. Records are posted from the
-          game.
+          None of your heroes is on this board yet. The boards take online
+          heroes' records, read from their realm on the server.
         </Empty>
       ) : (
         <EntryTable board={board} entries={neighbours} me={session?.user.id} />
@@ -235,7 +235,7 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
                 {board.hardcore ? <HardcoreBadge /> : null}
                 <span>
                   {board.sort === 'asc' ? 'Fastest first.' : 'Highest first.'}{' '}
-                  Each row opens the build that set it.
+                  Online heroes only; each row opens the build that set it.
                 </span>
               </Group>
             }

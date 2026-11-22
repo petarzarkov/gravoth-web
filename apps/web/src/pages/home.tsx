@@ -122,7 +122,7 @@ export const BoardsPage = () => {
     <>
       <PageTitle
         title="Leaderboards"
-        sub="Every record on the boards, with the whole build that set it: skills, gear, every affix."
+        sub="Every online hero's record, with the whole build that set it: skills, gear, every affix."
       >
         <SegmentedControl
           className="filters"

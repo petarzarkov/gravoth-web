@@ -24,13 +24,15 @@ export const DeleteAccountPage = () => {
           account and its sign-ins (email and password, Google, Discord), your
           display name and privacy settings, your heroes and every build they
           posted, your records on the leaderboards, the cloud save the game
-          keeps, your friends, friend requests and blocks. A confirmation mail
-          goes to a confirmed address. The nightly backups that still hold them
-          are deleted as they turn 30 days old.
+          keeps, your online realm (your online heroes, their stash and every
+          hero moved online), your friends, friend requests and blocks. A
+          confirmation mail goes to a confirmed address. The nightly backups
+          that still hold them are deleted as they turn 30 days old.
         </Text>
         <Text mb="lg">
-          Your heroes on your phone are not affected: the game plays offline and
-          keeps its save on the phone.
+          Your offline heroes on your phone are not affected: the game plays
+          offline and keeps their save on the phone. Online heroes live on the
+          server, so they go with the account.
         </Text>
         <Title order={2} size="h4" mb="xs">
           On this site

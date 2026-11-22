@@ -250,8 +250,8 @@ export const AccountPage = () => {
               {({ heroes: list }) =>
                 list.length === 0 ? (
                   <Empty>
-                    No heroes yet. A hero shows up here once the game posts its
-                    first record.
+                    No heroes yet. A hero shows up here once the game sends its
+                    build.
                   </Empty>
                 ) : (
                   <Stack gap="xs" className="hero-list">
@@ -342,8 +342,9 @@ export const AccountPage = () => {
                       >
                         <Stack gap="md">
                           <Text size="sm">
-                            Your heroes, records, builds, cloud save and friends
-                            are deleted with it. This can't be undone.
+                            Your heroes, records, builds, cloud save, online
+                            realm and friends are deleted with it. This can't be
+                            undone.
                           </Text>
                           {hasPassword ? (
                             <PasswordInput

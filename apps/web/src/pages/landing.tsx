@@ -163,7 +163,8 @@ export const LandingPage = () => {
         </Text>
         <Text mb="sm">
           Gravoth Online is optional: sign in with the same account as in the
-          game to put your records on the{' '}
+          game to show your heroes on your player page, to play online heroes
+          whose records stand on the{' '}
           <Anchor component={Link} to="/boards">
             leaderboards
           </Anchor>
