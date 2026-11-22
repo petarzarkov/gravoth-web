@@ -39,6 +39,8 @@ services:
       VALIDATOR_URL: http://validator:8080
       PUBLIC_URL: '${PUBLIC_URL:-https://gravoth-api.petarzarkov.com}'
       CORS_ORIGIN: '${CORS_ORIGIN:-https://gravoth.petarzarkov.com}'
+      # Decision 227: the boards take online heroes only; off until the game release that makes online heroes (BOARDS_ONLINE_ONLY=true in .env then).
+      BOARDS_ONLINE_ONLY: '${BOARDS_ONLINE_ONLY:-false}'
     ports: ['3000:3000']
     depends_on:
       postgres: { condition: service_healthy }
