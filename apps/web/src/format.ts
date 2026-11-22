@@ -46,6 +46,19 @@ export const formatDate = (iso: string): string => {
       });
 };
 
+/** A day and a time: `22 Nov, 14:05`. */
+export const formatDateTime = (iso: string): string => {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+};
+
 /** Play time as the game's choice card shows it: hours and minutes (`0:05`, `41:07`). */
 export const formatPlayTime = (seconds: number): string => {
   const minutes = Math.floor(Math.max(0, seconds) / 60);
@@ -133,6 +146,10 @@ const MESSAGES: Record<string, string> = {
   BOARD_NOT_FOUND: 'No such board.',
   BUILD_NOT_FOUND: 'No such build.',
   HERO_NOT_FOUND: 'No such hero.',
+  // Chat moderation (the admin page).
+  REPORT_NOT_FOUND: 'That report is gone.',
+  MUTE_NOT_FOUND: 'That player is not muted.',
+  MESSAGE_NOT_FOUND: 'That message is gone.',
   // better-auth's own codes.
   INVALID_EMAIL_OR_PASSWORD: 'Wrong email or password.',
   USER_ALREADY_EXISTS: 'An account already uses that email.',

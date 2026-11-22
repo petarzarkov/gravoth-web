@@ -6,11 +6,18 @@ import type {
   BoardList,
   BoardPage,
   BuildCard,
+  ChatModeratedMessage,
+  ChatModeratedMessages,
+  ChatMuteList,
+  ChatMuteView,
+  ChatReportList,
+  ChatReportView,
   CloudSaveDeleted,
   CloudSaveView,
   FriendView,
   HeroClass,
   MetaInfo,
+  MutePlayer,
   MyHeroes,
   Neighbourhood,
   Page,
@@ -18,6 +25,7 @@ import type {
   ProfileView,
   RequestOutcome,
   RequestView,
+  ResolveReport,
   SessionView,
   SignInMethods,
   SocialProvider,
@@ -195,4 +203,23 @@ export const api = {
     post<BlockView>('/api/blocks', { displayName }),
   unblock: (userId: string) =>
     post<{ unblocked: true }>(`/api/blocks/${userId}/remove`),
+
+  // Chat moderation (decision 228): the `admin` role only, 403 for anyone else. Players chat in the game, not here.
+  chatReports: (state: 'open' | 'closed', before?: number) =>
+    get<ChatReportList>('/api/admin/chat/reports', { state, before, take: 50 }),
+  resolveReport: (id: number, outcome: ResolveReport) =>
+    post<ChatReportView>(`/api/admin/chat/reports/${id}/resolve`, outcome),
+  chatMutes: () => get<ChatMuteList>('/api/admin/chat/mutes'),
+  mute: (body: MutePlayer) => post<ChatMuteView>('/api/admin/chat/mutes', body),
+  unmute: (userId: string) =>
+    post<{ removed: true }>(`/api/admin/chat/mutes/${userId}/remove`),
+  chatMessages: (query: {
+    userId?: string | undefined;
+    peerId?: string | undefined;
+    around?: number | undefined;
+    before?: number | undefined;
+    take?: number | undefined;
+  }) => get<ChatModeratedMessages>('/api/admin/chat/messages', query),
+  hideMessage: (id: number) =>
+    post<ChatModeratedMessage>(`/api/admin/chat/messages/${id}/hide`),
 };

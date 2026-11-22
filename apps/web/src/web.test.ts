@@ -22,6 +22,12 @@ import {
 import { matchPath } from './router.js';
 import { safeNext } from './pages/sign-in.js';
 import { bestBorder, recordBoard } from './pages/player.js';
+import {
+  MUTE_CHOICES,
+  groupReports,
+  muteEnds,
+} from './components/chat-moderation.js';
+import type { ChatReportView } from '@gravoth/contracts';
 
 describe('format', () => {
   test('a count board reads as a number', () => {
@@ -260,5 +266,59 @@ describe('player pages', () => {
     expect(bestBorder([withBorder('pinnacle'), withBorder('hall_gold')])).toBe(
       'pinnacle',
     );
+  });
+});
+
+describe('chat moderation', () => {
+  const player = (userId: string) => ({
+    userId,
+    displayName: userId,
+    avatar: {
+      kind: 'portrait' as const,
+      portrait: 'warden' as const,
+      url: null,
+    },
+  });
+  const report = (id: number, messageId: number): ChatReportView => ({
+    id,
+    reason: 'spam',
+    note: '',
+    reporter: player(`r${id}`),
+    message: {
+      id: messageId,
+      channel: 'global',
+      from: player('writer'),
+      to: null,
+      body: 'text',
+      at: '2026-11-22T12:00:00Z',
+      hidden: false,
+    },
+    reports: 1,
+    createdAt: '2026-11-22T12:00:00Z',
+    resolved: null,
+  });
+
+  test("a message's reports show together, in the order their newest came", () => {
+    const groups = groupReports([
+      report(9, 3),
+      report(8, 2),
+      report(7, 3),
+      report(6, 1),
+    ]);
+    expect(groups.map((group) => group.message.id)).toEqual([3, 2, 1]);
+    expect(groups[0]?.reports.map((entry) => entry.id)).toEqual([9, 7]);
+  });
+
+  test('a mute is an hour, a day, a week or for good', () => {
+    expect(MUTE_CHOICES.map((choice) => choice.hours)).toEqual([
+      1, 24, 168, 87_600,
+    ]);
+    const now = Date.parse('2026-11-22T12:00:00Z');
+    expect(muteEnds('2036-11-20T12:00:00Z', now)).toBe('for good');
+    expect(muteEnds('2026-11-23T12:00:00Z', now)).toMatch(/^until 23 Nov/);
+  });
+
+  test('the admin page has its address', () => {
+    expect(matchPath('/admin/chat', '/admin/chat')).toEqual({});
   });
 });

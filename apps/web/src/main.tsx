@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { Empty } from './components/bits.js';
 import { Layout, PageTitle } from './components/layout.js';
 import { AccountPage } from './pages/account.js';
+import { AdminChatPage } from './pages/admin-chat.js';
 import { BoardPage } from './pages/board.js';
 import { BuildPage } from './pages/build.js';
 import { DeleteAccountPage } from './pages/delete-account.js';
@@ -37,6 +38,8 @@ const routes: readonly RouteDefinition[] = [
   { pattern: '/account', render: () => <AccountPage /> },
   { pattern: '/friends', render: () => <FriendsPage /> },
   { pattern: '/delete-account', render: () => <DeleteAccountPage /> },
+  // Decision 228: moderation, for the admin role only (anyone else finds no page).
+  { pattern: '/admin/chat', render: () => <AdminChatPage /> },
 ];
 
 const NotFound = () => (

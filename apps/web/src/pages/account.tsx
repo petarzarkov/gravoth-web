@@ -25,7 +25,7 @@ import { PageTitle } from '../components/layout.js';
 import { PicturePicker } from '../components/picture-picker.js';
 import { useLoad } from '../components/use-load.js';
 import { formatDate, messageFor } from '../format.js';
-import { useNavigation } from '../router.js';
+import { Link, useNavigation } from '../router.js';
 import { useSession } from '../session.js';
 
 const problem = (caught: unknown): string =>
@@ -332,6 +332,22 @@ export const AccountPage = () => {
                       </Alert>
                     )}
                   </Panel>
+                  {view.admin ? (
+                    <Panel title="Moderation" className="moderation-panel">
+                      <Group justify="space-between" gap="sm">
+                        <Text size="sm" c="dimmed">
+                          Chat reports, mutes and the global channel.
+                        </Text>
+                        <Button
+                          component={Link}
+                          to="/admin/chat"
+                          variant="default"
+                        >
+                          Chat moderation
+                        </Button>
+                      </Group>
+                    </Panel>
+                  ) : null}
                   <Panel title="Delete account" className="panel-danger">
                     {deleting ? (
                       <form
@@ -343,8 +359,8 @@ export const AccountPage = () => {
                         <Stack gap="md">
                           <Text size="sm">
                             Your heroes, records, builds, cloud save, online
-                            realm and friends are deleted with it. This can't be
-                            undone.
+                            realm, friends and chat messages are deleted with
+                            it. This can't be undone.
                           </Text>
                           {hasPassword ? (
                             <PasswordInput

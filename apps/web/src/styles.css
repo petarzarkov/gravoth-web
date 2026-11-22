@@ -343,3 +343,23 @@ body {
   height: auto;
   pointer-events: none;
 }
+
+/* The admin page's chat lines (decision 228): plain text that wraps anywhere, and the reported line among its
+   neighbours. */
+.chat-body {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.chat-line-focus {
+  margin: 0 -8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--gold);
+  border-radius: 4px;
+  background: rgba(255, 199, 89, 0.06);
+}
+
+.report-context {
+  padding-top: 12px;
+  border-top: 1px solid var(--edge);
+}

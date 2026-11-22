@@ -73,9 +73,9 @@
       <p class="meta">
         Effective 17 November 2026; updated 22 November 2026 for version 0.13,
         which removes Google Play Games, and for Gravoth Online, the optional
-        accounts, leaderboards, player pages, friends, cloud save and online
-        heroes at gravoth.petarzarkov.com. Applies to the Android game Gravoth
-        (package
+        accounts, leaderboards, player pages, friends, chat, cloud save and
+        online heroes at gravoth.petarzarkov.com. Applies to the Android game
+        Gravoth (package
         <code>com.petarzarkov.gravoth</code>) and to Gravoth Online, both made
         by their independent developer, petarzarkov.
       </p>
@@ -89,11 +89,12 @@
         <li>
           Gravoth Online, at gravoth.petarzarkov.com, is optional: an account
           (or a guest) for a player page showing your heroes' builds, online
-          heroes whose records stand on the leaderboards, a friends list and a
-          cloud save. It keeps your account, your profile, your heroes and their
-          builds, your online heroes' save and, once you sign in to it in the
-          game with Google, Discord or email, a copy of your save (unless you
-          turn that off) on the developer's own server. See "Gravoth Online".
+          heroes whose records stand on the leaderboards, a friends list, chat
+          with other players and a cloud save. It keeps your account, your
+          profile, your heroes and their builds, your online heroes' save, your
+          chat messages (for 30 days) and, once you sign in to it in the game
+          with Google, Discord or email, a copy of your save (unless you turn
+          that off) on the developer's own server. See "Gravoth Online".
         </li>
         <li>
           From version 0.13 the game no longer uses Google Play Games: it does
@@ -110,7 +111,7 @@
           Nobody's personal data is sold. Apart from Gravoth Online, the game
           does not send your game data to the developer; Gravoth Online keeps
           only what you give it or post to it: your heroes' builds, your online
-          heroes' save, and the cloud save while it is on.
+          heroes' save, your chat messages, and the cloud save while it is on.
         </li>
         <li>
           There are no ads and no tracking in the game, and no analytics or
@@ -241,12 +242,13 @@
       <p>
         Gravoth Online is optional: accounts, player pages, online heroes and
         the leaderboards their records stand on (each with the hero's full
-        build), a friends list and a cloud save. It runs on the developer's own
-        server (gravoth-api.petarzarkov.com, in the European Union) and is used
-        by the website gravoth.petarzarkov.com and by the game, from its GRAVOTH
-        ONLINE page. Nothing in the game needs it. You can look at the
-        leaderboards and public player pages without an account; what follows
-        applies once you sign in or play as a guest. Its rules are in the
+        build), a friends list, chat and a cloud save. It runs on the
+        developer's own server (gravoth-api.petarzarkov.com, in the European
+        Union) and is used by the website gravoth.petarzarkov.com and by the
+        game, from its GRAVOTH ONLINE page. Nothing in the game needs it. You
+        can look at the leaderboards and public player pages without an account;
+        what follows applies once you sign in or play as a guest. Its rules are
+        in the
         <a href="/terms/">terms of service</a>.
       </p>
       <ul>
@@ -367,6 +369,38 @@
           Only you see these lists. Guests have no friends list.
         </li>
         <li>
+          <strong>Chat:</strong> in the game, an account (not a guest) can write
+          in one global channel that every account reads, and directly to its
+          friends. Before your first message you accept the chat rules (in the
+          <a href="/terms/">terms of service</a>), and the server keeps when you
+          did. For each message it keeps the text (plain text, up to 300
+          characters, as the word filter left it: slurs and hate are refused,
+          obscenities are masked with <code>*</code>, and links to anywhere but
+          gravoth.petarzarkov.com are refused), who wrote it, to whom for a
+          direct message, and when; for each conversation, how far you have read
+          it. Messages are deleted after 30 days, or later while a report about
+          one is still open. Global messages are shown to every account with the
+          writer's display name and picture; a direct message only to its two
+          players, and it stays readable to both after they stop being friends.
+          The messages of a player you block are not shown to you. The server
+          counts how many messages you send in a minute, to stop floods.
+        </li>
+        <li>
+          <strong>Reports and moderation:</strong> you can report a message you
+          can see, with a reason and an optional note. A report keeps your
+          account, the reason, the note, when you sent it, and a copy of the
+          message (its text, its channel, its writer and, for a direct message,
+          its other player, and when it was sent), so that it can be looked into
+          after the message itself is gone. Three reports of a global message
+          hide it until it has been looked at. The developer is the moderator:
+          they read the reports, and to look into one they can read any chat
+          message, global or direct, while it is kept; they can hide a message
+          and mute a player (for an hour, a day, a week or for good, with a
+          reason). A report and its copy are kept until it is closed and then
+          for 180 days, so repeated abuse can be seen; a mute is kept until it
+          ends. Nobody else reads reports, and they are never shared.
+        </li>
+        <li>
           <strong>What other players see:</strong> on the leaderboards, your
           display name, each online hero's name, class and full build, the score
           and its date. Your player page shows anyone your display name, your
@@ -377,7 +411,10 @@
           still show, and your player page shows only to your friends. Friends
           see your display name and picture. Where your picture is your Google
           or Discord one, a player's browser loads it from that service, which
-          then sees their IP address (the website sends no referrer with it).
+          then sees their IP address (the website sends no referrer with it). In
+          chat, other accounts see your display name, your picture and your
+          global messages; your direct messages only the friend they were sent
+          to.
         </li>
         <li>
           <strong>Mail:</strong> the server sends mail through Resend, an email
@@ -415,11 +452,13 @@
           (done within 30 days). It removes at once the account and its sign-ins
           and sessions, your profile, heroes, builds and records, your cloud
           save, your online heroes' save with the fingerprints of the heroes you
-          moved online, and your friends, requests and blocks. The nightly
-          copies that still hold them are deleted as they turn 30 days old, and
-          log lines naming the account's id are overwritten as the logs fill.
-          The heroes on your phone are not affected; online heroes live on the
-          server and go with the account.
+          moved online, your friends, requests and blocks, and your chat: your
+          messages and the messages sent to you, your read marks, the reports
+          you made and the reports of your messages with their copies, and any
+          mute. The nightly copies that still hold them are deleted as they turn
+          30 days old, and log lines naming the account's id are overwritten as
+          the logs fill. The heroes on your phone are not affected; online
+          heroes live on the server and go with the account.
         </li>
         <li>
           <strong>Your rights:</strong> you can see and change your display name
@@ -441,10 +480,10 @@
         <li>It contains no advertising and does not use the advertising ID.</li>
         <li>
           Apart from the engine's hardware statistics, it contains no analytics,
-          crash-reporting or tracking services. The game itself has no social
-          features: from version 0.13 the BOARDS list shows your own bests on
-          your phone only, and there is no chat or contact between players (the
-          online leaderboards and friends are Gravoth Online's, above).
+          crash-reporting or tracking services. Apart from Gravoth Online, the
+          game has no social features: from version 0.13 the BOARDS list shows
+          your own bests on your phone only, and players meet only through
+          Gravoth Online (its leaderboards, friends and chat, above).
         </li>
         <li>
           It sells nothing that changes the game. The in-game gambler sells
