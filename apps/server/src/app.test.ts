@@ -84,7 +84,7 @@ describe('the scaffold examples are gone', () => {
     });
   }
 
-  it('documents exactly the game, account, profile, friends, heroes, board and cloud save routes', async () => {
+  it('documents exactly the game, account, profile, friends, heroes, player, board and cloud save routes', async () => {
     const response = await fetch(`${base}/api/openapi.json`);
     expect(response.status).toBe(200);
     const document = (await response.json()) as {
@@ -117,11 +117,14 @@ describe('the scaffold examples are gone', () => {
       '/api/friends/{userId}/remove',
       '/api/health',
       '/api/heroes',
+      '/api/heroes/active',
+      '/api/heroes/{id}/builds',
       '/api/leaderboards',
       '/api/leaderboards/{key}',
       '/api/leaderboards/{key}/me',
       '/api/leaderboards/{key}/scores',
       '/api/meta',
+      '/api/players/{userId}',
       '/api/profile',
       '/api/saves/me',
     ]);

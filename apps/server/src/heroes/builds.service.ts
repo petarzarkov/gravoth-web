@@ -1,6 +1,6 @@
 import type { SqlTransaction } from '@dunx/infra/db';
 import { HttpError, HttpStatusCode } from '@dunx/http';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import {
   hero,
@@ -77,6 +77,30 @@ export class Builds {
     build: BuildSnapshot,
     checked: CheckedNumbers,
   ): Promise<HeroBuild> {
+    return (await this.store(tx, owner, build, checked)).build;
+  }
+
+  /** The hero's newest build (its highest revision), or undefined before the first. */
+  async latest(
+    heroId: string,
+    tx: SqlTransaction<typeof schema> | Db = this.db,
+  ): Promise<HeroBuild | undefined> {
+    const [row] = await tx
+      .select()
+      .from(heroBuild)
+      .where(eq(heroBuild.heroId, heroId))
+      .orderBy(desc(heroBuild.revision), desc(heroBuild.createdAt))
+      .limit(1);
+    return row;
+  }
+
+  /** {@link snapshot}, saying whether this call stored the build (`created`) or found it stored. */
+  async store(
+    tx: SqlTransaction<typeof schema>,
+    owner: Hero,
+    build: BuildSnapshot,
+    checked: CheckedNumbers,
+  ): Promise<{ build: HeroBuild; created: boolean }> {
     const contentHash = buildHash(build);
     const [existing] = await tx
       .select()
@@ -91,7 +115,7 @@ export class Builds {
     if (existing !== undefined) {
       if (existing.contentHash !== contentHash)
         throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
-      return existing;
+      return { build: existing, created: false };
     }
     const summary = { ...build.summary, ...checked.summary };
     const [row] = await tx
@@ -119,7 +143,7 @@ export class Builds {
       })
       .onConflictDoNothing({ target: [heroBuild.heroId, heroBuild.revision] })
       .returning();
-    if (row !== undefined) return row;
+    if (row !== undefined) return { build: row, created: true };
     // The same revision arrived twice at once; the other one is stored.
     const [raced] = await tx
       .select()
@@ -133,7 +157,7 @@ export class Builds {
       .limit(1);
     if (raced === undefined || raced.contentHash !== contentHash)
       throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
-    return raced;
+    return { build: raced, created: false };
   }
 
   /** The build card for `GET /api/builds/:id`. */

@@ -31,8 +31,11 @@ export { HERO_CLASSES, type HeroClass };
 
 /**
  * A hero the server knows, owned by one user. An **online** hero (step 5) lives on the server and starts fresh; an
- * offline hero is registered only so its records can stand on the boards with their builds. An offline hero never
- * becomes an online one (decided 2026-11-22). The name is unique per player, without regard to case.
+ * offline hero is registered so its builds show on its player's page (decision 226: the game sends every hero's build
+ * when it changes). The name is unique per player, without regard to case.
+ *
+ * `retired_at` (decision 226): the hero is gone from the phone (deleted, or moved), so its player page leaves it out;
+ * its builds and board records stay. `POST /api/heroes/active` sets and clears it.
  *
  * `(id, user_id)` is unique so a board entry can name both and the database holds them together: an entry's player is
  * always its hero's owner, and a guest's heroes moving to the account it becomes carry their entries along.
@@ -48,6 +51,7 @@ export const hero = pgTable(
     class: text('class', { enum: HERO_CLASSES }).notNull(),
     hardcore: boolean('hardcore').notNull().default(false),
     online: boolean('online').notNull().default(false),
+    retiredAt: timestamp('retired_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
