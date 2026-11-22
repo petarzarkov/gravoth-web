@@ -1,40 +1,88 @@
 # Deploying Gravoth Online
 
-One image (`Dockerfile`) holds the API and the website it serves. On the
-Raspberry Pi (and later a VPS) `compose.prod.yml` runs it beside Postgres 17,
-Redis, the rules checker and the Cloudflare Tunnel. Nothing here deploys by
-itself: `./deploy-pi.sh` runs only when the developer asks.
+Two halves, delivered by `.github/workflows/ci.yml` (decision 220):
+
+- **The website** is static, on the Cloudflare Pages project `gravoth`, behind
+  `https://gravoth.petarzarkov.com`. Every push to `main` that passes CI builds
+  it for Pages and deploys it. It calls the API at
+  `https://gravoth-api.petarzarkov.com` across origins.
+- **The server** is one image (`Dockerfile`): CI publishes it to GHCR for
+  linux/amd64 and linux/arm64 on every push to `main`. On the Raspberry Pi
+  (and later a VPS) `compose.prod.yml` runs it beside Postgres 17, Redis, the
+  rules checker and the Cloudflare Tunnel. Deploying it is by hand:
+  `./deploy-pi.sh`, only when the developer asks.
+
+## CI/CD
+
+| Job     | When                        | What                                                                                                                         |
+| ------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `check` | every push and pull request | lint, format, types, every suite (the server's against a Postgres service), both website builds, the image built and booted  |
+| `image` | `main`, after `check`       | `ghcr.io/petarzarkov/gravoth-web:main` and `:sha-<7>`, amd64 and arm64, with the run's own token                             |
+| `site`  | `main`, after `check`       | the Pages build (`GRAVOTH_API_BASE=$API_ORIGIN`) deployed to `$PAGES_PROJECT`; skipped with a notice until the secrets exist |
+
+The site job needs two repository secrets, set by the developer:
+`CLOUDFLARE_API_TOKEN` (a token with Cloudflare Pages: Edit) and
+`CLOUDFLARE_ACCOUNT_ID`. The repository variables `API_ORIGIN` and
+`PAGES_PROJECT` override the defaults.
+
+The rules checker's image is the game repository's:
+`ghcr.io/petarzarkov/gravoth-validator:<release>` and `:latest`, published by
+its `validator.yml` on each `v*` tag, so the server checks saves with the rules
+of the game players run.
+
+## The website on Pages
+
+`apps/web/build.ts` with `GRAVOTH_API_BASE` set writes `dist/` for Pages: the
+app (`/`, the game's page; `/boards`, `/builds/<id>`, `/sign-in`, `/account`,
+`/friends`, `/delete-account`), `/privacy/` (the policy Play links to, a page
+of its own), the screenshots, and `_headers` (the content security policy
+allowing calls to the API only, the other security headers, a year's cache on
+the hashed assets). Pages answers any other path with `index.html` (there is no
+`404.html`), which is how the app's own paths load.
+
+Sign-in works across the two origins because they are one site
+(`petarzarkov.com`): the session cookie is the API's, sent with the site's
+credentialed calls, and the API trusts the site (`CORS_ORIGIN`, default
+`https://gravoth.petarzarkov.com`, for CORS, the cross-site check and
+better-auth). Google and Discord come back to the API
+(`https://gravoth-api.petarzarkov.com/api/auth/callback/<provider>`), which
+then sends the browser back to the site.
+
+The API still serves its own copy of the site at
+`https://gravoth-api.petarzarkov.com/` (same origin), which the end-to-end run
+and a Pages outage can fall back on.
 
 ## The stack
 
-| Service       | Container           | What it is                                                                                                  |
-| ------------- | ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `app`         | `gravoth-api`       | This repository's image: the API on :3000 with the website at `/`. Migrations run at boot                   |
-| `postgres`    | `gravoth-postgres`  | The database, on the private network only. Its password is set once, when the volume is first made          |
-| `redis`       | `gravoth-redis`     | The cache, the rate limit and the WebSocket relay; the app degrades without it                              |
-| `validator`   | `gravoth-validator` | The rules checker, built from the game's repository (`dotnet/Gravoth.Validator` and the Core it compiles)   |
-| `cloudflared` | `gravoth-tunnel`    | The tunnel (profile `tunnel`): `gravoth-api.petarzarkov.com` → `http://app:3000`. No port is open on the Pi |
+| Service       | Container           | What it is                                                                                                                    |
+| ------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `app`         | `gravoth-api`       | `APP_IMAGE` (default `ghcr.io/petarzarkov/gravoth-web:main`): the API on :3000 (and its copy of the site). Migrations at boot |
+| `postgres`    | `gravoth-postgres`  | The database, on the private network only. Its password is set once, when the volume is first made                            |
+| `redis`       | `gravoth-redis`     | The cache, the rate limit and the WebSocket relay; the app degrades without it                                                |
+| `validator`   | `gravoth-validator` | `VALIDATOR_IMAGE` (default `ghcr.io/petarzarkov/gravoth-validator:latest`): the rules checker                                 |
+| `cloudflared` | `gravoth-tunnel`    | The tunnel (profile `tunnel`): `gravoth-api.petarzarkov.com` → `http://app:3000`. No port is open on the Pi                   |
 
-The public address serves both halves: `https://gravoth-api.petarzarkov.com/`
-is the website, `/api/...` the API the game calls. Mail links and the OAuth
-redirect URIs are built from `PUBLIC_URL` (that address by default). To give
-the website a nicer address later, point another tunnel hostname at
-`http://app:3000`, set `PUBLIC_URL` to it, and add its callback URLs to the
-Google and Discord clients.
+Mail links and the OAuth redirect URIs are built from `PUBLIC_URL`
+(`https://gravoth-api.petarzarkov.com` by default).
 
 ## On the Pi
 
 ```
 ~/gravoth/web/                     this repository (deploy-pi.sh copies it; .env is never copied)
 ~/gravoth/web/.env                 the secrets, written by the developer (every name in .env.example)
-~/gravoth/dotnet/...               the rules checker's sources, from the game's repository
-~/gravoth/game/Assets/Gravoth/Core the Core it compiles
+~/gravoth/dotnet/..., game/...     the rules checker's sources, only with --build
 ```
 
-`./deploy-pi.sh [--tunnel]` (with `GAME_REPO` pointing at the game's checkout,
-default `../bloodline`) copies all of that, then on the Pi runs
-`docker compose -f compose.prod.yml up -d --build` in `~/gravoth/web` with the
-commit as `COMMIT_SHA`.
+`./deploy-pi.sh [--tunnel]` copies the repository, then on the Pi pulls the
+images (`IMAGE_TAG`, default `main`, or a commit's `sha-<7>` from CI's summary;
+`VALIDATOR_TAG`, default `latest`) and restarts the stack with them. Pulling
+needs a one-time `docker login ghcr.io` on the Pi with a token that can read
+the developer's packages.
+
+`./deploy-pi.sh --build` builds both images on the Pi instead: this
+repository's source, and the rules checker from the game's checkout
+(`GAME_REPO`, default `../bloodline`), copied beside it. That is the way until
+the game's next release publishes the checker's first image.
 
 ### The first deploy from this repository
 
@@ -55,31 +103,36 @@ it:
 
 Values never go through an agent. Each line names where a value goes.
 
-1. **`~/gravoth/web/.env`** on the Pi (the first deploy copies the existing
+1. **GitHub:** the secrets `CLOUDFLARE_API_TOKEN` (Cloudflare Pages: Edit)
+   and `CLOUDFLARE_ACCOUNT_ID` on this repository
+   (`gh secret set CLOUDFLARE_API_TOKEN -R petarzarkov/gravoth-web`). The next
+   push to `main` then replaces gravoth.petarzarkov.com with this website. On
+   the Pi, once: `docker login ghcr.io` with a token that can read packages.
+2. **`~/gravoth/web/.env`** on the Pi (the first deploy copies the existing
    file, which already holds `AUTH_SECRET`, `POSTGRES_PASSWORD`,
    `RESEND_API_KEY` and `MAIL_FROM`). Still to add: `TUNNEL_TOKEN`,
    `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, `DISCORD_CLIENT_ID` and
    `DISCORD_CLIENT_SECRET`, and the four `R2_*` values. Set
    `POSTGRES_PASSWORD` before the first start: Postgres takes it only when its
    volume is first made.
-2. **Cloudflare Tunnel:** remove the `firecracker.petarzarkov.com` and
+3. **Cloudflare Tunnel:** remove the `firecracker.petarzarkov.com` and
    `demo.dunx.win` hostnames, add `gravoth-api.petarzarkov.com` →
    `http://app:3000`.
-3. **Cloudflare R2:** a bucket (`gravoth-backups`) and an R2 API token with
+4. **Cloudflare R2:** a bucket (`gravoth-backups`) and an R2 API token with
    Object Read & Write on that bucket only: the account id, key id, secret and
    bucket name are the four `R2_*` lines.
-4. **Resend:** add the domain `mail.petarzarkov.com`, put exactly the records
+5. **Resend:** add the domain `mail.petarzarkov.com`, put exactly the records
    Resend shows into Cloudflare DNS (DNS only), press Verify, then make a
    Sending-access API key for that domain.
-5. **Google:** in the game's existing Google Cloud project (its consent screen
+6. **Google:** in the game's existing Google Cloud project (its consent screen
    and both Android clients stay), add `petarzarkov.com` as an authorized
    domain and the `openid`, `email` and `profile` scopes, and create a **Web
    application** OAuth client with the redirect URI
    `https://gravoth-api.petarzarkov.com/api/auth/callback/google`. Its id is
    also the server client id the Android app gives Credential Manager.
-6. **Discord:** an application named Gravoth in the Developer Portal, with the
+7. **Discord:** an application named Gravoth in the Developer Portal, with the
    OAuth2 redirect `https://gravoth-api.petarzarkov.com/api/auth/callback/discord`.
-7. **Deploy** when ready (`./deploy-pi.sh --tunnel`), then, after the first
+8. **Deploy** when ready (`./deploy-pi.sh --tunnel`), then, after the first
    nightly backup, the restore drill below.
 
 A provider shows on the sign-in page and in the game only while both its
@@ -108,10 +161,3 @@ docker exec gravoth-postgres pg_restore --no-owner -U gravoth -d gravoth_drill /
 docker exec gravoth-postgres psql -U gravoth -d gravoth_drill -c 'select count(*) from users'
 # A real restore over the live database: --clean --if-exists -d gravoth, with the app stopped.
 ```
-
-## CI
-
-`.github/workflows/ci.yml`, one job per push to `main` or pull request: lint,
-format, types, every suite (the server's against a Postgres service), the
-website build, and the image built and booted against that Postgres. It never
-pushes an image and never deploys.

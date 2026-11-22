@@ -6,7 +6,8 @@
 # 2. Writes a real save with the game's own Core (e2e/savegen, in the .NET SDK image) for the rules checker to read.
 # 3. Runs e2e/api.e2e.ts (the game's calls: guests and their upgrade, mail links, password reset, verified, pending and
 #    flagged records, friends, blocks, privacy, the checker and Redis down, deletion, a backup restored into a scratch
-#    database) and e2e/ui.e2e.ts (the website in headless Chrome).
+#    database) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by e2e/pages.ts
+#    on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls gravoth-api in production).
 # 4. Takes it all down again, volumes included, unless KEEP=1.
 #
 #   GAME_REPO=../bloodline KEEP=1 bun run e2e
@@ -16,7 +17,9 @@ GAME_REPO=$(cd "${GAME_REPO:-../bloodline}" && pwd)
 TMP=$PWD/e2e/.tmp
 PROJECT=gravoth-e2e
 [ -f "$GAME_REPO/dotnet/Gravoth.Validator/Dockerfile" ] || { echo "No rules checker in $GAME_REPO (set GAME_REPO to the game's checkout)" >&2; exit 1; }
-if ss -ltn 2>/dev/null | grep -q ':3000 '; then echo "Port 3000 is in use; stop what holds it first" >&2; exit 1; fi
+for port in 3000 3001; do
+  if ss -ltn 2>/dev/null | grep -q ":$port "; then echo "Port $port is in use; stop what holds it first" >&2; exit 1; fi
+done
 
 # The rules checker's sources, laid out as deploy-pi.sh lays them out on the Pi.
 mkdir -p "$TMP/ctx/dotnet" "$TMP/ctx/game/Assets/Gravoth"
@@ -37,6 +40,9 @@ if [ ! -f "$TMP/local.env" ]; then
   } > "$TMP/local.env")
 fi
 grep -q '^VALIDATOR_CONTEXT=' "$TMP/local.env" || echo "VALIDATOR_CONTEXT=$TMP/ctx" >> "$TMP/local.env"
+# Local image names, so the run never tags anything as the published GHCR images.
+grep -q '^APP_IMAGE=' "$TMP/local.env" || echo "APP_IMAGE=gravoth-web:e2e" >> "$TMP/local.env"
+grep -q '^VALIDATOR_IMAGE=' "$TMP/local.env" || echo "VALIDATOR_IMAGE=gravoth-validator:e2e" >> "$TMP/local.env"
 
 # A real save: two barbarians (the other classes start locked), at chart tiers 9 and 3.
 echo "== a save from the game's Core"
@@ -58,7 +64,15 @@ curl -fsS http://localhost:3000/api/health >/dev/null
 status=0
 echo "== the API, as the game calls it"
 bun e2e/api.e2e.ts || status=1
-echo "== the website, in headless Chrome"
-if command -v "${CHROME:-google-chrome}" >/dev/null; then bun e2e/ui.e2e.ts || status=1; else echo "skipped: no ${CHROME:-google-chrome}"; fi
+echo "== the website as Cloudflare Pages serves it, in headless Chrome"
+if command -v "${CHROME:-google-chrome}" >/dev/null; then
+  (cd apps/web && GRAVOTH_API_BASE=http://localhost:3000 GRAVOTH_WEB_OUT="$TMP/pages" bun run build >/dev/null)
+  bun e2e/pages.ts "$TMP/pages" 3001 & PAGES=$!
+  sleep 1
+  bun e2e/ui.e2e.ts || status=1
+  kill "$PAGES" 2>/dev/null || true
+else
+  echo "skipped: no ${CHROME:-google-chrome}"
+fi
 [ "${KEEP:-}" = "1" ] && echo "KEEP=1: the stack stays up on http://localhost:3000 (down: ${COMPOSE[*]} down --volumes)"
 exit $status

@@ -1,7 +1,11 @@
 # The deployed shape (docs/deploy.md): the API with its website, Postgres, Redis, the rules checker and the Cloudflare
 # Tunnel. Same file on the Raspberry Pi and on a VPS.
 #
-#   COMMIT_SHA=$(git rev-parse --short HEAD) docker compose -f compose.prod.yml up -d --build
+#   docker compose -f compose.prod.yml pull app validator && docker compose -f compose.prod.yml up -d --no-build
+#
+# The images are the ones CI publishes to GHCR: this repository's (APP_IMAGE, default its `main` tag) and the rules
+# checker the game's repository publishes with each release (VALIDATOR_IMAGE, default `latest`). Pulling them needs a
+# one-time `docker login ghcr.io` on the machine. `--build` builds both here instead (deploy-pi.sh --build).
 #
 # The tunnel is behind the `tunnel` profile, off until its public hostname (gravoth-api.petarzarkov.com -> http://app:3000) is
 # set in Cloudflare Zero Trust: `docker compose -f compose.prod.yml --profile tunnel up -d`. Secrets live only in `.env` beside
@@ -21,7 +25,7 @@ services:
     build:
       context: .
       args: { COMMIT_SHA: '${COMMIT_SHA:-dev}' }
-    image: gravoth-web:latest
+    image: '${APP_IMAGE:-ghcr.io/petarzarkov/gravoth-web:main}'
     container_name: gravoth-api
     restart: unless-stopped
     logging: *logging
@@ -63,10 +67,12 @@ services:
       start_period: 20s
     networks: [gravoth]
 
-  # The rules checker: the game's own Core behind a private HTTP API (dotnet/Gravoth.Validator in the game's repository).
-  # Built from that repository's layout, which deploy-pi.sh copies beside this checkout (dotnet/ and game/Assets/Gravoth/Core
-  # in VALIDATOR_CONTEXT). Never on the tunnel.
+  # The rules checker: the game's own Core behind a private HTTP API (dotnet/Gravoth.Validator in the game's repository),
+  # published to GHCR with each game release. With --build, built from that repository's layout instead, which
+  # deploy-pi.sh copies beside this checkout (dotnet/ and game/Assets/Gravoth/Core in VALIDATOR_CONTEXT). Never on the
+  # tunnel.
   validator:
+    image: '${VALIDATOR_IMAGE:-ghcr.io/petarzarkov/gravoth-validator:latest}'
     build:
       context: '${VALIDATOR_CONTEXT:-..}'
       dockerfile: dotnet/Gravoth.Validator/Dockerfile

@@ -27,6 +27,11 @@ beforeAll(async () => {
     join(root, 'assets', 'index-ab12cd34.js'),
     'console.log("site")',
   );
+  await mkdir(join(root, 'privacy'));
+  await Bun.write(
+    join(root, 'privacy', 'index.html'),
+    '<!doctype html><title>Privacy</title><style>p{}</style><p>policy</p>',
+  );
   await Bun.write(
     join(root, 'favicon.svg'),
     '<svg xmlns="http://www.w3.org/2000/svg"/>',
@@ -99,6 +104,24 @@ describe('the website', () => {
     );
     // The policy is the page's own; the mail pages and Swagger UI carry inline styles.
     expect(response.headers.get('content-security-policy')).toBeNull();
+  });
+});
+
+describe('a folder page', () => {
+  it('serves /privacy and /privacy/ as the policy page, with its own policy', async () => {
+    for (const path of ['/privacy', '/privacy/']) {
+      const response = await fetch(`${base}${path}`, { headers: html });
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain('<p>policy</p>');
+      expect(response.headers.get('content-security-policy')).toContain(
+        "style-src 'unsafe-inline'",
+      );
+    }
+  });
+
+  it('never reads outside the build', async () => {
+    const response = await fetch(`${base}/..%2F..%2Fetc`, { headers: html });
+    expect(await response.text()).not.toContain('root:');
   });
 });
 

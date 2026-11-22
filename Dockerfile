@@ -1,11 +1,14 @@
 # Gravoth Online in one image: the API (apps/server) serving the website (apps/web, built here) over the contracts both
-# import (packages/contracts). Runs from source, the shape dunx documents: Bun transpiles on the fly and
+# import (packages/contracts). Multi-arch: CI publishes linux/amd64 and linux/arm64 (the Raspberry Pi) to GHCR. The
+# website and the dependencies are built on the build machine's own platform (no emulation), the dependencies for the
+# target's CPU (`--cpu`: @dunx/transform's parser is native); only the last stage runs as the target. Runs from source, the shape dunx documents: Bun transpiles on the fly and
 # `@dunx/transform/preload` (apps/server/bunfig.toml) records constructor types at load time, so the server's folder is
 # the WORKDIR. Built on the Raspberry Pi (arm64) by deploy-pi.sh, or anywhere with `docker build .`.
 ARG BUN_IMAGE=oven/bun:1.4.5-slim
 
-# The website: every workspace's dependencies, then `bun run build` into apps/web/dist.
-FROM ${BUN_IMAGE} AS web
+# The website: every workspace's dependencies, then `bun run build` into apps/web/dist (plain JavaScript and CSS, the same
+# for every platform).
+FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS web
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/server/package.json apps/server/
@@ -17,14 +20,16 @@ COPY packages/contracts packages/contracts
 COPY apps/web apps/web
 RUN cd apps/web && bun run build
 
-# The server's production dependencies only (no React DOM tooling, no TypeScript, no lint).
-FROM ${BUN_IMAGE} AS deps
+# The server's production dependencies only (no React DOM tooling, no TypeScript, no lint), for the target's CPU.
+FROM --platform=$BUILDPLATFORM ${BUN_IMAGE} AS deps
+ARG TARGETARCH
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 COPY packages/contracts/package.json packages/contracts/
-RUN bun install --frozen-lockfile --production --ignore-scripts --filter @gravoth/server
+RUN cpu=$([ "${TARGETARCH:-amd64}" = amd64 ] && echo x64 || echo "$TARGETARCH") && echo "dependencies for linux/$cpu" && \
+    bun install --frozen-lockfile --production --ignore-scripts --filter @gravoth/server --os linux --cpu "$cpu"
 
 FROM ${BUN_IMAGE}
 WORKDIR /app

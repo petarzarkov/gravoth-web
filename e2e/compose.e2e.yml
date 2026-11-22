@@ -11,7 +11,8 @@ services:
       R2_BUCKET: gravoth-backups
       R2_ENDPOINT: http://s3:9090
       PUBLIC_URL: http://localhost:3000
-      CORS_ORIGIN: http://localhost:3000
+      # The Pages stand-in (e2e/pages.ts), as https://gravoth.petarzarkov.com is in production.
+      CORS_ORIGIN: http://localhost:3001
       TRUST_PROXY: 'false'
       LOG_LEVEL: debug
     depends_on:

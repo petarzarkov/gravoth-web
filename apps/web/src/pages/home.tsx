@@ -57,7 +57,8 @@ const BoardCard = ({ board }: { board: BoardView }) => {
   );
 };
 
-export const HomePage = () => {
+/** `/boards`: every board with its top three, normal or hardcore. */
+export const BoardsPage = () => {
   const query = useQuery();
   const { navigate } = useNavigation();
   const hardcore = query.get('hardcore') === 'true';
@@ -68,7 +69,7 @@ export const HomePage = () => {
   return (
     <>
       <PageTitle
-        title="Gravoth Online"
+        title="Leaderboards"
         sub="Every record on the boards, with the whole build that set it: skills, gear, every affix."
       >
         <div className="segmented" role="group" aria-label="Mode">
@@ -76,7 +77,7 @@ export const HomePage = () => {
             type="button"
             className={hardcore ? 'segment' : 'segment active'}
             aria-pressed={!hardcore}
-            onClick={() => navigate('/', { replace: true })}
+            onClick={() => navigate('/boards', { replace: true })}
           >
             Normal
           </button>
@@ -84,7 +85,7 @@ export const HomePage = () => {
             type="button"
             className={hardcore ? 'segment active' : 'segment'}
             aria-pressed={hardcore}
-            onClick={() => navigate('/?hardcore=true', { replace: true })}
+            onClick={() => navigate('/boards?hardcore=true', { replace: true })}
           >
             Hardcore
           </button>

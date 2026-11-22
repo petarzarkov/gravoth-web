@@ -1171,6 +1171,116 @@ th.cell-num {
   margin-right: auto;
 }
 
+/* The landing page (gravoth.petarzarkov.com's home). */
+.landing {
+  display: grid;
+  gap: 24px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--panel-edge);
+  background: #050405;
+}
+
+.hero-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1024 / 500;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.hero-copy {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: grid;
+  gap: 12px;
+  padding: 28px 28px 24px;
+  background: linear-gradient(180deg, transparent, rgba(5, 4, 5, 0.92) 45%);
+}
+
+.hero-title {
+  font-size: clamp(36px, 7vw, 64px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.8);
+}
+
+.hero-sub {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.prose p,
+.prose li {
+  max-width: 72ch;
+  color: var(--text);
+}
+
+.prose h2 {
+  font-size: 22px;
+  margin: 4px 0 10px;
+}
+
+.prose h2 + p {
+  margin-top: 0;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--panel-edge);
+}
+
+.shot:hover img {
+  border-color: var(--gold);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.feature {
+  margin: 0;
+}
+
+.feature h3 {
+  font-size: 18px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.feature p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.foot a {
+  color: var(--muted);
+}
+
+.foot a:hover {
+  color: var(--gold);
+}
+
 @media (max-width: 860px) {
   .two-col,
   .build-grid {
@@ -1181,6 +1291,11 @@ th.cell-num {
 @media (max-width: 640px) {
   .main {
     padding-top: 20px;
+  }
+
+  .hero-copy {
+    position: static;
+    padding: 18px;
   }
 
   .top {

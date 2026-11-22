@@ -5,8 +5,8 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
 (decisions 171, 216, 218 and 219). This page is the code's side.
 
 ```
- the game (Unity, Android)          the website (apps/web)
-        │  bearer token                   │  session cookie, same origin
+ the game (Unity, Android)          the website (apps/web, Cloudflare Pages)
+        │  bearer token                   │  session cookie, credentialed CORS
         └──────────────┬──────────────────┘
                        ▼
               apps/server (dunx on Bun)  ──►  validator (the game's Core, .NET)
@@ -50,11 +50,19 @@ together. The tables (`apps/server/src/database/`):
 | `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                          |
 | `leaderboard_entries`       | a hero's best on a board with the build that set it; the database checks that build is the hero's and the hero the player's      |
 
-## The website on the API
+## The website, and its copy on the API
 
-`apps/web` builds into `apps/web/dist`: `index.html` and content-hashed
-assets under `/assets/`. The server serves that directory (`WEB_ROOT`):
+The website lives on Cloudflare Pages at gravoth.petarzarkov.com (decision
+220; `docs/deploy.md`, "The website on Pages") and calls the API at
+gravoth-api.petarzarkov.com. The two are one site, so the API's session cookie
+goes with the site's credentialed calls, and the API trusts the site through
+`CORS_ORIGIN`.
 
+`apps/web` builds into `apps/web/dist`: `index.html`, content-hashed assets
+under `/assets/`, and `public/` (the screenshots, `/privacy/`). The server also
+serves that directory (`WEB_ROOT`), same origin:
+
+- a folder with its own page (`/privacy/`) is served as that page;
 - `SpaShell` answers `index.html` for a browser asking for any path the site
   owns (no route matched, `GET`, `Accept: text/html`, not under `/api`, no dot
   in the last segment), with `no-cache` and the strict content security policy;
@@ -63,10 +71,9 @@ assets under `/assets/`. The server serves that directory (`WEB_ROOT`):
 - everything under `/api` is the API's, so a missing route there is still a
   JSON 404.
 
-Being on the same origin is what keeps sign-in simple: the session cookie is
-first-party, OAuth comes back to the same host, and no request is cross-site.
-`CORS_ORIGIN` trusts one more origin, for the dev server (`bun run dev:web`
-on :3001) or a site hosted elsewhere.
+`CORS_ORIGIN` names the one other origin the API trusts: the Pages site in
+production, the dev server (`bun run dev:web`, :3001) or the end-to-end run's
+Pages stand-in (`e2e/pages.ts`, :3001).
 
 ## Scores and the rules checker
 

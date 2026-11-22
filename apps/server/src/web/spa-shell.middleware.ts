@@ -1,3 +1,4 @@
+import { normalize, resolve, sep } from 'node:path';
 import type { BunRequest } from 'bun';
 import {
   STRICT_CSP,
@@ -42,6 +43,19 @@ export class SpaShell implements Middleware {
     )
       return next();
 
+    // A folder with a page of its own (/privacy/, the policy Play links to) is served as that page.
+    const own = this.folderPage(pathname);
+    if (own !== undefined && (await own.exists())) {
+      return new Response(req.method === 'HEAD' ? null : own, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-cache',
+          // A self-contained page with its own inline styles, and nothing else.
+          'content-security-policy': FOLDER_PAGE_POLICY,
+        },
+      });
+    }
+
     const index = Bun.file(`${this.options.root}/index.html`);
     if (!(await index.exists())) return next();
 
@@ -55,6 +69,22 @@ export class SpaShell implements Middleware {
     });
   }
 
+  /** `<root>/<path>/index.html` when the path is a folder under the root (never outside it), else undefined. */
+  private folderPage(
+    pathname: string,
+  ): ReturnType<typeof Bun.file> | undefined {
+    if (pathname === '/') return undefined;
+    const root = resolve(this.options.root);
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(pathname);
+    } catch {
+      return undefined;
+    }
+    const page = resolve(root, `.${normalize(decoded)}`, 'index.html');
+    return page.startsWith(`${root}${sep}`) ? Bun.file(page) : undefined;
+  }
+
   /** A website path: not the API's, and not a file's (no dot in the last segment). */
   static owns(pathname: string): boolean {
     if (pathname === '/api' || pathname.startsWith('/api/')) return false;
@@ -62,6 +92,10 @@ export class SpaShell implements Middleware {
     return !last.includes('.');
   }
 }
+
+/** The policy a folder's own page gets: its inline styles and images from the site, nothing else. */
+const FOLDER_PAGE_POLICY =
+  "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'";
 
 /** Bun's bundler names every asset by an 8-character content hash (`apps/web/build.ts`). */
 export const isHashedAsset = (pathname: string): boolean =>

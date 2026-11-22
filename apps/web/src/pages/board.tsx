@@ -183,7 +183,7 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
             }
           >
             <Link
-              to={board.hardcore ? '/?hardcore=true' : '/'}
+              to={board.hardcore ? '/boards?hardcore=true' : '/boards'}
               className="button button-quiet"
             >
               All boards

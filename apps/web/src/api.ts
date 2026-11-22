@@ -1,4 +1,5 @@
 import { AUTH_ROUTES } from '@gravoth/contracts/constants';
+import { API_BASE } from './links.js';
 import type {
   AccountView,
   BlockView,
@@ -66,9 +67,10 @@ export const request = async <T>(
   path: string,
   body?: unknown,
 ): Promise<T> => {
-  const response = await fetch(path, {
+  // `include`: on Cloudflare Pages the API is another origin of the same site, and the session cookie is the API's.
+  const response = await fetch(`${API_BASE}${path}`, {
     method,
-    credentials: 'same-origin',
+    credentials: 'include',
     headers: {
       accept: 'application/json',
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
@@ -134,21 +136,21 @@ export const api = {
     }),
   signUp: (name: string, email: string, password: string) =>
     post<unknown>(AUTH_ROUTES.signUpEmail, { name, email, password }),
-  /** Starts a provider's redirect: the answer's `url` is where the browser goes next. */
-  signInSocial: (provider: SocialProvider, callbackURL: string) =>
+  /**
+   * Starts a provider's redirect: the answer's `url` is where the browser goes next. The provider comes back to the
+   * API, which then sends the browser to these absolute addresses on this site (trusted by the API's CORS_ORIGIN).
+   */
+  signInSocial: (provider: SocialProvider, next: string) =>
     post<{ url?: string; redirect?: boolean }>(AUTH_ROUTES.signInSocial, {
       provider,
-      callbackURL,
-      errorCallbackURL: '/sign-in',
+      callbackURL: `${window.location.origin}${next}`,
+      errorCallbackURL: `${window.location.origin}/sign-in`,
     }),
   signOut: () => post<unknown>(AUTH_ROUTES.signOut),
   requestPasswordReset: (email: string) =>
     post<unknown>(AUTH_ROUTES.requestPasswordReset, { email }),
   sendVerification: (email: string) =>
-    post<unknown>(AUTH_ROUTES.sendVerificationEmail, {
-      email,
-      callbackURL: '/account',
-    }),
+    post<unknown>(AUTH_ROUTES.sendVerificationEmail, { email }),
 
   // The account and the profile.
   account: () => get<AccountView>('/api/account'),

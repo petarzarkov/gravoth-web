@@ -1,18 +1,19 @@
 # gravoth-web
 
 Gravoth Online: the server behind the game's accounts, boards and friends, and
-the website that shows them. A Bun monorepo on
+the game's website, https://gravoth.petarzarkov.com (the game's page, the
+privacy policy, the boards with every record's build, sign-in, friends). A Bun monorepo on
 [dunx](https://github.com/petarzarkov/dunx), started from the developer's
 [`dunx-template`](https://github.com/petarzarkov/dunx-template) (its lint,
 format, hooks and conventions) with the server moved in from the game's
 repository.
 
-| Path                 | What it is                                                                                                                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups |
-| `apps/web`           | `@gravoth/web`: the website (React on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Built into `apps/web/dist`, served by the API  |
-| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod            |
-| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                              |
+| Path                 | What it is                                                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups                |
+| `apps/web`           | `@gravoth/web`: the website (React on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Deployed to Cloudflare Pages by CI; the API serves a copy too |
+| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                           |
+| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                             |
 
 The game itself (Unity, `Gravoth.Core`, the rules checker in
 `dotnet/Gravoth.Validator`) lives in its own repository. The product plan and
@@ -77,9 +78,11 @@ offered. It needs Docker, Chrome and port 3000 free.
 
 ## Deploying
 
-One image (`Dockerfile`): the API serving the built website.
-`compose.prod.yml` runs it with Postgres, Redis, the rules checker (built from
-the game's repository) and the Cloudflare Tunnel. `deploy-pi.sh` copies both
-repositories' parts to the Raspberry Pi and rebuilds there, only when the
-developer asks. Everything about it, the setup list included, is in
-`docs/deploy.md`.
+CI/CD is `.github/workflows/ci.yml`: every push and pull request runs the
+checks; every push to `main` also publishes the server image to GHCR (amd64
+and arm64) and deploys the website to Cloudflare Pages
+(gravoth.petarzarkov.com). The server reaches the Raspberry Pi by hand:
+`./deploy-pi.sh` pulls the published images there, only when the developer
+asks. `compose.prod.yml` runs it with Postgres, Redis, the rules checker (the
+game repository's image) and the Cloudflare Tunnel. Everything, the setup list
+included, is in `docs/deploy.md`.

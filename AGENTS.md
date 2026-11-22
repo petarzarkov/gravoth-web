@@ -38,10 +38,15 @@ what CI runs.
 - **The website imports values only from `@gravoth/contracts/constants`**, and
   everything else with `import type`. `constants.ts` imports nothing, so the
   bundle carries no zod (`contracts.test.ts` holds it to that).
-- **The website is served by the API** (`apps/server/src/web/`): same origin, so
-  the session is a first-party cookie. `SpaShell` answers `index.html` for the
-  paths the site owns, never under `/api` and never for a file; the page's own
-  response carries the strict content security policy.
+- **The website is gravoth.petarzarkov.com, on Cloudflare Pages** (CI deploys
+  `main`), calling the API at gravoth-api.petarzarkov.com with credentials
+  (`API_BASE` from `GRAVOTH_API_BASE` at build). The API serves a same-origin
+  copy too (`apps/server/src/web/`): a folder's own page (`/privacy/`), else
+  `SpaShell`'s `index.html` for the paths the site owns, never under `/api` and
+  never for a file. Links to `/privacy/` are plain `<a>`s, not router links.
+- **CI/CD is one workflow** (`.github/workflows/ci.yml`): checks on every push,
+  the GHCR image and the Pages deploy from `main`. The Pi is deployed by hand
+  (`./deploy-pi.sh`, pulling those images) and only when the developer asks.
 - **The rules checker is the game's** (`dotnet/Gravoth.Validator` in the game's
   repository). The server calls it over HTTP and never re-implements a rule.
 - **Migrations are drizzle-kit's** (`bun run db:generate` in `apps/server`);

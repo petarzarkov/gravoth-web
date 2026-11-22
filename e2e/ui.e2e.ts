@@ -1,6 +1,8 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
 // the local stack. Screenshots of the account, friends and delete pages land in e2e/.tmp/ui.
-const base = 'http://localhost:3000';
+// The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
+const base = 'http://localhost:3001';
+const apiBase = 'http://localhost:3000';
 const out = `${import.meta.dir}/.tmp/ui`;
 const run = Date.now().toString(36).slice(-5);
 let failed = 0;
@@ -18,7 +20,7 @@ const api = async (
   body?: unknown,
   token?: string,
 ) => {
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetch(`${apiBase}${path}`, {
     method,
     headers: {
       'content-type': 'application/json',
@@ -162,6 +164,58 @@ const has = (text: string) => `__t.text().includes(${JSON.stringify(text)})`;
 const email = `dara-${run}@example.test`;
 const darName = `Dara${run}`;
 
+// 0. The landing page, the privacy policy and the deletion page, readable signed out.
+await go('/');
+ok(
+  'the home page says what Gravoth is, with the Play link',
+  await until(
+    `${has('What Gravoth is')} && !!document.querySelector('a[href*="play.google.com/store/apps/details?id=com.petarzarkov.gravoth"]')`,
+  ),
+);
+ok(
+  'its screenshots load',
+  await js(
+    `Promise.all([...document.querySelectorAll('.shot img')].map(i => i.decode().then(() => i.naturalWidth > 0, () => false))).then(r => r.length === 8 && r.every(Boolean))`,
+  ),
+);
+const privacy = await fetch(`${base}/privacy/`);
+const privacyText = await privacy.text();
+ok(
+  'the privacy policy is a page of its own at /privacy/',
+  privacy.status === 200 &&
+    privacyText.includes('com.petarzarkov.gravoth') &&
+    (privacy.headers.get('content-security-policy') ?? '').includes(
+      "'unsafe-inline'",
+    ),
+  privacy.status,
+);
+const home = await fetch(`${base}/`);
+ok(
+  "the site's pages carry the strict policy, allowing calls to the API",
+  (home.headers.get('content-security-policy') ?? '').includes(
+    `connect-src 'self' ${apiBase}`,
+  ),
+);
+await go('/delete-account');
+ok(
+  'the account deletion page explains it without signing in',
+  await until(has('Without signing in')),
+);
+const preflight = await fetch(`${apiBase}/api/profile`, {
+  method: 'OPTIONS',
+  headers: {
+    origin: base,
+    'access-control-request-method': 'PATCH',
+    'access-control-request-headers': 'content-type',
+  },
+});
+ok(
+  "the API allows the site's credentialed calls across origins",
+  preflight.headers.get('access-control-allow-origin') === base &&
+    preflight.headers.get('access-control-allow-credentials') === 'true',
+  [preflight.status, preflight.headers.get('access-control-allow-origin')],
+);
+
 // 1. Create an account through the form.
 await go('/sign-in');
 await js(`__t.click('Create account')`);
@@ -191,7 +245,9 @@ ok(
 );
 await js(`document.querySelector('.toggle input').click()`);
 await until(`!document.querySelector('.toggle input').checked`);
-const prof = await js(`fetch('/api/profile').then(r => r.json())`);
+const prof = await js(
+  `fetch('http://localhost:3000/api/profile', { credentials: 'include' }).then(r => r.json())`,
+);
 ok(
   'turning the public profile off saves',
   prof.publicProfile === false && prof.displayName === darName,
