@@ -20,10 +20,11 @@ Two halves, delivered by `.github/workflows/ci.yml` (decision 220):
 | `image` | `main`, after `check`       | `ghcr.io/petarzarkov/gravoth-web:main` and `:sha-<7>`, amd64 and arm64, with the run's own token                             |
 | `site`  | `main`, after `check`       | the Pages build (`GRAVOTH_API_BASE=$API_ORIGIN`) deployed to `$PAGES_PROJECT`; skipped with a notice until the secrets exist |
 
-The site job needs two repository secrets, set by the developer:
-`CLOUDFLARE_API_TOKEN` (a token with Cloudflare Pages: Edit) and
-`CLOUDFLARE_ACCOUNT_ID`. The repository variables `API_ORIGIN` and
-`PAGES_PROJECT` override the defaults.
+The site job needs one repository secret, set by the developer:
+`CLOUDFLARE_API_TOKEN` (a token with Cloudflare Pages: Edit). The account id
+is the repository variable `CLOUDFLARE_ACCOUNT_ID` (set 2026-11-22; an id, not
+a secret). The repository variables `API_ORIGIN` and `PAGES_PROJECT` override
+the defaults.
 
 The rules checker's image is the game repository's:
 `ghcr.io/petarzarkov/gravoth-validator:<release>` and `:latest`, published by
@@ -35,7 +36,7 @@ of the game players run.
 `apps/web/build.ts` with `GRAVOTH_API_BASE` set writes `dist/` for Pages: the
 app (`/`, the game's page; `/boards`, `/builds/<id>`, `/sign-in`, `/account`,
 `/friends`, `/delete-account`), `/privacy/` (the policy Play links to, a page
-of its own), the screenshots, and `_headers` (the content security policy
+of its own), `/terms/` (the terms of service, also a page of its own), the screenshots, and `_headers` (the content security policy
 allowing calls to the API only, the other security headers, a year's cache on
 the hashed assets). Pages answers any other path with `index.html` (there is no
 `404.html`), which is how the app's own paths load.
@@ -103,9 +104,9 @@ it:
 
 Values never go through an agent. Each line names where a value goes.
 
-1. **GitHub:** the secrets `CLOUDFLARE_API_TOKEN` (Cloudflare Pages: Edit)
-   and `CLOUDFLARE_ACCOUNT_ID` on this repository
-   (`gh secret set CLOUDFLARE_API_TOKEN -R petarzarkov/gravoth-web`). The next
+1. **GitHub:** the secret `CLOUDFLARE_API_TOKEN` (Cloudflare Pages: Edit) on
+   this repository (`gh secret set CLOUDFLARE_API_TOKEN -R petarzarkov/gravoth-web`;
+   the account id is already the variable `CLOUDFLARE_ACCOUNT_ID`). The next
    push to `main` then replaces gravoth.petarzarkov.com with this website. On
    the Pi, once: `docker login ghcr.io` with a token that can read packages.
 2. **`~/gravoth/web/.env`** on the Pi (the first deploy copies the existing
@@ -115,11 +116,10 @@ Values never go through an agent. Each line names where a value goes.
    `DISCORD_CLIENT_SECRET`, and the four `R2_*` values. Set
    `POSTGRES_PASSWORD` before the first start: Postgres takes it only when its
    volume is first made.
-3. **Cloudflare Tunnel:** remove the `firecracker.petarzarkov.com` and
-   `demo.dunx.win` hostnames, add `gravoth-api.petarzarkov.com` →
-   `http://app:3000`.
-4. **Cloudflare R2:** a bucket (`gravoth-backups`) and an R2 API token with
-   Object Read & Write on that bucket only: the account id, key id, secret and
+3. **Cloudflare Tunnel:** done 2026-11-22 (the tunnel `pi-local` routes only
+   `gravoth-api.petarzarkov.com` → `http://app:3000`).
+4. **Cloudflare R2:** the bucket `gravoth-backups` exists (2026-11-22, Eastern
+   Europe); still an R2 API token with Object Read & Write on that bucket only: the account id, key id, secret and
    bucket name are the four `R2_*` lines.
 5. **Resend:** add the domain `mail.petarzarkov.com`, put exactly the records
    Resend shows into Cloudflare DNS (DNS only), press Verify, then make a
