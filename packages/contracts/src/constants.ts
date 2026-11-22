@@ -260,6 +260,9 @@ export const CLOUD_SAVE_MAX_BYTES = 3_000_000;
 /** The longest `data` a `CloudSaveWrite` takes: the base64 of {@link CLOUD_SAVE_MAX_BYTES} bytes. */
 export const CLOUD_SAVE_MAX_BASE64 = 4_000_000;
 
+/** Decision 226: the most heroes `POST /api/heroes/active` lists (a save holds six; room for later). */
+export const MAX_ACTIVE_HEROES = 64;
+
 export const ERROR_CODES = [
   // Any route that needs a session.
   'UNAUTHENTICATED',
@@ -297,6 +300,8 @@ export const ERROR_CODES = [
   'SCORE_OUT_OF_RANGE',
   // The cloud save (/api/saves/me): a guest gets GUEST_ACCOUNT.
   'SAVE_TOO_LARGE',
+  // A hero's build (POST /api/heroes/:id/builds) for an online hero, whose builds come from its realm only.
+  'HERO_ONLINE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

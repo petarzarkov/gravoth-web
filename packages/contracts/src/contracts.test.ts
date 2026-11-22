@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  ActiveHeroes,
   AVATAR_BORDERS,
   AVATAR_BORDER_NAMES,
   AVATAR_IMAGE_SOURCES,
@@ -13,6 +14,8 @@ import {
   CloudSaveWrite,
   DISPLAY_NAME_PATTERN,
   HARDCORE_PREFIX,
+  MAX_ACTIVE_HEROES,
+  PostHeroBuild,
   ReadBoard,
   RegisterHero,
   UpdateProfile,
@@ -195,6 +198,36 @@ describe('players', () => {
     );
     expect(
       RegisterHero.safeParse({ name: 'Ash', class: 'Necromancer' }).success,
+    ).toBe(false);
+  });
+});
+
+describe("players' heroes", () => {
+  test('a hero build is a BuildSnapshot, with an optional save and the hero in it', () => {
+    expect(PostHeroBuild.safeParse({ build }).success).toBe(true);
+    expect(
+      PostHeroBuild.safeParse({ build, save: 'x', saveHeroId: 2 }).success,
+    ).toBe(true);
+    expect(PostHeroBuild.safeParse({ build: { level: 3 } }).success).toBe(
+      false,
+    );
+    expect(PostHeroBuild.safeParse({ build, saveHeroId: -1 }).success).toBe(
+      false,
+    );
+    expect(
+      PostHeroBuild.safeParse({ build, save: 'x'.repeat(2_000_001) }).success,
+    ).toBe(false);
+  });
+
+  test('the active heroes are uuids, at most 64', () => {
+    const id = '0b7c5f3e-8f3a-4a52-9a43-4f6f6e2a1b11';
+    expect(ActiveHeroes.parse({ heroIds: [] }).heroIds).toEqual([]);
+    expect(ActiveHeroes.safeParse({ heroIds: [id] }).success).toBe(true);
+    expect(ActiveHeroes.safeParse({ heroIds: ['x'] }).success).toBe(false);
+    expect(
+      ActiveHeroes.safeParse({
+        heroIds: Array.from({ length: MAX_ACTIVE_HEROES + 1 }, () => id),
+      }).success,
     ).toBe(false);
   });
 });
