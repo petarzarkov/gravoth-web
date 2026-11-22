@@ -94,3 +94,60 @@ describe('0002 and 0003, the profile pictures', () => {
     expect(new Set(rows.map((r) => r.avatar_portrait)).size).toBeGreaterThan(5);
   });
 });
+
+describe('0004, the OAuth tokens kept in plaintext before', () => {
+  let tokensDatabase: TestDatabase;
+  let tokens: SQL;
+  let before: string;
+
+  beforeAll(async () => {
+    tokensDatabase = await createTestDatabase();
+    tokens = new SQL(tokensDatabase.url, { max: 1 });
+    before = await migrationsBefore('0004_oauth_tokens_cleared');
+  });
+
+  afterAll(async () => {
+    await tokens.close();
+    await tokensDatabase.drop();
+    await rm(before, { recursive: true, force: true });
+  });
+
+  it('clears every access, refresh and ID token, and keeps the sign-ins and passwords', async () => {
+    const db = drizzle({ client: tokens });
+    await migrate(db, { migrationsFolder: before });
+    const [user] = (await tokens`
+      INSERT INTO users (name, email) VALUES ('Tok', 'tok@migrate.test') RETURNING id`) as {
+      id: string;
+    }[];
+    await tokens`INSERT INTO accounts (account_id, provider_id, user_id, access_token, refresh_token, id_token, scope)
+      VALUES ('g-tok', 'google', ${user?.id}, 'ya29.plain', 'refresh-plain', 'header.claims.signature', 'openid email')`;
+    await tokens`INSERT INTO accounts (account_id, provider_id, user_id, password)
+      VALUES (${user?.id}, 'credential', ${user?.id}, 'a-bcrypt-hash')`;
+
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+
+    const rows = (await tokens`
+      SELECT provider_id, account_id, access_token, refresh_token, id_token, scope, password
+      FROM accounts ORDER BY provider_id`) as Record<string, string | null>[];
+    expect(rows).toEqual([
+      {
+        provider_id: 'credential',
+        account_id: user?.id ?? '',
+        access_token: null,
+        refresh_token: null,
+        id_token: null,
+        scope: null,
+        password: 'a-bcrypt-hash',
+      },
+      {
+        provider_id: 'google',
+        account_id: 'g-tok',
+        access_token: null,
+        refresh_token: null,
+        id_token: null,
+        scope: 'openid email',
+        password: null,
+      },
+    ]);
+  });
+});

@@ -29,6 +29,13 @@
       "when": 1795345498380,
       "tag": "0003_profile_avatars_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795349056275,
+      "tag": "0004_oauth_tokens_cleared",
+      "breakpoints": true
     }
   ]
 }

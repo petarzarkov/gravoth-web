@@ -23,6 +23,7 @@ import { gameSessionExpiry, isGameClient } from './game-sessions.js';
 import { GameSignIn } from './game-sign-in.js';
 import { GameSignInController } from './game-sign-in.controller.js';
 import { Accounts } from './accounts.service.js';
+import { sealAccountTokens } from './oauth-tokens.js';
 import { ProviderPhotos } from './provider-photos.js';
 import { SignInProviders } from './sign-in-providers.js';
 
@@ -68,6 +69,7 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
           logger: Logger,
         ) => {
           const publicUrl = config.get('publicUrl');
+          const secret = config.get('auth.secret');
           const website = URL.parse(config.get('corsOrigin'))?.origin;
           return {
             appName: 'Gravoth',
@@ -84,7 +86,7 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                   ...(args.length === 0 ? [] : [{ details: args }]),
                 ),
             },
-            secret: config.get('auth.secret'),
+            secret,
             // better-auth rejects a browser request whose Origin is not this (or a trusted origin below), and builds
             // every OAuth redirect URI from it: `<PUBLIC_URL>/api/auth/callback/<provider>`.
             baseURL: publicUrl,
@@ -149,6 +151,9 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
             // linked from the provider, never copied): provider-photos.ts.
             socialProviders: photos.watch(providers.social()),
             account: {
+              // The providers' access and refresh tokens are stored encrypted with AUTH_SECRET, and the ID token not
+              // at all (oauth-tokens.ts, the account hooks below). better-auth reads a plaintext one as it is.
+              encryptOAuthTokens: true,
               accountLinking: {
                 enabled: true,
                 // A provider's address joins an existing account only when both sides have confirmed it: the
@@ -191,6 +196,10 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
               },
               account: {
                 create: {
+                  // Every write of a sign-in's tokens, whichever route made it: encrypted, and no ID token kept.
+                  before: async (row: Record<string, unknown>) => ({
+                    data: await sealAccountTokens(row, secret),
+                  }),
                   // A Google or Discord account linked to an existing user (the same confirmed address) brings its
                   // photo, as a sign-in with it does.
                   after: async (row: {
@@ -200,6 +209,11 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                   }) => {
                     await photos.linked(row);
                   },
+                },
+                update: {
+                  before: async (row: Record<string, unknown>) => ({
+                    data: await sealAccountTokens(row, secret),
+                  }),
                 },
               },
             },
