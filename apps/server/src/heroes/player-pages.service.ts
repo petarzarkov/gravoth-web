@@ -1,3 +1,4 @@
+import { AppConfigService } from '../config.js';
 import { HttpError, HttpStatusCode } from '@dunx/http';
 import {
   and,
@@ -42,7 +43,10 @@ const { card: _card, ...buildColumns } = getTableColumns(heroBuild);
  * (`publicProfile` false) shows its page to friends and the player only, and to anyone else it is no player at all.
  */
 export class PlayerPages {
-  constructor(private readonly db: Db) {}
+  constructor(
+    private readonly db: Db,
+    private readonly config: AppConfigService,
+  ) {}
 
   async page(userId: string, caller: string | undefined): Promise<PlayerPage> {
     const [owner] = await this.db
@@ -146,7 +150,12 @@ export class PlayerPages {
       .from(e)
       .innerJoin(leaderboard, eq(leaderboard.id, e.boardId))
       .innerJoin(hero, eq(hero.id, e.heroId))
-      .where(and(shownEntry(), inArray(e.boardId, boards)))
+      .where(
+        and(
+          shownEntry(this.config.get('boards').onlineOnly),
+          inArray(e.boardId, boards),
+        ),
+      )
       .as('ranked');
     const rows = await this.db
       .select()

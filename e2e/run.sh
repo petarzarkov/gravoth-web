@@ -47,6 +47,7 @@ fi
 grep -q '^VALIDATOR_CONTEXT=' "$TMP/local.env" || echo "VALIDATOR_CONTEXT=$TMP/ctx" >> "$TMP/local.env"
 # Local image names, so the run never tags anything as the published GHCR images.
 grep -q '^APP_IMAGE=' "$TMP/local.env" || echo "APP_IMAGE=gravoth-web:e2e" >> "$TMP/local.env"
+grep -q '^BOARDS_ONLINE_ONLY=' "$TMP/local.env" || echo "BOARDS_ONLINE_ONLY=true" >> "$TMP/local.env"
 grep -q '^VALIDATOR_IMAGE=' "$TMP/local.env" || echo "VALIDATOR_IMAGE=gravoth-validator:e2e" >> "$TMP/local.env"
 
 # Real saves: two barbarians for the score route (the other classes start locked), at chart tiers 9 and 3; and the online

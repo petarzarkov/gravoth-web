@@ -20,7 +20,12 @@ export const startTestApp = async (
     ...(options.overrides === undefined
       ? {}
       : { overrides: options.overrides }),
-    config: { ...options.config, DATABASE_URL: database.url },
+    // The suites describe decision 227's boards (online heroes only) unless one says otherwise.
+    config: {
+      BOARDS_ONLINE_ONLY: 'true',
+      ...options.config,
+      DATABASE_URL: database.url,
+    },
   });
   const base = new URL(await app.listen(0)).origin;
   return {

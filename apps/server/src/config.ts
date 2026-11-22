@@ -111,6 +111,11 @@ const envSchema = z.object({
   R2_ENDPOINT: z.url().optional(),
   /** Days a nightly backup is kept in the bucket before the job deletes it. */
   BACKUP_KEEP_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
+  /**
+   * Decision 227: the boards take online heroes only. Off until the game release that makes online heroes ships, so the
+   * players of v0.13.0 (offline heroes only) keep their boards; on, an offline hero's record is kept but never shown.
+   */
+  BOARDS_ONLINE_ONLY: z.stringbool().default(false),
   /** The app-wide limit. Generous, so a per-route `@Throttle` is the interesting half. */
   THROTTLE_LIMIT: z.coerce.number().int().min(1).default(1000),
   THROTTLE_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
@@ -171,6 +176,7 @@ export interface AppConfig {
     readonly keepDays: number;
   };
   readonly authorization: { readonly enabled: boolean };
+  readonly boards: { readonly onlineOnly: boolean };
   readonly throttle: { readonly limit: number; readonly windowSeconds: number };
   readonly schedule: { readonly tz: string };
   readonly validator: { readonly url: string };
@@ -298,6 +304,7 @@ export const validate = (env: ConfigSource): AppConfig => {
     mail: { resendApiKey: value.RESEND_API_KEY, from: value.MAIL_FROM },
     backup: { r2, keepDays: value.BACKUP_KEEP_DAYS },
     authorization: { enabled: true },
+    boards: { onlineOnly: value.BOARDS_ONLINE_ONLY },
     throttle: {
       limit: value.THROTTLE_LIMIT,
       windowSeconds: value.THROTTLE_WINDOW_SECONDS,
