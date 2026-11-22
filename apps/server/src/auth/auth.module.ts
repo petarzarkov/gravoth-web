@@ -19,6 +19,7 @@ import { Profiles } from '../players/profiles.service.js';
 import { AccountController } from './account.controller.js';
 import { AccountPagesController } from './account-pages.controller.js';
 import { AccountServicesModule } from './account-services.module.js';
+import { gameSessionExpiry, isGameClient } from './game-sessions.js';
 import { GameSignIn } from './game-sign-in.js';
 import { GameSignInController } from './game-sign-in.controller.js';
 import { Accounts } from './accounts.service.js';
@@ -171,6 +172,18 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
                       user.isAnonymous === true,
                     );
                   },
+                },
+              },
+              session: {
+                create: {
+                  // Decision 223: a session made for the game lasts until the player signs out of it.
+                  before: async (
+                    session: { expiresAt: Date },
+                    ctx?: { headers?: Headers; request?: Request } | null,
+                  ) =>
+                    isGameClient(ctx?.headers ?? ctx?.request?.headers)
+                      ? { data: { ...session, expiresAt: gameSessionExpiry() } }
+                      : undefined,
                 },
               },
               account: {

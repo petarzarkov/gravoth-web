@@ -166,6 +166,12 @@ export const AVATAR_IMAGE_SOURCES = [
   'https://cdn.discordapp.com',
 ] as const;
 
+/**
+ * The header the game sends on every call (`game/<version>`, decision 223): a session made for it lasts until the
+ * player signs out of the game, where the website's cookie session lives 90 days, renewed by use.
+ */
+export const GAME_CLIENT_HEADER = 'x-gravoth-client';
+
 /** better-auth's limits on a password (`emailAndPassword` in the server's auth module). */
 export const PASSWORD_LIMITS = { min: 8, max: 128 } as const;
 

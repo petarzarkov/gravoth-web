@@ -6,6 +6,7 @@ import { AppConfigService } from '../config.js';
 import { escapeHtml } from '../http/escape-html.js';
 import { GuestUpgrade } from '../players/guest-upgrade.js';
 import { page } from './account-pages.controller.js';
+import { gameSessionExpiry } from './game-sessions.js';
 
 /** How long the one-time code from a browser sign-in can be traded for a session. */
 export const GAME_CODE_TTL_MS = 120_000;
@@ -169,13 +170,20 @@ export class GameSignIn {
       }
     }
 
-    const session = await context.internalAdapter.createSession(userId, false, {
-      ipAddress:
-        req.headers.get('cf-connecting-ip') ??
-        req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-        null,
-      userAgent: req.headers.get('user-agent'),
-    });
+    // Decision 223: the game's session lasts until it signs out (`overrideAll`: better-auth sets its own expiry last).
+    const session = await context.internalAdapter.createSession(
+      userId,
+      false,
+      {
+        ipAddress:
+          req.headers.get('cf-connecting-ip') ??
+          req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          null,
+        userAgent: req.headers.get('user-agent'),
+        expiresAt: gameSessionExpiry(),
+      },
+      true,
+    );
     this.logger.info('game signed in through the browser', { userId });
     return { token: session.token };
   }

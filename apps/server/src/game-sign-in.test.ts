@@ -286,3 +286,44 @@ describe('the game signs in through the browser', () => {
     expect((await account(guestToken)).status).toBe(401);
   });
 });
+
+describe("the game's session lasts until it signs out (decision 223)", () => {
+  const YEAR_MS = 365 * 86_400_000;
+  const expiryOf = async (token: string): Promise<number> => {
+    const response = await fetch(`${base}/api/auth/get-session`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const body = (await response.json()) as {
+      session: { expiresAt: string };
+    };
+    return new Date(body.session.expiresAt).getTime() - Date.now();
+  };
+  const guest = async (headers: Record<string, string>): Promise<string> => {
+    const response = await fetch(`${base}/api/auth/sign-in/anonymous`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: '{}',
+    });
+    return response.headers.get('set-auth-token') ?? '';
+  };
+
+  it("gives the browser sign-in's exchange a session of decades", async () => {
+    const { done } = await browserSignIn('code-kai');
+    const code =
+      new URL(done.headers.get('location') ?? '').searchParams.get('code') ??
+      '';
+    const { token } = (await (await exchange(code)).json()) as {
+      token: string;
+    };
+    expect(await expiryOf(token)).toBeGreaterThan(40 * YEAR_MS);
+  });
+
+  it('gives a sign-in from the game (its header) a session of decades, and anything else 90 days', async () => {
+    const game = await guest({ 'x-gravoth-client': 'game/0.13.0' });
+    expect(await expiryOf(game)).toBeGreaterThan(40 * YEAR_MS);
+    const other = await guest({});
+    const days = (await expiryOf(other)) / 86_400_000;
+    expect(days).toBeGreaterThan(89);
+    expect(days).toBeLessThan(91);
+  });
+});
