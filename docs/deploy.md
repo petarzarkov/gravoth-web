@@ -29,7 +29,10 @@ the defaults.
 The rules checker's image is the game repository's:
 `ghcr.io/petarzarkov/gravoth-validator:<release>` and `:latest`, published by
 its `validator.yml` on each `v*` tag, so the server checks saves with the rules
-of the game players run.
+of the game players run. Without the board key the checker reports an online
+realm's board records as `unchecked` (their form and plausibility only); given
+the key file (`BOARD_KEY_FILE`, mounted read-only into the `validator`
+container, never in an image) it verifies each record's witness too.
 
 ## The website on Pages
 

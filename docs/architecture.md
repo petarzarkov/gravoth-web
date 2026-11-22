@@ -2,7 +2,7 @@
 
 The product plan (what each step gives players, the decisions behind it) is in
 the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
-(decisions 171, 216, 218, 219 and 225). This page is the code's side.
+(decisions 171, 216, 218, 219, 225, 226 and 227). This page is the code's side.
 
 ```
  the game (Unity, Android)          the website (apps/web, Cloudflare Pages)
@@ -24,15 +24,15 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's C# client mirrors the same shapes by hand; the OpenAPI document at
   `/api/openapi.json` is the reference for it.
 - **`apps/server`** is the API. Each feature is a dunx module (`auth`,
-  `players`, `social`, `heroes`, `boards`, `saves`, `mail`, `backup`) over one Postgres
+  `players`, `social`, `heroes`, `boards`, `saves`, `realm`, `mail`, `backup`) over one Postgres
   pool (drizzle over `Bun.SQL`). better-auth serves sign-in under `/api/auth`:
   the game sends `Authorization: Bearer`, the website a first-party cookie.
   `web/` serves the website's build.
 - **`apps/web`** is the website: React 19 with Mantine 9 (`theme.ts`, the
   game's palette, always dark) on Bun's bundler, and a small history router
   (`router.tsx`). Pages: the boards
-  (`/`, `/boards/:key`), a build card (`/builds/:id`), sign-in, the account
-  (with the cloud save) and friends. Every request goes through `api.ts`, typed by the contracts.
+  (`/`, `/boards/:key`), a build card (`/builds/:id`), a player page
+  (`/players/:userId`), sign-in, the account (with the cloud save) and friends. Every request goes through `api.ts`, typed by the contracts.
 
 ## The database
 
@@ -46,11 +46,13 @@ together. The tables (`apps/server/src/database/`):
 | `sessions`, `verifications` | sessions (the bearer token) and mail-link codes                                                                                                            |
 | `profiles`                  | the display name (unique in any case, format-checked, word-filtered), the picture (a portrait or the sign-in's photo), the flags                           |
 | `friendships`, `blocks`     | one row per pair whichever asked (`pending` or `accepted`), never oneself; blocks one way                                                                  |
-| `heroes`                    | a hero the server knows: name (once per player), class, hardcore, online                                                                                   |
+| `heroes`                    | a hero the server knows: name (once per player among the offline ones), class, hardcore, `retired_at`; an online one's realm id, level and `flagged`       |
 | `hero_builds`               | an immutable snapshot of a hero's whole build at a revision (a trigger refuses any update); the sorted numbers lifted to columns                           |
 | `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                                                    |
 | `leaderboard_entries`       | a hero's best on a board with the build that set it; the database checks that build is the hero's and the hero the player's                                |
 | `cloud_saves`               | the game's cloud save, one per account (never a guest's): the decoded bytes (`bytea`), their size and SHA-256, the description, play time and game version |
+| `realms`                    | the online realm, one per account (never a guest's): the save's bytes, revision, size, SHA-256, the checked revision, the game version, the lease          |
+| `realm_transfers`           | each offline hero moved online, by the rules checker's fingerprint (unique across accounts), with its realm id                                             |
 
 A player's picture is one of the game's 42 portraits (`AVATAR_PORTRAITS`, a
 random one at sign-up) or their Google or Discord photo. The photo is linked,
@@ -88,6 +90,58 @@ reads a `Buffer` back, so the column passes the value through), and a check
 holds `size` to `octet_length(data)`. The copy goes with its user, and the
 nightly dump carries it like every table.
 
+## Players' heroes (decision 226)
+
+The game sends every hero's build when it changes (`POST /api/heroes/:id/builds`,
+the builds service the score route uses: one immutable row a revision, `created`
+false when it is the hero's latest already; the rules checker's card from the save
+sent or the account's cloud save), and the offline heroes still on the phone
+(`POST /api/heroes/active`: the others get `retired_at`, their builds and records
+kept). `GET /api/players/:userId` is a player page: every hero not retired, each with
+its newest build (a board row's `BuildView`) and its shown records ranked as their
+boards rank them (`heroes/player-pages.service.ts`, a window over `boards/shown.ts`'s
+rule), the newest build's level first. Anyone may read one, a guest's too; a hidden
+profile's page is 404 `PLAYER_NOT_FOUND` to anyone but a friend and the player.
+
+## The online realm (decision 227)
+
+Each account (not a guest) has at most one realm: the game's own save holding all its
+online heroes, kept by the server (`realms`, bytes as `bytea`), played by one device
+at a time (`realm/realms.service.ts`):
+
+- `POST /api/realm/lease` takes or renews the lease (five minutes,
+  `REALM_LEASE_SECONDS`); another device's live lease is 409 `REALM_LEASED`
+  `{ leaseUntil }` unless `force`. A device keeps its lease past its end until another
+  takes it, so a long connection drop loses nothing.
+- `PUT /api/realm` replaces the realm whole at `baseRevision + 1` and renews the lease:
+  409 `LEASE_LOST` from any device but the holder, 409 `REVISION_MISMATCH`
+  `{ revision }` from an old revision, 413 `SAVE_TOO_LARGE` over 3 MB. A transfer
+  (`transferred`: the realm ids of offline heroes moved online) is read by the checker
+  in the request, and each hero's fingerprint goes into `realm_transfers` in the same
+  transaction: one seen before, on any account, is 409 `ALREADY_TRANSFERRED`
+  `{ characterIds }`, and a checker that cannot read it 503 `CHECKER_UNAVAILABLE`.
+  The game's version comes from its `x-gravoth-client` header. The conflicts' extra
+  fields ride on `http/detailed-error.ts`'s `DetailedHttpError`.
+- `GET /api/realm` answers the save, its revision, the revision the checker last read
+  (`checkedRevision`) and the heroes as it read them; `POST /api/realm/release` ends
+  the lease at quit.
+
+After each accepted upload, not blocking the reply, `realm/realm-sync.ts` has the
+checker read the realm (`/saves/heroes`, one account at a time, a superseded upload
+skipped): each hero's `heroes` row by its realm id (online, name, class, hardcore,
+level, `flagged` with the checker's reasons), a new build when its snapshot changed
+(`/saves/snapshot`, Core's BuildSnapshotJson, with the checker's numbers and card), and
+its board records (the save's witnessed bests: ranked, plausible, a witness the checker
+does not refuse) as verified entries when they beat the hero's. Online heroes no longer
+in the realm are retired; a realm that does not read flags them all; a checker down
+leaves the realm unchecked until the next upload.
+
+The fingerprint is the checker's (`SaveHeroes.Fingerprint` in the game's repository):
+SHA-256 of the hero's class, body and hair (fixed at creation) and the first five
+entries of its level clock (the play seconds at levels 2-6, never rewritten), or its
+name while the clock is shorter. A save has no creation time and a moved hero gets a
+new id in the realm, so neither can identify it.
+
 ## The website, and its copy on the API
 
 The website lives on Cloudflare Pages at gravoth.petarzarkov.com (decision
@@ -114,6 +168,12 @@ production, the dev server (`bun run dev:web`, :3001) or the end-to-end run's
 Pages stand-in (`e2e/pages.ts`, :3001).
 
 ## Scores and the rules checker
+
+The boards show online heroes only (decision 227, `boards/shown.ts`: not flagged, an
+online hero the checker has not flagged), and their records come from their realm. The
+score route still answers v0.13.0's records for offline heroes in the same shape: the
+build and the entry are stored and checked as below, but the entry is on no board and
+its `rank` is null. An online hero's score (and hero build) is 409 `HERO_ONLINE`.
 
 A score arrives with the whole build (`SubmitScore`). The server asks the
 rules checker through `BuildCheck`, an interface: verified, pending (shown) or
