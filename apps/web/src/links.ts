@@ -2,6 +2,9 @@
 export const PLAY_URL =
   'https://play.google.com/store/apps/details?id=com.petarzarkov.gravoth';
 
+/** The Gravoth Discord server (the developer's invite, 2026-11-22). */
+export const DISCORD_URL = 'https://discord.gg/sj7SxAxvf';
+
 /** The game's public contact address (the game's config/identity.env), as the privacy policy gives it. */
 export const CONTACT_EMAIL = 'gravoth.arpg@gmail.com';
 

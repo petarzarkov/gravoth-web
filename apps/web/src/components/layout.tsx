@@ -9,7 +9,7 @@ import {
 } from '@mantine/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '../api.js';
-import { PLAY_URL } from '../links.js';
+import { DISCORD_URL, PLAY_URL } from '../links.js';
 import { Link, useNavigation } from '../router.js';
 import { isGuest, useSession } from '../session.js';
 import { PlayerAvatar } from './avatar.js';
@@ -127,6 +127,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             </Text>
             <Anchor size="sm" c="dimmed" href={PLAY_URL}>
               Google Play
+            </Anchor>
+            <Anchor size="sm" c="dimmed" href={DISCORD_URL}>
+              Discord
             </Anchor>
             <Anchor size="sm" c="dimmed" href="/privacy/">
               Privacy policy

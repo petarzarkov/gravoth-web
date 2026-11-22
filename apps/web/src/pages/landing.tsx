@@ -9,7 +9,8 @@ import {
   Title,
 } from '@mantine/core';
 import { useEffect } from 'react';
-import { PLAY_URL } from '../links.js';
+import { DiscordTile } from '../components/brand-marks.js';
+import { DISCORD_URL, PLAY_URL } from '../links.js';
 import { Link } from '../router.js';
 
 const SHOTS = [
@@ -91,6 +92,14 @@ export const LandingPage = () => {
             </Button>
             <Button component={Link} to="/boards" variant="default">
               See the leaderboards
+            </Button>
+            <Button
+              component="a"
+              href={DISCORD_URL}
+              variant="default"
+              leftSection={<DiscordTile size={22} />}
+            >
+              Join the Discord
             </Button>
           </Group>
         </Group>
