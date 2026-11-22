@@ -112,7 +112,7 @@ export const BuildSnapshot = z
     talents: document,
     atlas: document.default({}),
     auras: z.array(Aura).max(12).default([]),
-    /** Rites, cosmetics and whatever else the card shows. */
+    /** Rites, cosmetics and whatever else the card shows; `border` is the hero's best avatar border (`AVATAR_BORDERS`). */
     extras: document.default({}),
     summary: BuildSummary,
   })

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  AVATAR_BORDERS,
+  AVATAR_BORDER_NAMES,
   AVATAR_IMAGE_SOURCES,
   AVATAR_PORTRAITS,
   AroundMe,
@@ -10,6 +12,7 @@ import {
   ReadBoard,
   RegisterHero,
   UpdateProfile,
+  avatarBorderOf,
   hardcoreTitle,
 } from './index.js';
 
@@ -167,6 +170,19 @@ describe('players', () => {
     for (const id of AVATAR_PORTRAITS) expect(id).toMatch(/^[a-z][a-z_]*$/);
     for (const source of AVATAR_IMAGE_SOURCES)
       expect(source).toMatch(/^https:\/\/[a-z0-9.*-]+$/);
+  });
+
+  test("the avatar borders are the game's 13 keys, worst to best, each named", () => {
+    expect(AVATAR_BORDERS).toHaveLength(13);
+    expect(new Set(AVATAR_BORDERS).size).toBe(13);
+    expect(AVATAR_BORDERS[0]).toBe('pit_30');
+    expect(AVATAR_BORDERS[12]).toBe('pinnacle_gold');
+    expect(Object.keys(AVATAR_BORDER_NAMES).sort()).toEqual(
+      [...AVATAR_BORDERS].sort(),
+    );
+    expect(avatarBorderOf('hall_gold_4')).toBe('hall_gold_4');
+    for (const unknown of ['', 'HALL_GOLD', 'pit_99', '../x', 7, null])
+      expect(avatarBorderOf(unknown)).toBeNull();
   });
 
   test('a hero class is read in any case', () => {

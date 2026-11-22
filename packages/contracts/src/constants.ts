@@ -160,6 +160,65 @@ export const AVATAR_PORTRAITS = [
 ] as const;
 export type AvatarPortrait = (typeof AVATAR_PORTRAITS)[number];
 
+/**
+ * The avatar borders a hero earns in the game (decision 196, `Gravoth.Core.Feats.AvatarBorders`), worst to best; a
+ * build sends its hero's best as `extras.border`. The website has each frame at `/img/borders/<key>.webp`.
+ */
+export const AVATAR_BORDERS = [
+  'pit_30',
+  'tier_6',
+  'hall_bronze',
+  'trial_v',
+  'pit_50',
+  'tier_12',
+  'hall_silver',
+  'pit_75',
+  'tier_16',
+  'hall_gold',
+  'hall_gold_4',
+  'pinnacle',
+  'pinnacle_gold',
+] as const;
+export type AvatarBorder = (typeof AVATAR_BORDERS)[number];
+
+/** Each border's name and what earns it, as the game words them. */
+export const AVATAR_BORDER_NAMES: Readonly<
+  Record<AvatarBorder, { readonly name: string; readonly earned: string }>
+> = {
+  pit_30: { name: 'Delver', earned: 'Clear floor 30 of the Bone Pit' },
+  tier_6: { name: 'Charter', earned: 'Clear a tier 6 chart' },
+  hall_bronze: {
+    name: 'Hall Bronze',
+    earned: 'Clear a corner hall at tier 10+ in 4:30',
+  },
+  trial_v: { name: 'Trialborn', earned: 'Win Trial V' },
+  pit_50: { name: "Pit's Floor", earned: 'Clear floor 50 of the Bone Pit' },
+  tier_12: { name: 'Cartographer', earned: 'Clear a tier 12 chart' },
+  hall_silver: {
+    name: 'Hall Silver',
+    earned: 'Clear a corner hall at tier 10+ in 3:00',
+  },
+  pit_75: { name: 'Abyssal', earned: 'Clear floor 75 of the Bone Pit' },
+  tier_16: { name: 'Sealbreaker', earned: 'Clear a tier S16 chart' },
+  hall_gold: {
+    name: 'Hall Gold',
+    earned: 'Clear a corner hall at tier 10+ in 2:00',
+  },
+  hall_gold_4: { name: 'Hallmaster', earned: 'Gold on all four corner halls' },
+  pinnacle: { name: 'Voicebreaker', earned: 'Slay the First Voice' },
+  pinnacle_gold: {
+    name: 'Last Word',
+    earned: 'Slay the First Voice in gold time',
+  },
+};
+
+/** A build's border key when it is one the website knows; anything else (absent, a later game's) is none. */
+export const avatarBorderOf = (value: unknown): AvatarBorder | null =>
+  typeof value === 'string' &&
+  (AVATAR_BORDERS as readonly string[]).includes(value)
+    ? (value as AvatarBorder)
+    : null;
+
 /** Where a linked provider photo may load from (the site's img-src). */
 export const AVATAR_IMAGE_SOURCES = [
   'https://*.googleusercontent.com',
