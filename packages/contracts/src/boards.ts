@@ -122,9 +122,13 @@ export interface Neighbourhood {
   readonly neighbours: readonly EntryView[];
 }
 
-/** `POST /api/leaderboards/:key/scores`. */
+/**
+ * `POST /api/leaderboards/:key/scores`. `entry` is the hero's standing entry on the board after this submission;
+ * `check` is how this submission itself was judged. A flagged submission never replaces a standing entry, and any
+ * other submission replaces a flagged one.
+ */
 export interface SubmitResult {
-  /** `new`: the hero's first score here. `improved`: it beat the hero's best. `kept`: the best stands. */
+  /** `new`: the hero's first score here. `improved`: it replaced the hero's entry. `kept`: the entry stands. */
   readonly result: 'new' | 'improved' | 'kept';
   readonly board: BoardView;
   readonly entry: {
@@ -136,4 +140,6 @@ export interface SubmitResult {
     /** Null while flagged (a flagged entry is not shown). */
     readonly rank: number | null;
   };
+  /** This submission's own verdict, and why when it was not verified. */
+  readonly check: { readonly verdict: Verdict; readonly note: string | null };
 }

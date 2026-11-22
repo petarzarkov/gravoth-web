@@ -42,6 +42,8 @@ COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/c
 COPY packages/contracts/src packages/contracts/src
 COPY apps/server/package.json apps/server/bunfig.toml apps/server/tsconfig.json apps/server/
 COPY apps/server/src apps/server/src
+# The one script the image runs by hand: a backup now, for the restore drill (docs/deploy.md).
+COPY apps/server/scripts/backup-now.ts apps/server/scripts/
 # The migrations the app applies at boot (src/database/migrations.ts).
 COPY apps/server/drizzle apps/server/drizzle
 COPY --from=web /app/apps/web/dist apps/web/dist

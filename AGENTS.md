@@ -56,3 +56,7 @@ what CI runs.
   (project `gravoth-server-test`, port 55432), gives each suite its own
   database, and removes it all. With `TEST_DATABASE_URL` set (CI) it starts
   nothing.
+- End to end: `bun run e2e` (e2e/run.sh) runs the production stack on this
+  machine, the rules checker built from the game's repository (`GAME_REPO`),
+  and drives the API and the website. Run it after any change to the stack,
+  the Dockerfile, auth, boards or the website's flows.

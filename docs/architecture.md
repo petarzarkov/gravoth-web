@@ -72,6 +72,11 @@ on :3001) or a site hosted elsewhere.
 
 A score arrives with the whole build (`SubmitScore`). The server asks the
 rules checker through `BuildCheck`, an interface: verified, pending (shown) or
-flagged (kept, hidden). Only the chart tier is checked against the save so far;
+flagged (hidden). A hero keeps one entry a board: a flagged attempt never
+replaces it (it is recorded only when the hero had none, and logged for review
+either way), and any other attempt replaces a flagged entry, so one
+contradicted claim can neither wipe a standing record nor bury the honest ones
+after it. The answer's `check` says how that one submission was judged. Only
+the chart tier is checked against the save so far;
 the Pit floor, Marks and the times need the checker to report board records
 (the open-issues list in the game's repository).

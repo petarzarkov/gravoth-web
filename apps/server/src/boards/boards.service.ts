@@ -1,3 +1,4 @@
+import { Logger } from '@dunx/core';
 import { HttpError, HttpStatusCode } from '@dunx/http';
 import {
   CursorError,
@@ -91,6 +92,7 @@ export class Boards {
     private readonly heroes: Heroes,
     private readonly builds: Builds,
     private readonly check: BuildCheck,
+    private readonly logger: Logger,
   ) {}
 
   async list(filter: {
@@ -284,6 +286,10 @@ export class Boards {
         board.sort === 'desc'
           ? sql`excluded.score > ${e.score}`
           : sql`excluded.score < ${e.score}`;
+      // A flagged attempt never replaces the hero's entry (it is recorded only when the hero has none here), so one
+      // contradicted claim cannot wipe a standing record. Any other attempt replaces a better-scoring flagged entry
+      // too, so an honest record shows again after a flagged one.
+      const replaces = sql`excluded.verdict <> 'flagged' AND (${better} OR ${e.verdict} = 'flagged')`;
       const [written] = await tx
         .insert(e)
         .values({
@@ -307,7 +313,7 @@ export class Boards {
             verdict: sql`excluded.verdict`,
             verdictNote: sql`excluded.verdict_note`,
           },
-          setWhere: better,
+          setWhere: replaces,
         })
         // `xmax` is 0 on a row this statement inserted, and set on one it updated.
         .returning({ ...entryColumns, inserted: sql<boolean>`(xmax = 0)` });
@@ -328,6 +334,20 @@ export class Boards {
     });
 
     const { row } = outcome;
+    if (checked.verdict === 'flagged') {
+      // The evidence outlives the entry: a flagged attempt that replaced nothing, or a flagged entry an honest one
+      // later replaces, stays in the log for review (and its build in hero_builds).
+      this.logger.warn('board score flagged', {
+        board: board.key,
+        hardcore: board.hardcore,
+        heroId: owner.id,
+        userId,
+        score: body.score,
+        note: checked.note,
+        recorded:
+          outcome.row.verdict === 'flagged' && outcome.row.score === body.score,
+      });
+    }
     const rank =
       row.verdict === 'flagged'
         ? null
@@ -346,6 +366,7 @@ export class Boards {
         verdictNote: row.verdictNote,
         rank,
       },
+      check: { verdict: checked.verdict, note: checked.note },
     };
   }
 

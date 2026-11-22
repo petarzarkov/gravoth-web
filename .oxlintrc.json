@@ -38,6 +38,19 @@
         ],
         "typescript/await-thenable": "off"
       }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": {
+        "max-lines": [
+          "error",
+          {
+            "max": 1000,
+            "skipBlankLines": true
+          }
+        ],
+        "typescript/no-explicit-any": "off"
+      }
     }
   ],
   "ignorePatterns": [

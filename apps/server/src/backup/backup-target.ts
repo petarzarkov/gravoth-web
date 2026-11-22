@@ -22,9 +22,16 @@ export class BackupTarget {
             bucket: r2.bucket,
             accessKeyId: r2.accessKeyId,
             secretAccessKey: r2.secretAccessKey,
-            endpoint: `https://${r2.accountId}.r2.cloudflarestorage.com`,
-            region: 'auto',
+            endpoint:
+              r2.endpoint ?? `https://${r2.accountId}.r2.cloudflarestorage.com`,
+            // R2 signs for `auto`; any other S3 (MinIO) for the usual default.
+            region: r2.endpoint === undefined ? 'auto' : 'us-east-1',
           }).create();
-    this.description = r2 === undefined ? undefined : `r2://${r2.bucket}`;
+    this.description =
+      r2 === undefined
+        ? undefined
+        : r2.endpoint === undefined
+          ? `r2://${r2.bucket}`
+          : `s3://${r2.bucket} at ${new URL(r2.endpoint).host}`;
   }
 }

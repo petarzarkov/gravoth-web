@@ -16,14 +16,15 @@
     "build": "bun run --filter @gravoth/web build",
     "start": "bun run --filter @gravoth/server start",
     "typecheck": "tsc --noEmit -p packages/contracts && tsc --noEmit -p apps/server && tsc --noEmit -p apps/web",
-    "lint": "oxlint --type-aware --fix apps packages scripts",
-    "lint:check": "oxlint --type-aware --max-warnings 0 apps packages scripts",
+    "lint": "oxlint --type-aware --fix apps packages scripts e2e",
+    "lint:check": "oxlint --type-aware --max-warnings 0 apps packages scripts e2e",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "test": "bun run test:contracts && bun run test:web && bun run test:server",
     "test:contracts": "cd packages/contracts && bun test",
     "test:web": "cd apps/web && bun test",
-    "test:server": "cd apps/server && bun run test"
+    "test:server": "cd apps/server && bun run test",
+    "e2e": "bash e2e/run.sh"
   },
   "devDependencies": {
     "@stagelint/stagelint": "0.1.4",

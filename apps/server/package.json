@@ -9,7 +9,8 @@
     "test": "bun scripts/test.ts",
     "db:generate": "drizzle-kit generate",
     "mail:preview": "dunx-email preview ./src/mail/templates",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "backup:now": "bun scripts/backup-now.ts"
   },
   "dependencies": {
     "@dunx/auth": "^3.10.6",

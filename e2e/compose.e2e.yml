@@ -1,0 +1,25 @@
+# `bun run e2e` (e2e/run.sh): compose.prod.yml run locally with throwaway secrets (e2e/.tmp/local.env, generated), an S3 mock standing in for R2, mails
+# logged at debug (no Resend key), the site on http://localhost:3000. Never used on the Pi.
+services:
+  app:
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      R2_ACCOUNT_ID: local
+      R2_ACCESS_KEY_ID: ${MINIO_USER}
+      R2_SECRET_ACCESS_KEY: ${MINIO_PASSWORD}
+      R2_BUCKET: gravoth-backups
+      R2_ENDPOINT: http://s3:9090
+      PUBLIC_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      TRUST_PROXY: 'false'
+      LOG_LEVEL: debug
+    depends_on:
+      s3: { condition: service_started }
+  # S3 for the backups (MinIO's images are no longer public): Adobe's S3 mock, any credentials, the bucket made at start.
+  s3:
+    image: adobe/s3mock:latest
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: gravoth-backups
+    ports: ['127.0.0.1:9090:9090']
+    networks: [gravoth]

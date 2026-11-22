@@ -104,6 +104,11 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1).optional(),
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   R2_BUCKET: z.string().min(1).optional(),
+  /**
+   * Another S3 endpoint for the backups instead of R2's own (`https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`): a
+   * local MinIO in an end-to-end run. Production leaves it unset.
+   */
+  R2_ENDPOINT: z.url().optional(),
   /** Days a nightly backup is kept in the bucket before the job deletes it. */
   BACKUP_KEEP_DAYS: z.coerce.number().int().min(1).max(3650).default(30),
   /** The app-wide limit. Generous, so a per-route `@Throttle` is the interesting half. */
@@ -132,6 +137,8 @@ export interface R2Bucket {
   readonly accessKeyId: string;
   readonly secretAccessKey: string;
   readonly bucket: string;
+  /** Set only to send the backups somewhere other than R2 (`R2_ENDPOINT`). */
+  readonly endpoint?: string;
 }
 
 export interface AppConfig {
@@ -261,6 +268,9 @@ export const validate = (env: ConfigSource): AppConfig => {
           accessKeyId: value.R2_ACCESS_KEY_ID,
           secretAccessKey: value.R2_SECRET_ACCESS_KEY,
           bucket: value.R2_BUCKET,
+          ...(value.R2_ENDPOINT === undefined
+            ? {}
+            : { endpoint: value.R2_ENDPOINT }),
         };
 
   return {

@@ -58,6 +58,23 @@ http://localhost:3000/api/openapi.json  the document, better-auth's routes inclu
 The server's own scripts (`db:generate`, `mail:preview`) are in
 `apps/server/package.json`.
 
+## End to end, on this machine
+
+```bash
+bun run e2e        # GAME_REPO=../bloodline by default; KEEP=1 leaves the stack up on :3000
+```
+
+`e2e/run.sh` runs the production stack locally (`compose.prod.yml`, with the
+rules checker built from the game's repository) beside an S3 mock in place of
+R2, with throwaway secrets and every mail written to the log. It writes a real
+save with the game's own Core (`e2e/savegen`), then drives the API the way the
+game does (`e2e/api.e2e.ts`: guests and their upgrade, the confirmation and
+reset mails' links, verified, pending and flagged records, friends, blocks,
+privacy, the rules checker and Redis down, account deletion, a backup restored
+into a scratch database) and the website in headless Chrome
+(`e2e/ui.e2e.ts`). No OAuth client is needed: Google and Discord are simply not
+offered. It needs Docker, Chrome and port 3000 free.
+
 ## Deploying
 
 One image (`Dockerfile`): the API serving the built website.

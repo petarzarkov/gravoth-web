@@ -93,6 +93,11 @@ bucket as `postgres/gravoth-<time>.dump`, and deletes dumps older than
 `BACKUP_KEEP_DAYS` (30). Without the four `R2_*` variables it logs that it
 skipped.
 
+The drill need not wait for the night: `docker exec gravoth-api bun scripts/backup-now.ts`
+runs the same job at once and prints the key it wrote. `bun run e2e` does the
+whole drill on this machine (against an S3 mock, through `R2_ENDPOINT`) and
+checks every table comes back with its rows.
+
 To restore (the drill, before launch, into a scratch database first):
 
 ```bash

@@ -11,6 +11,7 @@ import { LimitsModule } from './throttle/throttle.module.js';
 import { MaintenanceModule } from './schedule/schedule.module.js';
 import { GravothModule } from './gravoth/gravoth.module.js';
 import { BackupModule } from './backup/backup.module.js';
+import { DatabaseBackup } from './backup/database-backup.js';
 import { SocialModule } from './social/social.module.js';
 import { HeroesModule } from './heroes/heroes.module.js';
 import { BoardsModule } from './boards/boards.module.js';
@@ -52,6 +53,7 @@ import { WebModule } from './web/web.module.js';
   // Better Auth serves its own routes, so the document is the only place they
   // appear - and `betterAuthDocument` needs the instance. `StaticOptions` for the
   // website's middleware, which `app.use` resolves from the root (main.ts).
-  exports: [Auth, StaticOptions],
+  // `DatabaseBackup` for scripts/backup-now.ts.
+  exports: [Auth, StaticOptions, DatabaseBackup],
 })
 export class AppModule {}

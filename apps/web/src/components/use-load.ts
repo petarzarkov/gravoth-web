@@ -17,9 +17,9 @@ const LOADING = { state: 'loading' } as const;
 
 /**
  * Loads once per change of `key`, and again on `reload`. A load that a newer
- * one replaced never lands, so a fast click through pages shows the last. A
- * reload keeps showing what it had until the new answer comes; a new key shows
- * loading at once (worked out while rendering, not set from an effect).
+ * one replaced never lands, so a fast click through pages shows the last. What
+ * was shown stays until the new answer comes, so changing a filter never blanks
+ * the page (worked out while rendering, not set from an effect).
  */
 export const useLoad = <T>(
   key: string,
@@ -60,8 +60,14 @@ export const useLoad = <T>(
 
   const reload = useCallback(() => setRound((value) => value + 1), []);
 
-  if (settled === null || settled.key !== key) return [LOADING, reload];
-  if (settled.round !== round && settled.load.state !== 'ready')
+  // While a new key or a reload loads, what was shown stays (a filter change keeps the page in place); with nothing
+  // shown yet, it is loading. Each board and build is its own component (main.tsx keys them), so nothing carries
+  // between two of them.
+  if (settled === null) return [LOADING, reload];
+  if (
+    (settled.key !== key || settled.round !== round) &&
+    settled.load.state !== 'ready'
+  )
     return [LOADING, reload];
   return [settled.load, reload];
 };

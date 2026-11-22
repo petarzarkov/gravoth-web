@@ -7,7 +7,7 @@ import {
   type CardPage,
   type SaveReport,
 } from './gravoth/validator.client.js';
-import type { BuildSnapshot } from '@gravoth/contracts';
+import type { BuildSnapshot, SubmitResult } from '@gravoth/contracts';
 import { startTestApp, type TestApp } from './testing/app.js';
 import { call, guest, signUp, type Player } from './testing/http.js';
 
@@ -178,17 +178,8 @@ interface BoardPage {
     };
   };
 }
-interface Submitted {
-  result: 'new' | 'improved' | 'kept';
-  entry: {
-    id: string;
-    score: number;
-    buildId: string;
-    verdict: string;
-    verdictNote: string | null;
-    rank: number | null;
-  };
-}
+/** The contracts' own answer to a score. */
+type Submitted = SubmitResult;
 
 const mail = new MemoryTransport();
 let started: TestApp;
@@ -486,6 +477,67 @@ describe('posting a score with its build', () => {
       saveHeroId: 1,
     });
     expect(unreadable.body.entry.verdict).toBe('flagged');
+  });
+
+  it('never lets a flagged claim replace a standing record, and lets an honest one replace a flagged entry', async () => {
+    const save = saveOf([
+      {
+        id: 3,
+        name: 'Kriso',
+        class: 'Barbarian',
+        level: 60,
+        highestChartTier: 10,
+      },
+    ]);
+    // Kriso's verified tier 9 replaces his earlier flagged entry.
+    const verified = await score(ana, 'chart_tier', {
+      heroId: heroIds['Kriso'],
+      score: 9,
+      build: buildAt(21),
+      save,
+      saveHeroId: 3,
+    });
+    expect(verified.body.check.verdict).toBe('verified');
+    expect(verified.body.result).toBe('improved');
+    // A higher claim the save contradicts is flagged and replaces nothing.
+    const claim = await score(ana, 'chart_tier', {
+      heroId: heroIds['Kriso'],
+      score: 13,
+      build: buildAt(22),
+      save,
+      saveHeroId: 3,
+    });
+    expect(claim.body.result).toBe('kept');
+    expect(claim.body.check).toEqual({
+      verdict: 'flagged',
+      note: "the save's highest chart tier is 10",
+    });
+    expect(claim.body.entry).toMatchObject({ score: 9, verdict: 'verified' });
+    const board = await get<BoardPage>('/api/leaderboards/chart_tier');
+    expect(
+      board.body.entries.data.find((row) => row.hero.name === 'Kriso')?.score,
+    ).toBe(9);
+
+    // Mott's only entry is flagged; a lower honest score replaces it and shows.
+    const flaggedFirst = await score(bo, 'chart_tier', {
+      heroId: heroIds['Mott'],
+      score: 7,
+      build: buildAt(23),
+      save: 'garbage',
+      saveHeroId: 1,
+    });
+    expect(flaggedFirst.body.entry.verdict).toBe('flagged');
+    const honestAfter = await score(bo, 'chart_tier', {
+      heroId: heroIds['Mott'],
+      score: 2,
+      build: buildAt(24),
+    });
+    expect(honestAfter.body.result).toBe('improved');
+    expect(honestAfter.body.entry).toMatchObject({
+      score: 2,
+      verdict: 'pending',
+    });
+    expect(honestAfter.body.entry.rank).not.toBeNull();
   });
 });
 

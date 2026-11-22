@@ -135,5 +135,14 @@ describe('config', () => {
       },
       keepDays: 30,
     });
+    expect(
+      validate({
+        R2_ACCOUNT_ID: 'acc',
+        R2_ACCESS_KEY_ID: 'key',
+        R2_SECRET_ACCESS_KEY: 'secret',
+        R2_BUCKET: 'gravoth-backups',
+        R2_ENDPOINT: 'http://minio:9000',
+      }).backup.r2?.endpoint,
+    ).toBe('http://minio:9000');
   });
 });
