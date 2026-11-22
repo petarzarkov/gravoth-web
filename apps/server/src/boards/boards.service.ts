@@ -12,7 +12,6 @@ import {
   desc,
   eq,
   getTableColumns,
-  ne,
   sql,
   type SQL,
 } from 'drizzle-orm';
@@ -33,6 +32,7 @@ import { Heroes } from '../heroes/heroes.service.js';
 import type { PageQuery } from '../http/page-query.js';
 import { avatarView } from '../players/avatars.js';
 import { BuildCheck } from './build-check.js';
+import { shownEntry } from './shown.js';
 import { HARDCORE_PREFIX } from '@gravoth/contracts';
 import type {
   BoardPage,
@@ -250,6 +250,10 @@ export class Boards {
    * A score and the build that set it: the build is stored (or found, for a revision already sent), the rules checker
    * gives its verdict, and the hero's row on the board is written only when the score beats its best, in one
    * statement (`ON CONFLICT ... DO UPDATE ... WHERE`), so two submissions at once cannot both win.
+   *
+   * Decision 227: the boards take online heroes only, whose records come from their realm, never from here (409
+   * `HERO_ONLINE`). An offline hero's score still answers as it did (v0.13.0 shows no error): its build and entry are
+   * stored and checked as before, but the entry is not on any board, so its `rank` is null.
    */
   async submit(
     userId: string,
@@ -258,6 +262,8 @@ export class Boards {
   ): Promise<SubmitResult> {
     const board = await this.resolve(key, undefined, body.season);
     const owner = await this.heroes.own(userId, body.heroId);
+    if (owner.online)
+      throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_ONLINE');
     if (owner.hardcore !== board.hardcore)
       throw new HttpError(
         HttpStatusCode.UNPROCESSABLE_ENTITY,
@@ -350,8 +356,9 @@ export class Boards {
           outcome.row.verdict === 'flagged' && outcome.row.score === body.score,
       });
     }
+    // An offline hero's entry is on no board (decision 227), so it has no rank; nor has a flagged one.
     const rank =
-      row.verdict === 'flagged'
+      row.verdict === 'flagged' || !owner.online
         ? null
         : (await this.countBefore(
             { board },
@@ -407,7 +414,7 @@ export class Boards {
     const me = scope.friendsOf;
     return and(
       eq(e.boardId, scope.board.id),
-      ne(e.verdict, 'flagged'),
+      shownEntry(),
       scope.heroClass === undefined
         ? undefined
         : eq(hero.class, scope.heroClass),

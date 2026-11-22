@@ -50,6 +50,13 @@
       "when": 1795352632221,
       "tag": "0006_hero_retired",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795353032215,
+      "tag": "0007_online_realm",
+      "breakpoints": true
     }
   ]
 }

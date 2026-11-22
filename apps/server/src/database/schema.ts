@@ -9,3 +9,4 @@ export * from './social.schema.js';
 export * from './heroes.schema.js';
 export * from './boards.schema.js';
 export * from './saves.schema.js';
+export * from './realms.schema.js';

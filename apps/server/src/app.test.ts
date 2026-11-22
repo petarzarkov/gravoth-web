@@ -18,6 +18,11 @@ afterAll(async () => {
   await started.close();
 });
 
+const getJson = async <T>(path: string) => {
+  const response = await fetch(`${base}${path}`);
+  return { status: response.status, body: (await response.json()) as T };
+};
+
 describe('Gravoth routes', () => {
   it('answers /api/health while the process serves: Postgres up, the rules checker down', async () => {
     const response = await fetch(`${base}/api/health`);
@@ -84,7 +89,7 @@ describe('the scaffold examples are gone', () => {
     });
   }
 
-  it('documents exactly the game, account, profile, friends, heroes, player, board and cloud save routes', async () => {
+  it('documents exactly the game, account, profile, friends, heroes, player, board, cloud save and realm routes', async () => {
     const response = await fetch(`${base}/api/openapi.json`);
     expect(response.status).toBe(200);
     const document = (await response.json()) as {
@@ -126,7 +131,44 @@ describe('the scaffold examples are gone', () => {
       '/api/meta',
       '/api/players/{userId}',
       '/api/profile',
+      '/api/realm',
+      '/api/realm/lease',
+      '/api/realm/release',
       '/api/saves/me',
     ]);
+  });
+});
+
+describe('the board catalog', () => {
+  it('has the game boards, each with a hardcore twin', async () => {
+    const all = await getJson<{
+      boards: {
+        key: string;
+        title: string;
+        hardcore: boolean;
+        sort: string;
+        format: string;
+      }[];
+    }>('/api/leaderboards');
+
+    expect(all.status).toBe(200);
+    expect(all.body.boards).toHaveLength(10);
+    expect(
+      all.body.boards.find((b) => b.key === 'map_s16' && !b.hardcore),
+    ).toMatchObject({
+      title: 'Fastest S16 map clear',
+      sort: 'asc',
+      format: 'time_ms',
+    });
+    const hardcore = await getJson<{
+      boards: { title: string; hardcore: boolean }[];
+    }>('/api/leaderboards?hardcore=true');
+    expect(hardcore.body.boards.map((b) => b.title)).toContain(
+      'Hardcore deepest Bone Pit floor',
+    );
+    expect(hardcore.body.boards.every((b) => b.hardcore)).toBe(true);
+    expect((await fetch(`${base}/api/leaderboards/no_such_board`)).status).toBe(
+      404,
+    );
   });
 });

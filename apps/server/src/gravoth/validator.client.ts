@@ -22,6 +22,47 @@ export interface SaveReport {
   heroes: HeroSummary[];
 }
 
+/** One board record a save keeps, as `/saves/heroes` checks it (decision 227). */
+export interface RecordCheck {
+  board: string;
+  score: number;
+  characterId: number;
+  /** `verified` (the checker's key says it is the game's), `unchecked` (it has no key), `invalid`. */
+  witness: 'verified' | 'unchecked' | 'invalid';
+  plausible: boolean;
+  /** A board the boards show (every one but Trial V). */
+  ranked: boolean;
+}
+
+/** One hero of a save, as `/saves/heroes` checks it (decision 227). */
+export interface HeroCheck {
+  characterId: number;
+  name: string;
+  /** The server's class key (`barbarian`). */
+  class: string;
+  level: number;
+  hardcore: boolean;
+  plausible: boolean;
+  reasons: string[];
+  records: RecordCheck[];
+  /** The transfer fingerprint: SHA-256 hex of what identifies the hero in any save. */
+  fingerprint: string;
+  dps: number;
+  clearDps: number;
+  ehp: number;
+  life: number;
+  highestChartTier: number;
+}
+
+export interface HeroesReport {
+  ok: boolean;
+  needsNewerBuild: boolean;
+  needs: number;
+  warnings: string[];
+  saveId: string | null;
+  heroes: HeroCheck[];
+}
+
 export interface CardPage {
   title: string;
   sections: { title: string; rows: { label: string; value: string }[] }[];
@@ -59,6 +100,39 @@ export class ValidatorClient {
     if (!res.ok)
       throw new Error(`validator /saves/check answered ${res.status}`);
     return (await res.json()) as SaveReport;
+  }
+
+  /** Decision 227: every hero of a save (the realm), with its plausibility, records and fingerprint. */
+  async heroes(save: string): Promise<HeroesReport> {
+    const res = await fetch(this.url('/saves/heroes'), {
+      method: 'POST',
+      body: save,
+      headers: { 'content-type': 'text/plain' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok)
+      throw new Error(`validator /saves/heroes answered ${res.status}`);
+    return (await res.json()) as HeroesReport;
+  }
+
+  /** Decision 227: Core's BuildSnapshotJson for one hero of a save (revision 0), or null when it holds no such hero. */
+  async snapshot(
+    save: string,
+    heroId: number,
+    gameVersion: string,
+  ): Promise<unknown> {
+    const url = new URL(this.url(`/saves/snapshot/${heroId}`));
+    url.searchParams.set('gameVersion', gameVersion);
+    const res = await fetch(url, {
+      method: 'POST',
+      body: save,
+      headers: { 'content-type': 'text/plain' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok)
+      throw new Error(`validator /saves/snapshot answered ${res.status}`);
+    return (await res.json()) as unknown;
   }
 
   /** The hero's build card, or null when the save holds no such hero. */

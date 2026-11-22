@@ -30,9 +30,12 @@ import { jsonb } from './columns.js';
 export { HERO_CLASSES, type HeroClass };
 
 /**
- * A hero the server knows, owned by one user. An **online** hero (step 5) lives on the server and starts fresh; an
- * offline hero is registered so its builds show on its player's page (decision 226: the game sends every hero's build
- * when it changes). The name is unique per player, without regard to case.
+ * A hero the server knows, owned by one user. An offline hero is registered by the game (by name, unique per player
+ * among the offline ones, without regard to case) so its builds show on its player's page (decision 226: the game
+ * sends every hero's build when it changes). An **online** hero (decision 227) is a hero of the account's realm
+ * (`realms`), made and kept up to date by the rules checker's read of each upload and known by its id in that save
+ * (`realm_character_id`, once per player); only online heroes stand on the boards, and a `flagged` one (the checker
+ * found it implausible, `flag_note` says why) never does.
  *
  * `retired_at` (decision 226): the hero is gone from the phone (deleted, or moved), so its player page leaves it out;
  * its builds and board records stay. `POST /api/heroes/active` sets and clears it.
@@ -51,6 +54,13 @@ export const hero = pgTable(
     class: text('class', { enum: HERO_CLASSES }).notNull(),
     hardcore: boolean('hardcore').notNull().default(false),
     online: boolean('online').notNull().default(false),
+    /** Decision 227: an online hero's id in its realm's save (`CharacterSave.Id`); null for an offline hero. */
+    realmCharacterId: integer('realm_character_id'),
+    /** Decision 227: an online hero's level as the rules checker last read it. */
+    level: smallint('level'),
+    /** Decision 227: the rules checker found the hero implausible: kept for review, never on the boards. */
+    flagged: boolean('flagged').notNull().default(false),
+    flagNote: text('flag_note'),
     retiredAt: timestamp('retired_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -61,7 +71,17 @@ export const hero = pgTable(
   },
   (t) => [
     unique('heroes_id_user_key').on(t.id, t.userId),
-    uniqueIndex('heroes_user_name_key').on(t.userId, sql`lower(${t.name})`),
+    // One offline hero a name per player; online heroes are known by their realm's id (two may share a name).
+    uniqueIndex('heroes_user_name_key')
+      .on(t.userId, sql`lower(${t.name})`)
+      .where(sql`NOT ${t.online}`),
+    uniqueIndex('heroes_user_realm_character_key')
+      .on(t.userId, t.realmCharacterId)
+      .where(sql`${t.realmCharacterId} IS NOT NULL`),
+    check(
+      'heroes_realm_character',
+      sql`${t.realmCharacterId} IS NULL OR (${t.online} AND ${t.realmCharacterId} >= 0)`,
+    ),
     check(
       'heroes_name_length',
       sql`char_length(${t.name}) BETWEEN 1 AND 24 AND ${t.name} = btrim(${t.name})`,

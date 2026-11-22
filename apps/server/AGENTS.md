@@ -35,7 +35,7 @@ bun run mail:preview   # the mail templates
 - `src/database/` - the schema (auth, social, heroes, boards, saves), the `Db` handle, the migration runner, Postgres errors
 - `drizzle/` - the migrations (drizzle-kit's; `0001` is hand-written: the trigger that keeps builds immutable)
 - `src/auth/` - better-auth and `/api/account`; `src/players/` - profiles, display names, the guest upgrade
-- `src/social/` - profile, friends, blocks; `src/heroes/` - heroes and builds; `src/boards/` - the boards; `src/saves/` - the cloud save
+- `src/social/` - profile, friends, blocks; `src/heroes/` - heroes, builds and player pages; `src/boards/` - the boards; `src/saves/` - the cloud save; `src/realm/` - the online realm
 - `src/mail/` - the mailer and its React Email templates; `src/backup/` - the nightly dump to R2
 - `src/cache/`, `src/throttle/`, `src/schedule/` - the scaffold's infrastructure
 - `src/web/` - the website's page (`SpaShell`) and the static options
@@ -60,7 +60,8 @@ bottom is what stops that starting a server.
 - **guest clean-up** - at 04:15 (`players/guest-cleanup.ts`), deleting guests with no heroes and no use in 30 days (a session's `updated_at`; `GET /api/account` marks a game session used, since better-auth never renews one).
 - **auth** - better-auth mounted at `/api/auth` (guests, email and password, Google, Discord), and `/api/account` (the caller, the sign-in methods, deletion, the mail-link pages).
 - **mail** - Resend with React Email templates; logged without `RESEND_API_KEY`.
-- **social, heroes, boards** - `/api/profile`, `/api/friends`, `/api/blocks`, `/api/heroes`, `/api/builds/:id`, `/api/leaderboards`.
+- **social, heroes, boards** - `/api/profile`, `/api/friends`, `/api/blocks`, `/api/heroes` (with every hero's build, decision 226), `/api/builds/:id`, `/api/players/:userId`, `/api/leaderboards` (online heroes only, decision 227).
+- **realm** - `/api/realm`: the online realm (decision 227), one save of online heroes per account, its one-device lease and revisions; `realm/realm-sync.ts` lands the rules checker's read of each upload on the heroes, builds and boards after the reply.
 - **saves** - `/api/saves/me`: the game's cloud save, one copy per account (not a guest's), stored as `bytea` (`database/columns.ts`'s, since drizzle-orm 0.45 has none).
 - **cache** - Bun.RedisClient and a two-tier Cache in front of it.
 - **throttle** - A fixed-window rate limit per caller, with the counter in Redis.

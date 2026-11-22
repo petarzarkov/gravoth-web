@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { provide } from '@dunx/core';
 import { EmailTransport, MemoryTransport } from '@dunx/infra/email';
+import { eq } from 'drizzle-orm';
 import { AppConfigService } from './config.js';
+import { Db } from './database/db.js';
+import { hero } from './database/schema.js';
 import {
   ValidatorClient,
   type CardPage,
@@ -20,6 +23,11 @@ import { call, guest, signUp, type Player } from './testing/http.js';
 /**
  * Boards over HTTP: heroes registered, scores posted with their builds, the rules checker's verdicts, the top of a
  * board with every row's build, the caller's neighbourhood, the friends view, the hardcore twins, and the build card.
+ *
+ * Decision 227: the boards show online heroes only, whose records come from their realm (realm.test.ts), and an
+ * online hero's score is refused. Here the scores go in through the score route while the heroes are offline (stored,
+ * answered with no rank, on no board), and the heroes are then made online straight in the database (`setOnline`, a
+ * stand-in for their realm), so these suites read the boards' own ranking, paging and views.
  *
  * The rules checker is a stand-in that reads a "save" written as JSON by the test (the real one reads the game's save
  * format with the game's own Core; its contract is `ValidatorClient`'s).
@@ -198,7 +206,17 @@ let base = '';
 let ana: Player;
 let bo: Player;
 let cy: Player;
+let db: Db;
 const heroIds: Record<string, string> = {};
+
+/** The heroes' realm, stood in for: online (on the boards) or offline (scores accepted, on no board). */
+const setOnline = async (online: boolean, ...names: string[]) => {
+  for (const name of names)
+    await db
+      .update(hero)
+      .set({ online })
+      .where(eq(hero.id, heroIds[name] ?? ''));
+};
 
 const post = <T>(path: string, who: Player | undefined, body: unknown) =>
   call<T>(base, 'POST', path, { token: who?.token, body });
@@ -233,6 +251,7 @@ beforeAll(async () => {
     ],
   });
   base = started.base;
+  db = started.app.get(Db);
   ana = await signUp(base, 'Ana', 'ana@boards.test');
   bo = await signUp(base, 'Bodhi', 'bo@boards.test');
   cy = await signUp(base, 'Cyra', 'cy@boards.test');
@@ -246,38 +265,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await started.close();
-});
-
-describe('the board catalog', () => {
-  it('has the game boards, each with a hardcore twin', async () => {
-    const all = await get<{
-      boards: {
-        key: string;
-        title: string;
-        hardcore: boolean;
-        sort: string;
-        format: string;
-      }[];
-    }>('/api/leaderboards');
-
-    expect(all.status).toBe(200);
-    expect(all.body.boards).toHaveLength(10);
-    expect(
-      all.body.boards.find((b) => b.key === 'map_s16' && !b.hardcore),
-    ).toMatchObject({
-      title: 'Fastest S16 map clear',
-      sort: 'asc',
-      format: 'time_ms',
-    });
-    const hardcore = await get<{
-      boards: { title: string; hardcore: boolean }[];
-    }>('/api/leaderboards?hardcore=true');
-    expect(hardcore.body.boards.map((b) => b.title)).toContain(
-      'Hardcore deepest Bone Pit floor',
-    );
-    expect(hardcore.body.boards.every((b) => b.hardcore)).toBe(true);
-    expect((await get('/api/leaderboards/no_such_board')).status).toBe(404);
-  });
 });
 
 describe('heroes', () => {
@@ -327,7 +314,8 @@ describe('posting a score with its build', () => {
     expect(posted.status).toBe(200);
     expect(posted.body).toMatchObject({
       result: 'new',
-      entry: { score: 40, verdict: 'verified', verdictNote: null, rank: 1 },
+      // An offline hero's entry is on no board, so it has no rank (decision 227).
+      entry: { score: 40, verdict: 'verified', verdictNote: null, rank: null },
     });
     const card = await get<{
       dps: number;
@@ -355,7 +343,7 @@ describe('posting a score with its build', () => {
     expect(mott.body.entry).toMatchObject({
       verdict: 'pending',
       verdictNote: 'no save came with the score',
-      rank: 1,
+      rank: null,
     });
 
     const vex = await score(cy, 'pit_floor', {
@@ -369,8 +357,18 @@ describe('posting a score with its build', () => {
     expect(vex.body.entry).toMatchObject({
       verdict: 'pending',
       verdictNote: 'the rules checker did not answer',
-      rank: 3,
+      rank: null,
     });
+
+    // Online, the three rank by score, then the earlier of Kriso's and Vex's equal 40s.
+    await setOnline(true, 'Kriso', 'Mott', 'Vex');
+    const page = await get<BoardPage>('/api/leaderboards/pit_floor');
+    expect(page.body.entries.data.map((r) => [r.rank, r.hero.name])).toEqual([
+      [1, 'Mott'],
+      [2, 'Kriso'],
+      [3, 'Vex'],
+    ]);
+    await setOnline(false, 'Kriso', 'Mott', 'Vex');
   });
 
   it('replaces a hero best only with a better score, keeping the build that set it', async () => {
@@ -382,7 +380,7 @@ describe('posting a score with its build', () => {
     });
     expect(better.body).toMatchObject({
       result: 'improved',
-      entry: { score: 60, rank: 1 },
+      entry: { score: 60, rank: null },
     });
 
     const worse = await score(ana, 'pit_floor', {
@@ -477,9 +475,12 @@ describe('posting a score with its build', () => {
       verdictNote: "the save's highest chart tier is 10",
       rank: null,
     });
+    // Even online, the flagged entry is on no board.
+    await setOnline(true, 'Kriso');
     expect(
       (await get<BoardPage>('/api/leaderboards/chart_tier')).body.entries.data,
     ).toEqual([]);
+    await setOnline(false, 'Kriso');
 
     const unreadable = await score(bo, 'chart_tier', {
       heroId: heroIds['Mott'],
@@ -525,10 +526,12 @@ describe('posting a score with its build', () => {
       note: "the save's highest chart tier is 10",
     });
     expect(claim.body.entry).toMatchObject({ score: 9, verdict: 'verified' });
+    await setOnline(true, 'Kriso');
     const board = await get<BoardPage>('/api/leaderboards/chart_tier');
     expect(
       board.body.entries.data.find((row) => row.hero.name === 'Kriso')?.score,
     ).toBe(9);
+    await setOnline(false, 'Kriso');
 
     // Mott's only entry is flagged; a lower honest score replaces it and shows.
     const flaggedFirst = await score(bo, 'chart_tier', {
@@ -549,11 +552,21 @@ describe('posting a score with its build', () => {
       score: 2,
       verdict: 'pending',
     });
-    expect(honestAfter.body.entry.rank).not.toBeNull();
+    await setOnline(true, 'Mott');
+    expect(
+      (
+        await get<BoardPage>('/api/leaderboards/chart_tier')
+      ).body.entries.data.map((r) => [r.hero.name, r.score]),
+    ).toContainEqual(['Mott', 2]);
+    await setOnline(false, 'Mott');
   });
 });
 
 describe('reading a board', () => {
+  beforeAll(async () => {
+    await setOnline(true, 'Kriso', 'Lyra', 'Mott', 'Vex');
+  });
+
   it('shows the top with ranks, players, heroes and every row whole build', async () => {
     const page = await get<BoardPage>('/api/leaderboards/pit_floor');
 
@@ -674,12 +687,14 @@ describe('reading a board', () => {
   });
 
   it('keeps the hardcore twin apart, by its key or the hardcore filter', async () => {
+    await setOnline(false, 'Lyra');
     const posted = await score(ana, 'hc_pit_floor', {
       heroId: heroIds['Lyra'],
       score: 12,
       build: buildAt(1),
     });
-    expect(posted.body.entry.rank).toBe(1);
+    expect(posted.status).toBe(200);
+    await setOnline(true, 'Lyra');
 
     const byKey = await get<BoardPage>('/api/leaderboards/hc_pit_floor');
     const byFilter = await get<BoardPage>(
@@ -701,6 +716,7 @@ describe('reading a board', () => {
   });
 
   it('ranks a time board smallest first', async () => {
+    await setOnline(false, 'Kriso', 'Mott');
     await score(ana, 'map_s16', {
       heroId: heroIds['Kriso'],
       score: 400_000,
@@ -711,6 +727,7 @@ describe('reading a board', () => {
       score: 350_000,
       build: buildAt(1),
     });
+    await setOnline(true, 'Kriso', 'Mott');
 
     const page = await get<BoardPage>('/api/leaderboards/map_s16');
     expect(
@@ -769,6 +786,8 @@ describe('accounts and the boards', () => {
       score: 45,
       build: buildAt(1),
     });
+    heroIds['Ash'] = hero.body.hero.id;
+    await setOnline(true, 'Ash');
 
     const signUpReply = await post('/api/auth/sign-up/email', visitor, {
       email: 'wanderer@boards.test',

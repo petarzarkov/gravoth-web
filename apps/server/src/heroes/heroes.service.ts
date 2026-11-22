@@ -16,10 +16,11 @@ export const toHeroView = (row: Hero): HeroView => ({
 });
 
 /**
- * The heroes a player has told the server about. Until online heroes (step 5), a hero is registered so its records can
- * stand on the boards: registering is idempotent by name (the same hero after a reinstall finds its row again), a
- * name is one hero per player, and the device is the authority on hardcore (a hardcore hero that falls becomes normal;
- * MAKE HARDCORE goes the other way once, decision 198).
+ * The heroes a player has told the server about. An offline hero is registered so its builds show on its player page:
+ * registering is idempotent by name among the player's offline heroes (the same hero after a reinstall finds its row
+ * again), a name is one offline hero per player, and the device is the authority on hardcore (a hardcore hero that
+ * falls becomes normal; MAKE HARDCORE goes the other way once, decision 198). Online heroes are the realm's
+ * (decision 227, `realm/realm-sync.ts`): registering never finds one.
  */
 export class Heroes {
   constructor(private readonly db: Db) {}
@@ -89,7 +90,11 @@ export class Heroes {
       .select()
       .from(hero)
       .where(
-        and(eq(hero.userId, userId), sql`lower(${hero.name}) = lower(${name})`),
+        and(
+          eq(hero.userId, userId),
+          eq(hero.online, false),
+          sql`lower(${hero.name}) = lower(${name})`,
+        ),
       )
       .limit(1);
     return row;

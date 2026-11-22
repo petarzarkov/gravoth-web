@@ -18,7 +18,9 @@ import { SocialModule } from './social/social.module.js';
 import { HeroesModule } from './heroes/heroes.module.js';
 import { BoardsModule } from './boards/boards.module.js';
 import { SavesModule } from './saves/saves.module.js';
+import { RealmModule } from './realm/realm.module.js';
 import { WebModule } from './web/web.module.js';
+import { RealmSync } from './realm/realm-sync.js';
 
 /**
  * Import order is construction order, and shutdown runs in reverse - so config and
@@ -54,12 +56,14 @@ import { WebModule } from './web/web.module.js';
     HeroesModule,
     BoardsModule,
     SavesModule,
+    RealmModule,
     WebModule,
   ],
   // Better Auth serves its own routes, so the document is the only place they
   // appear - and `betterAuthDocument` needs the instance. `StaticOptions` for the
   // website's middleware, which `app.use` resolves from the root (main.ts).
-  // `DatabaseBackup` for scripts/backup-now.ts. `ScheduleRegistry` for what is armed, and to run a job now.
-  exports: [Auth, StaticOptions, DatabaseBackup, ScheduleRegistry],
+  // `DatabaseBackup` for scripts/backup-now.ts. `ScheduleRegistry` for what is armed, and to run a job now. `RealmSync`
+  // for a suite to wait on a realm's checks.
+  exports: [Auth, StaticOptions, DatabaseBackup, ScheduleRegistry, RealmSync],
 })
 export class AppModule {}

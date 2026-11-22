@@ -17,6 +17,7 @@ import { OpenApiModule } from '@dunx/openapi';
 import { SwaggerRenderer } from '@dunx/openapi/swagger';
 import { AppModule } from './app.module.js';
 import { AppConfigService, RELAY_CHANNEL } from './config.js';
+import { AppErrorFilter } from './http/detailed-error.js';
 import { SpaShell } from './web/spa-shell.middleware.js';
 
 /**
@@ -64,6 +65,8 @@ export const createApp = async (
       websocket: { idleTimeout: 30 },
       relay: new RedisRelay({ connectionTimeout: 500 }),
       relayChannel: RELAY_CHANNEL,
+      // dunx's error bodies, plus the details the realm's conflicts carry (http/detailed-error.ts).
+      onError: AppErrorFilter,
       ...(overrides.length === 0 ? {} : { overrides }),
     },
   );

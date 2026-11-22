@@ -1,6 +1,7 @@
 import { Module, provide } from '@dunx/core';
 import { HttpOptionsProvider, RelayPublisher, WsRelayModule } from '@dunx/http';
 import { AppConfigService, RELAY_CHANNEL } from '../config.js';
+import { AppErrorFilter } from './detailed-error.js';
 import { AppHttpOptions } from './http-options.js';
 
 @Module({
@@ -27,7 +28,9 @@ import { AppHttpOptions } from './http-options.js';
     // The HTTP settings that read from config, resolved after the container
     // exists. `HttpFactory` promotes a default, so binding this replaces it.
     provide(HttpOptionsProvider, { useClass: AppHttpOptions }),
+    // dunx's error bodies, with the details a `DetailedHttpError` carries (main.ts's `onError`).
+    AppErrorFilter,
   ],
-  exports: [HttpOptionsProvider, RelayPublisher],
+  exports: [HttpOptionsProvider, RelayPublisher, AppErrorFilter],
 })
 export class HttpModule {}

@@ -29,10 +29,10 @@ const tooLarge = () =>
   new HttpError(HttpStatusCode.PAYLOAD_TOO_LARGE, 'SAVE_TOO_LARGE');
 
 /**
- * The write's body, read as JSON before the schema checks it, so that a save too large to keep is a 413
+ * The write's body (a cloud save's, a realm's), read as JSON before the schema checks it, so that a save too large to keep is a 413
  * `SAVE_TOO_LARGE` (what the game can tell apart) rather than the schema's own 400 on `data`'s length.
  */
-const saveBody = async (req: Request): Promise<unknown> => {
+export const saveBody = async (req: Request): Promise<unknown> => {
   if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY_BYTES)
     throw tooLarge();
   const text = await req.text();
