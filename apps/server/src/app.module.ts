@@ -17,6 +17,7 @@ import { DatabaseBackup } from './backup/database-backup.js';
 import { SocialModule } from './social/social.module.js';
 import { HeroesModule } from './heroes/heroes.module.js';
 import { BoardsModule } from './boards/boards.module.js';
+import { SavesModule } from './saves/saves.module.js';
 import { WebModule } from './web/web.module.js';
 
 /**
@@ -52,6 +53,7 @@ import { WebModule } from './web/web.module.js';
     SocialModule,
     HeroesModule,
     BoardsModule,
+    SavesModule,
     WebModule,
   ],
   // Better Auth serves its own routes, so the document is the only place they

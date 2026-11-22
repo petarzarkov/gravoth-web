@@ -7,13 +7,18 @@ export interface Reply<T = Record<string, unknown>> {
 
 export const call = async <T = Record<string, unknown>>(
   base: string,
-  method: 'GET' | 'POST' | 'PATCH',
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   path: string,
-  options: { token?: string | undefined; body?: unknown } = {},
+  options: {
+    token?: string | undefined;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<Reply<T>> => {
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
+      ...options.headers,
       ...(options.body === undefined
         ? {}
         : { 'content-type': 'application/json' }),

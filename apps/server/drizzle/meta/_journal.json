@@ -36,6 +36,13 @@
       "when": 1795349056275,
       "tag": "0004_oauth_tokens_cleared",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795350600193,
+      "tag": "0005_cloud_saves",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ import {
 import {
   account,
   block,
+  cloudSave,
   friendship,
   hero,
   heroBuild,
@@ -591,6 +592,13 @@ describe('deleting a user', () => {
       .insert(hero)
       .values({ userId: stays.id, name: 'Kept', class: 'sorcerer' })
       .returning();
+    const save = (userId: string) => ({
+      userId,
+      data: new Uint8Array([0, 255, 0]),
+      size: 3,
+      sha256: '0'.repeat(64),
+    });
+    await db.insert(cloudSave).values([save(gone.id), save(stays.id)]);
 
     await db.delete(user).where(eq(user.id, gone.id));
 
@@ -636,5 +644,51 @@ describe('deleting a user', () => {
     expect(
       await count(db.select().from(hero).where(eq(hero.id, staysHero!.id))),
     ).toBe(1);
+    expect(
+      await count(
+        db.select().from(cloudSave).where(eq(cloudSave.userId, gone.id)),
+      ),
+    ).toBe(0);
+    expect(
+      await count(
+        db.select().from(cloudSave).where(eq(cloudSave.userId, stays.id)),
+      ),
+    ).toBe(1);
+  });
+});
+
+describe('cloud saves', () => {
+  it('keep one copy per user, its size and hash its own, and no empty one', async () => {
+    const owner = await newUser('Keeper');
+    const bytes = new Uint8Array([0, 1, 0, 255]);
+    const row = {
+      userId: owner.id,
+      data: bytes,
+      size: 4,
+      sha256: 'a'.repeat(64),
+    };
+    await db.insert(cloudSave).values(row);
+    expect(
+      isUniqueViolation(await failure(db.insert(cloudSave).values(row))),
+    ).toBe(true);
+    await db.delete(cloudSave).where(eq(cloudSave.userId, owner.id));
+    for (const [constraint, values] of [
+      ['cloud_saves_size', { ...row, size: 5 }],
+      ['cloud_saves_size', { ...row, data: new Uint8Array(), size: 0 }],
+      ['cloud_saves_sha256', { ...row, sha256: 'not a hash' }],
+      ['cloud_saves_play_seconds', { ...row, playSeconds: -1 }],
+      ['cloud_saves_game_version', { ...row, gameVersion: 'latest' }],
+    ] as const) {
+      expect(
+        checkViolation(await failure(db.insert(cloudSave).values(values))),
+      ).toBe(constraint);
+    }
+    expect(
+      isForeignKeyViolation(
+        await failure(
+          db.insert(cloudSave).values({ ...row, userId: crypto.randomUUID() }),
+        ),
+      ),
+    ).toBe(true);
   });
 });

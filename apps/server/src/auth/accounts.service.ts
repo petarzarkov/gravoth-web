@@ -74,8 +74,8 @@ export class Accounts {
 
   /**
    * Deletes the caller's account: one `DELETE` of the user row, and the foreign keys take everything kept for it with
-   * it (its sign-ins and sessions, its profile, heroes, builds and board entries, its friendships, requests and blocks
-   * either way). An account with a password has to give it; a guest or a Google- or Discord-only account is proven by
+   * it (its sign-ins and sessions, its profile, heroes, builds and board entries, its cloud save, its friendships,
+   * requests and blocks either way). An account with a password has to give it; a guest or a Google- or Discord-only account is proven by
    * its session, the same one that signs it in. A confirmed address then gets one last mail saying so.
    */
   async delete(password: string | undefined): Promise<void> {

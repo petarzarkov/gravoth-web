@@ -15,3 +15,16 @@ export const jsonb = <T>(name: string) =>
     toDriver: (value) => value,
     fromDriver: (value) => value,
   })(name);
+
+/**
+ * A `bytea` column, which drizzle-orm 0.45 does not have. `Bun.SQL` sends a `Uint8Array` (or a `Buffer`) parameter as
+ * binary and reads a `bytea` back as a `Buffer`, so the value passes through as it is, like `jsonb` above: measured on
+ * Bun 1.4.5 with drizzle-orm 0.45.2 (zero bytes, high bytes and 3 MB of random bytes come back exactly, and
+ * Postgres's own `octet_length` and `sha256` agree), and held to it by `saves.test.ts`.
+ */
+export const bytea = (name: string) =>
+  customType<{ data: Uint8Array; driverData: Uint8Array }>({
+    dataType: () => 'bytea',
+    toDriver: (value) => value,
+    fromDriver: (value) => value,
+  })(name);

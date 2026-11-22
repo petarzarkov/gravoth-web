@@ -8,3 +8,4 @@ export * from './auth.schema.js';
 export * from './social.schema.js';
 export * from './heroes.schema.js';
 export * from './boards.schema.js';
+export * from './saves.schema.js';
