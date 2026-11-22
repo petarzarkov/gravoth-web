@@ -58,7 +58,17 @@ sign-in with that provider brings up to date (`auth/provider-photos.ts`, on the
 providers' user-info step, so the redirect and Android's ID token both do it),
 and the site's image policy allows those hosts (`AVATAR_IMAGE_SOURCES`). Only
 an address on those hosts is ever shown (`players/avatars.ts`); a `provider`
-picture whose photo is gone shows its portrait.
+picture whose photo is gone shows its portrait. On a board row and a build
+card the picture wears the hero's avatar border, which the build carries
+(`extras.border`, one of `AVATAR_BORDERS`; the game's frames are in
+`apps/web/public/img/borders`).
+
+A Google or Discord sign-in's access and refresh tokens are stored encrypted
+with `AUTH_SECRET`, and its ID token not at all (`auth/oauth-tokens.ts`); the
+server never calls a provider with them. Guests with no heroes and no use in
+30 days are deleted every day at 04:15 (`players/guest-cleanup.ts`), and the
+request logs never hold a sign-in's one-time `code` or `state`
+(`http/log-redaction.ts`).
 
 ## The website, and its copy on the API
 
