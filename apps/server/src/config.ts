@@ -5,6 +5,7 @@ import {
   type DynamicModule,
   LogLevel,
 } from '@dunx/core';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 
 /** What `AUTH_SECRET` is when nothing sets it. Public, so never good enough for production. */
@@ -39,6 +40,11 @@ const envSchema = z.object({
   /** Both cost a `req.clone().text()` on the hot path, so off in production. */
   LOG_REQUEST_BODY: z.stringbool().default(false),
   LOG_RESPONSE_BODY: z.stringbool().default(false),
+  /**
+   * A second origin trusted for credentialed browser calls (better-auth, CORS and the cross-site check): the website's
+   * dev server (http://localhost:3001), or a site hosted apart from the API. The API serves its own website, so
+   * production needs none.
+   */
   CORS_ORIGIN: z.string().default('https://example.com'),
   /**
    * Whether `x-forwarded-for` is believed. Off unless a trusted proxy is in
@@ -102,9 +108,14 @@ const envSchema = z.object({
   THROTTLE_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
   /** A `@Cron` that names no zone of its own runs in this one. */
   SCHEDULE_TZ: z.string().default('UTC'),
-  /** Gravoth's rules checker (dotnet/Gravoth.Validator), on the private network. */
+  /** Gravoth's rules checker (dotnet/Gravoth.Validator in the game's repository), on the private network. */
   VALIDATOR_URL: z.url().default('http://localhost:8080'),
+  /** The website's build (`bun run build` in apps/web). Absent: apps/web/dist beside this app. */
+  WEB_ROOT: z.string().min(1).optional(),
 });
+
+/** apps/web/dist, from apps/server/src. */
+const DEFAULT_WEB_ROOT = resolve(import.meta.dir, '../../web/dist');
 
 /** An OAuth client: both halves, or the provider is not offered. */
 export interface OAuthClient {
@@ -142,6 +153,8 @@ export interface AppConfig {
   readonly throttle: { readonly limit: number; readonly windowSeconds: number };
   readonly schedule: { readonly tz: string };
   readonly validator: { readonly url: string };
+  /** The website's build directory, served at `/`. */
+  readonly web: { readonly root: string };
 }
 
 /**
@@ -235,6 +248,7 @@ export const validate = (env: ConfigSource): AppConfig => {
     throttle: { limit: value.THROTTLE_LIMIT, windowSeconds: value.THROTTLE_WINDOW_SECONDS },
     schedule: { tz: value.SCHEDULE_TZ },
     validator: { url: value.VALIDATOR_URL },
+    web: { root: value.WEB_ROOT === undefined ? DEFAULT_WEB_ROOT : resolve(value.WEB_ROOT) },
   };
 };
 

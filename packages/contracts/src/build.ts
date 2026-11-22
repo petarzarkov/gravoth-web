@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ITEM_SLOTS, RARITIES } from './constants.js';
 import type { HeroView } from './heroes.js';
 
 /**
@@ -16,22 +17,6 @@ const key = z
 const label = z.string().min(1).max(80);
 const count = (max: number) => z.number().int().min(0).max(max);
 
-export const ITEM_SLOTS = [
-  'MainHand',
-  'OffHand',
-  'Helm',
-  'Chest',
-  'Gloves',
-  'Boots',
-  'Belt',
-  'Amulet',
-  'Ring1',
-  'Ring2',
-] as const;
-export type ItemSlot = (typeof ITEM_SLOTS)[number];
-
-export const RARITIES = ['Normal', 'Magic', 'Rare', 'Unique'] as const;
-export type Rarity = (typeof RARITIES)[number];
 
 /** One line on an item: an implicit, an affix with its tier, a unique's line, a corruption. */
 export const AffixLine = z.object({

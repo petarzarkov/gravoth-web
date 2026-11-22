@@ -131,3 +131,10 @@ describe('players', () => {
     ).toBe(false);
   });
 });
+
+describe('constants', () => {
+  test('carry no schema library, so the website bundle stays small', async () => {
+    const source = await Bun.file(`${import.meta.dir}/constants.ts`).text();
+    expect(source).not.toMatch(/from ['"]/);
+  });
+});

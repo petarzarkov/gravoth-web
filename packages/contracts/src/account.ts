@@ -1,11 +1,6 @@
 import { z } from 'zod';
+import type { SignInMethod } from './constants.js';
 
-/** The third-party sign-ins, each offered only while the server has its client. */
-export const SOCIAL_PROVIDERS = ['google', 'discord'] as const;
-export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
-
-/** A sign-in method a client can offer, as `GET /api/account/methods` lists it. */
-export type SignInMethod = 'guest' | 'email' | SocialProvider;
 
 /** `GET /api/account/methods`: which sign-in buttons this server can honour, so a client shows no dead one. */
 export interface SignInMethods {
@@ -39,20 +34,7 @@ export const DeleteAccount = z
 
 export type DeleteAccount = z.infer<typeof DeleteAccount>;
 
-/** better-auth's limits on a password (`emailAndPassword` in the server's auth module). */
-export const PASSWORD_LIMITS = { min: 8, max: 128 } as const;
 
-/** better-auth's routes, under `/api/auth`, that a browser client calls. */
-export const AUTH_ROUTES = {
-  session: '/api/auth/get-session',
-  signInEmail: '/api/auth/sign-in/email',
-  signUpEmail: '/api/auth/sign-up/email',
-  signInSocial: '/api/auth/sign-in/social',
-  signOut: '/api/auth/sign-out',
-  requestPasswordReset: '/api/auth/request-password-reset',
-  resetPassword: '/api/auth/reset-password',
-  sendVerificationEmail: '/api/auth/send-verification-email',
-} as const;
 
 /** What `get-session` answers for a signed-in caller (the fields a client reads). */
 export interface SessionView {

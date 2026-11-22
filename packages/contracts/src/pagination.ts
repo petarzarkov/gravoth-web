@@ -1,16 +1,6 @@
 import { z } from 'zod';
+import { PAGE_LIMITS } from './constants.js';
 
-/**
- * Keyset pagination as `@dunx/infra/pagination` answers it. The limits are
- * dunx's own (`PAGINATION`), repeated here so a browser bundle needs no server
- * package; `pagination.test.ts` keeps the two equal.
- */
-export const PAGE_LIMITS = {
-  MIN_TAKE: 1,
-  MAX_TAKE: 100,
-  DEFAULT_TAKE: 20,
-  MAX_CURSOR: 512,
-} as const;
 
 /**
  * The query every growing list takes: `take` rows, and the `cursor` from a

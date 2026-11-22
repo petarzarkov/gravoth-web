@@ -1,10 +1,11 @@
 import { Auth, betterAuthDocument } from '@dunx/auth';
 import { ConfigInput, Logger, provide, type ConfigSource, type Registration } from '@dunx/core';
-import { HttpFactory, RedisRelay, ThrottleGuard, type HttpApp } from '@dunx/http';
+import { HttpFactory, RedisRelay, StaticFiles, ThrottleGuard, type HttpApp } from '@dunx/http';
 import { OpenApiModule } from '@dunx/openapi';
 import { SwaggerRenderer } from '@dunx/openapi/swagger';
 import { AppModule } from './app.module.js';
 import { AppConfigService, RELAY_CHANNEL } from './config.js';
+import { SpaShell } from './web/spa-shell.middleware.js';
 
 /**
  * One app for `bun run start`, `bun run dev` and the tests, and one file:
@@ -57,6 +58,8 @@ export const createApp = async (options: { overrides?: readonly Registration[]; 
     maxAge: 600,
   });
   app.use(ThrottleGuard);
+  // The website (apps/web/dist): its page for the paths it owns, then its assets. Neither touches `/api`.
+  app.use(SpaShell, StaticFiles);
 
   return app;
 };

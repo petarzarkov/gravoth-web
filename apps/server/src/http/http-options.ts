@@ -5,6 +5,7 @@ import {
   type CsrfOptions,
   type PubSubRelay,
   type RequestLoggingOptions,
+  type SecurityHeadersOptions,
 } from '@dunx/http';
 import { AppConfigService, RELAY_CHANNEL } from '../config.js';
 
@@ -55,6 +56,14 @@ export class AppHttpOptions extends HttpOptionsProvider {
     return {
       trustedOrigins: origin === undefined || origin === 'null' ? [] : [origin],
     };
+  }
+
+  /**
+   * HSTS, nosniff, no referrer, no framing and a same-origin opener on every response. The content security policy is
+   * the website page's own (web/spa-shell.middleware.ts): the mail pages and Swagger UI carry inline styles.
+   */
+  override get securityHeaders(): SecurityHeadersOptions {
+    return { contentSecurityPolicy: false };
   }
 
   override get relay(): PubSubRelay {

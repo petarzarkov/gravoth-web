@@ -1,9 +1,6 @@
 import { z } from 'zod';
+import { DISPLAY_NAME_PATTERN, DISPLAY_NAME_RULE } from './constants.js';
 
-/** 3 to 20 letters, digits, `_` or `-`, starting with a letter or digit. The word filter is the server's. */
-export const DISPLAY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/;
-export const DISPLAY_NAME_RULE =
-  '3 to 20 letters, digits, _ or -, starting with a letter or digit';
 
 export const DisplayName = z
   .string()

@@ -1,13 +1,6 @@
 import { z } from 'zod';
+import { HERO_CLASSES, type HeroClass } from './constants.js';
 
-/** The game's classes, lower case (`Gravoth.Core`'s `HeroClass`). */
-export const HERO_CLASSES = [
-  'barbarian',
-  'ranger',
-  'sorcerer',
-  'templar',
-] as const;
-export type HeroClass = (typeof HERO_CLASSES)[number];
 
 /** `POST /api/heroes`: a hero the server should know, by its name on this account. */
 export const RegisterHero = z

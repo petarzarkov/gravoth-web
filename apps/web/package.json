@@ -1,0 +1,24 @@
+{
+  "name": "@gravoth/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gravoth Online's website: the boards with every row's build, build cards, sign-in, the profile and friends. React on Bun's bundler, served by @gravoth/server.",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot dev.ts",
+    "build": "bun build.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gravoth/contracts": "workspace:*",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "typescript": "7.0.2"
+  }
+}
