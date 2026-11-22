@@ -321,6 +321,17 @@ export const ERROR_CODES = [
   'REVISION_MISMATCH',
   'ALREADY_TRANSFERRED',
   'CHECKER_UNAVAILABLE',
+  // Chat (/api/chat, decision 228): a guest gets GUEST_ACCOUNT, a fast sender 429 TOO_MANY_REQUESTS.
+  'CHAT_RULES',
+  'CHAT_MUTED',
+  'CHAT_REPEAT',
+  'MESSAGE_NOT_ALLOWED',
+  'LINKS_NOT_ALLOWED',
+  'NOT_FRIENDS',
+  'MESSAGE_NOT_FOUND',
+  'CANNOT_REPORT_SELF',
+  'REPORT_NOT_FOUND',
+  'MUTE_NOT_FOUND',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
