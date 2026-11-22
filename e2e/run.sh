@@ -3,11 +3,14 @@
 #
 # 1. Stands up compose.prod.yml (the image, Postgres, Redis, the rules checker built from the game's repository) with
 #    e2e/compose.e2e.yml: throwaway secrets, an S3 mock in place of R2, mails logged at debug, http://localhost:3000.
-# 2. Writes a real save with the game's own Core (e2e/savegen, in the .NET SDK image) for the rules checker to read.
+# 2. Writes real saves with the game's own Core (e2e/savegen, in the .NET SDK image) for the rules checker to read: one for
+#    the score route, and the online realms (decision 227) with their witnessed board records.
 # 3. Runs e2e/saves.e2e.ts (the cloud save: written, read back to the byte, replaced, refused, deleted, never a
 #    guest's), e2e/api.e2e.ts (the game's calls: guests and their upgrade, mail links, password reset, verified, pending
-#    and flagged records, friends, blocks, privacy, the checker and Redis down, deletion, a backup restored into a scratch
-#    database, the cloud saves among it) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages
+#    and flagged records kept off the boards, online realms feeding them, friends, blocks, privacy, the checker and Redis
+#    down, deletion, a backup restored into a scratch database, the cloud saves and realms among it), e2e/realm.e2e.ts
+#    (decisions 226 and 227: hero builds, player pages, the realm's lease, revisions and one-time transfers, the boards it
+#    feeds, the checker down) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages
 #    and served by e2e/pages.ts on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls
 #    gravoth-api in production).
 # 4. Takes it all down again, volumes included, unless KEEP=1.
@@ -46,16 +49,26 @@ grep -q '^VALIDATOR_CONTEXT=' "$TMP/local.env" || echo "VALIDATOR_CONTEXT=$TMP/c
 grep -q '^APP_IMAGE=' "$TMP/local.env" || echo "APP_IMAGE=gravoth-web:e2e" >> "$TMP/local.env"
 grep -q '^VALIDATOR_IMAGE=' "$TMP/local.env" || echo "VALIDATOR_IMAGE=gravoth-validator:e2e" >> "$TMP/local.env"
 
-# A real save: two barbarians (the other classes start locked), at chart tiers 9 and 3.
-echo "== a save from the game's Core"
+# Real saves: two barbarians for the score route (the other classes start locked), at chart tiers 9 and 3; and the online
+# realms (decision 227) with their witnessed board records, uploaded by the API run and the website run.
+echo "== saves from the game's Core"
 docker run --rm -v "$TMP/ctx:/game:ro" -v "$PWD/e2e/savegen:/gen:ro" -v "$TMP:/out" --user "$(id -u):$(id -g)" \
   -e HOME=/tmp -e DOTNET_CLI_HOME=/tmp -e DOTNET_NOLOGO=1 mcr.microsoft.com/dotnet/sdk:10.0 sh -c '
     set -e; mkdir -p /tmp/work/gen
     cp -r /game/dotnet /game/game /tmp/work/
     cp /gen/Program.cs /gen/SaveGen.csproj /tmp/work/gen/
-    cd /tmp/work/gen && dotnet run -c Release -v q -- Ashgrove barbarian 58 9 Wren barbarian 44 3 > /out/save.txt' 2>&1 \
-  | grep -E '^hero |error' || true
-[ -s "$TMP/save.txt" ] || { echo "the save generator wrote nothing" >&2; exit 1; }
+    cd /tmp/work/gen && dotnet run -c Release -v q -- /out \
+      save.txt 0 Ashgrove barbarian 58 9 0 0 Wren barbarian 44 3 0 0 \
+      + realm-ana.txt 1 Ashgrove barbarian 58 9 70 0 Wren barbarian 44 3 20 0 \
+      + realm-ana2.txt 1 Ashgrove barbarian 58 9 70 0 Wren barbarian 44 3 20 0 Drifter barbarian 12 0 0 0 \
+      + realm-bo.txt 1 Bodhi barbarian 40 0 90 0 \
+      + realm-bo2.txt 1 Bodhi barbarian 40 0 90 0 Drifter barbarian 12 0 0 0 \
+      + realm-cy.txt 1 Cyril barbarian 60 0 100 0 \
+      + realm-eli.txt 1 Ember barbarian 60 0 60 1' 2>&1 \
+  | grep -E '^hero |^best |error' || true
+for f in save realm-ana realm-ana2 realm-bo realm-bo2 realm-cy realm-eli; do
+  [ -s "$TMP/$f.txt" ] || { echo "the save generator wrote no $f.txt" >&2; exit 1; }
+done
 
 COMPOSE=(docker compose -p "$PROJECT" --env-file "$TMP/local.env" -f compose.prod.yml -f e2e/compose.e2e.yml)
 [ "${KEEP:-}" = "1" ] || trap '"${COMPOSE[@]}" down --volumes --remove-orphans >/dev/null 2>&1' EXIT
@@ -68,6 +81,8 @@ echo "== the cloud save, as the game keeps it"
 bun e2e/saves.e2e.ts || status=1
 echo "== the API, as the game calls it"
 bun e2e/api.e2e.ts || status=1
+echo "== players' heroes and the online realm, as the game calls them"
+bun e2e/realm.e2e.ts || status=1
 echo "== the website as Cloudflare Pages serves it, in headless Chrome"
 if command -v "${CHROME:-google-chrome}" >/dev/null; then
   (cd apps/web && GRAVOTH_API_BASE=http://localhost:3000 GRAVOTH_WEB_OUT="$TMP/pages" bun run build >/dev/null)

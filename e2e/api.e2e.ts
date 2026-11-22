@@ -1,10 +1,25 @@
 // `bun run e2e` (e2e/run.sh): end to end over the local production stack (compose.prod.yml + e2e/compose.e2e.yml): the game's calls (bearer tokens),
-// mails read back from the API's log, the rules checker on a real save, friends, privacy, deletion, degraded services,
-// and a backup restored into a scratch database, the cloud saves e2e/saves.e2e.ts kept among them. Prints one line per
-// check; exits 1 if any failed.
+// mails read back from the API's log, the rules checker on a real save, the online realm (decision 227: the lease,
+// revisions, transfers, and the boards and player pages it feeds, read by the real checker from saves the game's Core
+// wrote), friends, privacy, deletion, degraded services, and a backup restored into a scratch database, the cloud saves
+// e2e/saves.e2e.ts kept among them. Prints one line per check; exits 1 if any failed.
 const base = 'http://localhost:3000';
 const save = await Bun.file(`${import.meta.dir}/.tmp/save.txt`).text();
 const run = `${Date.now().toString(36)}`;
+/** A suffix for the realms' heroes, so a rerun on a kept stack (KEEP=1) tells them apart. */
+const sfx = run.slice(-3);
+/** An online realm the save generator wrote (e2e/savegen), its heroes renamed as asked, as base64 for `PUT /api/realm`. */
+const realmFile = async (
+  file: string,
+  renames: Record<string, string> = {},
+) => {
+  let text = await Bun.file(`${import.meta.dir}/.tmp/${file}.txt`).text();
+  for (const [from, to] of Object.entries(renames))
+    text = text.replace(new RegExp(`^name ${from}$`, 'm'), `name ${to}`);
+  return Buffer.from(text).toString('base64');
+};
+/** The game's own header (decision 223), which also names its version for the checker's build snapshots. */
+const GAME = { 'x-gravoth-client': 'game/0.13.1' };
 let failed = 0;
 const ok = (name: string, cond: boolean, detail: unknown = '') => {
   if (!cond) failed++;
@@ -28,9 +43,10 @@ const call = async (
     form?: Record<string, string>;
     redirect?: RequestRedirect;
     ip?: string;
+    headers?: Record<string, string>;
   } = {},
 ): Promise<Reply> => {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...opts.headers };
   if (opts.ip) headers['cf-connecting-ip'] = opts.ip;
   if (opts.token) headers.authorization = `Bearer ${opts.token}`;
   let body: BodyInit | undefined;
@@ -404,10 +420,10 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     },
   });
   ok(
-    'a tier 9 record the save backs is verified',
+    'a tier 9 record the save backs is verified, and on no board: Ashgrove is offline (decision 227)',
     s1.status === 200 &&
       s1.body.entry?.verdict === 'verified' &&
-      s1.body.entry.rank !== null,
+      s1.body.entry.rank === null,
     s1.body,
   );
   const card = await call('GET', `/api/builds/${s1.body.entry?.buildId}`);
@@ -447,10 +463,8 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     },
   });
   ok(
-    "Wren's honest tier 3 replaces the flagged entry and shows",
-    s3.body.result === 'improved' &&
-      s3.body.entry?.verdict === 'verified' &&
-      s3.body.entry.rank !== null,
+    "Wren's honest tier 3 replaces the flagged entry",
+    s3.body.result === 'improved' && s3.body.entry?.verdict === 'verified',
     s3.body,
   );
   const s5 = await call('POST', '/api/leaderboards/chart_tier/scores', {
@@ -492,20 +506,16 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     body: { heroId: ash.body.hero.id, score: 140, build: build(58, 2) },
   });
   ok(
-    'a record with no save is shown as pending',
-    s4.body.entry?.verdict === 'pending' && s4.body.entry.rank !== null,
+    'a record with no save is pending',
+    s4.body.entry?.verdict === 'pending' && s4.body.entry.rank === null,
     s4.body.entry,
   );
   const board = await call('GET', '/api/leaderboards/chart_tier?take=50');
-  const rows = board.body.entries.data.map(
-    (e: any) => `${e.hero.name}:${e.score}`,
-  );
   ok(
-    'the board shows the verified records and no flagged claim',
-    rows.includes('Ashgrove:9') &&
-      rows.includes('Wren:3') &&
-      !rows.some((r: string) => r.endsWith(':12') || r.endsWith(':13')),
-    rows,
+    "the boards show none of the offline heroes' records, v0.13.0's score route answered all the same",
+    board.status === 200 &&
+      board.body.entries.data.every((e: any) => e.player.userId !== ana.id),
+    board.body.entries,
   );
   const dup = await call('POST', '/api/leaderboards/pit_floor/scores', {
     token: ana.token,
@@ -528,6 +538,65 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     "a normal hero's record on a hardcore board is refused",
     hc.status === 422,
     hc.body,
+  );
+}
+
+/** The realm once the rules checker has read its latest revision. */
+const checkedRealm = async (token: string) => {
+  let r = await call('GET', '/api/realm', { token });
+  for (let i = 0; i < 80 && r.body.checkedRevision !== r.body.revision; i++) {
+    await Bun.sleep(250);
+    r = await call('GET', '/api/realm', { token });
+  }
+  return r;
+};
+/** A player's realm, first upload: the lease, then revision 1, then the checker's read. */
+const firstRealm = async (token: string, data: string) => {
+  await call('POST', '/api/realm/lease', {
+    token,
+    body: { deviceId: 'phone' },
+  });
+  const up = await call('PUT', '/api/realm', {
+    token,
+    headers: GAME,
+    body: { deviceId: 'phone', baseRevision: 0, data, reason: 'create' },
+  });
+  return { up, read: await checkedRealm(token) };
+};
+
+// ---- 3b. Ana's online realm (decision 227; e2e/realm.e2e.ts drives the lease, revisions and transfers): the boards take
+// its records, read by the rules checker from the save the game's Core wrote, and none of the offline heroes'.
+{
+  const ana = players.Ana!;
+  const { up, read } = await firstRealm(
+    ana.token,
+    await realmFile('realm-ana'),
+  );
+  ok(
+    "Ana's realm goes up and the checker reads it: Ashgrove and Wren online, neither flagged",
+    up.status === 200 &&
+      read.body.checkedRevision === 1 &&
+      JSON.stringify(
+        read.body.heroes.map((h: any) => [h.name, h.level, h.flagged]),
+      ) ===
+        JSON.stringify([
+          ['Ashgrove', 58, false],
+          ['Wren', 44, false],
+        ]),
+    [up.body, read.body.heroes],
+  );
+  const pit = await call('GET', '/api/leaderboards/pit_floor?take=100');
+  const mine = pit.body.entries.data.filter(
+    (e: any) => e.player.userId === ana.id,
+  );
+  ok(
+    "the board shows Ashgrove's floor 70 from the realm, verified, and not the offline 140",
+    mine.length === 1 &&
+      mine[0].hero.name === 'Ashgrove' &&
+      mine[0].score === 70 &&
+      mine[0].verdict === 'verified' &&
+      mine[0].build.level === 58,
+    mine,
   );
 }
 
@@ -585,22 +654,21 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     `/api/friends/requests/${cyIn.body.data?.[0]?.id}/decline`,
     { token: cy!.token },
   );
-  const boHero = await call('POST', '/api/heroes', {
-    token: bo!.token,
-    body: { name: `Bodhi${run.slice(-3)}`, class: 'templar' },
-  });
-  await call('POST', '/api/leaderboards/pit_floor/scores', {
-    token: bo!.token,
-    body: { heroId: boHero.body.hero.id, score: 90, build: build(40, 1) },
-  });
-  const cyHero = await call('POST', '/api/heroes', {
-    token: cy!.token,
-    body: { name: `Cyril${run.slice(-3)}`, class: 'sorcerer' },
-  });
-  await call('POST', '/api/leaderboards/pit_floor/scores', {
-    token: cy!.token,
-    body: { heroId: cyHero.body.hero.id, score: 200, build: build(45, 1) },
-  });
+  // Bo's and Cy's online heroes, on the boards from their realms.
+  for (const [who, file, hero] of [
+    [bo!, 'realm-bo', 'Bodhi'],
+    [cy!, 'realm-cy', 'Cyril'],
+  ] as const) {
+    const { up, read } = await firstRealm(
+      who.token,
+      await realmFile(file, { [hero]: `${hero}${sfx}` }),
+    );
+    ok(
+      `${hero}${sfx} is online from ${who.name}'s realm`,
+      up.status === 200 && read.body.heroes[0]?.name === `${hero}${sfx}`,
+      [up.body, read.body.heroes],
+    );
+  }
   const fview = await call(
     'GET',
     '/api/leaderboards/pit_floor?view=friends&take=50',
@@ -610,8 +678,8 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
   ok(
     "Ana's friends view: her and Bo's heroes, not Cy's",
     fnames.includes('Ashgrove') &&
-      fnames.includes(`Bodhi${run.slice(-3)}`) &&
-      !fnames.includes(`Cyril${run.slice(-3)}`),
+      fnames.includes(`Bodhi${sfx}`) &&
+      !fnames.includes(`Cyril${sfx}`),
     fnames,
   );
   const me = await call('GET', '/api/leaderboards/pit_floor/me?around=1', {
@@ -638,7 +706,7 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
   });
   const pub = await call('GET', '/api/leaderboards/pit_floor?take=50');
   const boRow = pub.body.entries.data.find(
-    (e: any) => e.hero.name === `Bodhi${run.slice(-3)}`,
+    (e: any) => e.hero.name === `Bodhi${sfx}`,
   );
   ok(
     'a private profile shows as hidden to the public, without its picture',
@@ -651,7 +719,7 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     token: bo!.token,
   });
   const ownRow = own.body.entries.data.find(
-    (e: any) => e.hero.name === `Bodhi${run.slice(-3)}`,
+    (e: any) => e.hero.name === `Bodhi${sfx}`,
   );
   ok(
     '…and as their own name and picture to themselves',
@@ -755,9 +823,7 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
   const board = await call('GET', '/api/leaderboards/pit_floor?take=50');
   ok(
     "Cy's hero and record are gone from the board",
-    !board.body.entries.data.some(
-      (e: any) => e.hero.name === `Cyril${run.slice(-3)}`,
-    ),
+    !board.body.entries.data.some((e: any) => e.hero.name === `Cyril${sfx}`),
   );
   const signIn = await call('POST', '/api/auth/sign-in/email', {
     body: { email: cy.email, password: pw },
@@ -773,6 +839,11 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     (await psql(
       `select count(*) from cloud_saves where user_id = '${cy.id}'`,
     )) === '0',
+  );
+  ok(
+    "Cy's online realm went with the account",
+    (await psql(`select count(*) from realms where user_id = '${cy.id}'`)) ===
+      '0',
   );
 }
 
@@ -855,6 +926,8 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     'friendships',
     'blocks',
     'cloud_saves',
+    'realms',
+    'realm_transfers',
   ]) {
     const [live, drill] = [
       await count('gravoth', table),

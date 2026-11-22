@@ -1,6 +1,6 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
-// the local stack. Screenshots of the account (its cloud save too), friends, board, build and delete pages land in
-// e2e/.tmp/ui.
+// the local stack. Screenshots of the account (its cloud save too), friends, board, build, player and delete pages land
+// in e2e/.tmp/ui.
 // The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
 const base = 'http://localhost:3001';
 const apiBase = 'http://localhost:3000';
@@ -42,6 +42,7 @@ const eli = await api('POST', '/api/auth/sign-up/email', {
   password: 'a long enough password',
 });
 const eliName = `Eli${run}`;
+const eliId: string = eli.body.user?.id;
 await api('PATCH', '/api/profile', { displayName: eliName }, eli.token!);
 
 const port = 9400 + (Date.now() % 500);
@@ -497,6 +498,12 @@ ok(
     `[...document.querySelectorAll('.friend-list .person-row')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && li.textContent.includes('since') && /\\/img\\/portraits\\/[a-z_]+\\.webp$/.test(li.querySelector('.player-avatar img')?.getAttribute('src') ?? ''))`,
   ),
 );
+ok(
+  "a friend's name opens their player page",
+  await until(
+    `!!document.querySelector('.friend-list a.person[href="/players/${eliId}"]')`,
+  ),
+);
 await shot('friends');
 
 // 5. A board with the filters.
@@ -522,57 +529,63 @@ ok(
 );
 
 // 5b. Decision 224: Eli's hardcore hero, wearing an avatar border. Its row on the hardcore board shows the HARDCORE
-// badge beside the class and the border's frame round Eli's picture; its build page shows them and the rest.
-const ember = await api(
-  'POST',
-  '/api/heroes',
-  { name: `Ember${run}`, class: 'templar', hardcore: true },
-  eli.token!,
-);
-const posted = await api(
-  'POST',
-  '/api/leaderboards/hc_pit_floor/scores',
+// badge beside the class and the border's frame round Eli's picture; its build page shows them and the rest. Decision
+// 227: Ember is an online hero, on the board from Eli's realm (a save the game's Core wrote: floor 60, so the pit_50
+// border), read by the rules checker.
+const realmText = (
+  await Bun.file(`${import.meta.dir}/.tmp/realm-eli.txt`).text()
+).replace(/^name Ember$/m, `name Ember${run}`);
+await api('POST', '/api/realm/lease', { deviceId: 'phone' }, eli.token!);
+const realmUp = await api(
+  'PUT',
+  '/api/realm',
   {
-    heroId: ember.body.hero?.id,
-    score: 4321,
-    build: {
-      revision: 1,
-      gameVersion: '0.13.0',
-      level: 88,
-      skills: [
-        {
-          id: 'judgement',
-          level: 20,
-          slot: 0,
-          supports: [{ id: 'melee_phys', level: 18 }],
-        },
-      ],
-      gear: [
-        {
-          slot: 'MainHand',
-          name: 'Oath Hammer',
-          base: 'War Maul',
-          rarity: 'Rare',
-          itemLevel: 80,
-          lines: [{ text: '+40 to Strength', kind: 'suffix', tier: 2 }],
-        },
-      ],
-      talents: { version: 3, points: 80, earned: 84, nodes: [1, 2, 3] },
-      extras: {
-        border: 'pit_50',
-        marks: 210,
-        attributes: { strength: 250 },
-        rites: [{ slot: 1, id: 'oathbound', name: 'Oathbound', nodes: ['a'] }],
-      },
-      summary: { dps: 98_000, clearDps: 70_000, ehp: 40_000, life: 4_800 },
-    },
+    deviceId: 'phone',
+    baseRevision: 0,
+    data: Buffer.from(realmText).toString('base64'),
+    reason: 'create',
   },
   eli.token!,
 );
+let emberEntry: any;
+for (let i = 0; i < 80 && !emberEntry; i++) {
+  const hc = await api('GET', '/api/leaderboards/hc_pit_floor?take=100');
+  emberEntry = hc.body.entries?.data.find(
+    (e: any) => e.hero.name === `Ember${run}`,
+  );
+  if (!emberEntry) await Bun.sleep(250);
+}
+const posted = { body: { entry: { buildId: emberEntry?.build.id } } };
 ok(
-  'a hardcore record with an avatar border posts',
-  posted.status < 300 && typeof posted.body.entry?.buildId === 'string',
-  [posted.status, posted.body],
+  "Ember's realm goes up and its hardcore record, read from it, is on the board",
+  realmUp.status === 200 &&
+    emberEntry?.score === 60 &&
+    emberEntry.build.extras.border === 'pit_50',
+  [realmUp.status, realmUp.body, emberEntry?.score],
+);
+// An offline hero of Eli's, with its build (decision 226), for the player page.
+const lantern = await api(
+  'POST',
+  '/api/heroes',
+  { name: `Lantern${run}`, class: 'barbarian' },
+  eli.token!,
+);
+await api(
+  'POST',
+  `/api/heroes/${lantern.body.hero?.id}/builds`,
+  {
+    build: {
+      revision: 0,
+      gameVersion: '0.13.1',
+      level: 23,
+      skills: [{ id: 'cleave', level: 12, slot: 0, supports: [] }],
+      gear: [],
+      talents: {},
+      extras: { border: 'pit_30' },
+      summary: { dps: 2_400, clearDps: 1_900, ehp: 6_100, life: 1_400 },
+    },
+  },
+  eli.token!,
 );
 const emberRow = `[...document.querySelectorAll('.board-table tbody tr')].find(tr => tr.textContent.includes(${JSON.stringify(`Ember${run}`)}))`;
 const frameLoads = (scope: string) =>
@@ -600,16 +613,67 @@ await go(`/builds/${posted.body.entry?.buildId}`);
 ok(
   'its build page shows the badge, the framed picture and the character',
   await until(
-    `!!document.querySelector('.page-sub .hardcore-badge') && !!document.querySelector('.build-player .avatar-frame[data-border="pit_50"]') && ${has('Avatar border')} && ${has('Oathbound')}`,
+    `!!document.querySelector('.page-sub .hardcore-badge') && !!document.querySelector('.build-player .avatar-frame[data-border="pit_50"]') && ${has('Avatar border')}`,
   ),
 );
 await js(frameLoads('document'));
 await fullShot('build');
 
+// 5c. Decision 226: Eli's player page, from the board row's name: the picture in the best hero's border, every hero as a
+// card (class, HARDCORE, ONLINE, level, DPS and EHP, records), each opening its build.
+await go('/boards/pit_floor?hardcore=true');
+await until(`!!(${emberRow})`);
+ok(
+  "the row's player name opens the player page",
+  (await js(
+    `(${emberRow})?.querySelector('a.player-link')?.getAttribute('href')`,
+  )) === `/players/${eliId}`,
+);
+await js(`(${emberRow}).querySelector('a.player-link').click()`);
+const playerReady = `location.pathname === '/players/${eliId}' && document.querySelectorAll('.player-hero').length === 2`;
+ok(
+  "Eli's page shows both heroes, Ember first (the higher level), online and hardcore, with its record",
+  await until(
+    `${playerReady} && (() => { const c = document.querySelector('.player-hero'); const t = c.innerText; return t.includes(${JSON.stringify(`Ember${run}`)}) && !!c.querySelector('.hardcore-badge') && !!c.querySelector('.online-badge') && t.includes('Hardcore deepest Bone Pit floor') && /#[0-9]+/.test(t) && t.includes('60'); })()`,
+  ),
+  await js('__t.text().slice(0, 600)'),
+);
+ok(
+  'the offline hero shows without ONLINE, and every card opens its build',
+  (await js(
+    `(() => { const c = [...document.querySelectorAll('.player-hero')][1]; return c.innerText.includes(${JSON.stringify(`Lantern${run}`)}) && !c.querySelector('.online-badge') && [...document.querySelectorAll('.player-hero a.hero-link')].every(a => (a.getAttribute('href') ?? '').startsWith('/builds/')); })()`,
+  )) === true,
+);
+ok(
+  "the picture wears the best hero's border, and the frame loads",
+  (await js(frameLoads(`document.querySelector('.player-head')`))) === true,
+);
+await fullShot('player');
+await phone();
+await go(`/players/${eliId}`);
+await until(playerReady);
+await js(frameLoads(`document.querySelector('.player-head')`));
+ok(
+  'the player page fits a phone',
+  (await js(
+    `document.documentElement.scrollWidth <= window.innerWidth + 1`,
+  )) === true,
+);
+await fullShot('player-phone');
+await desktop();
+
 // 6. Remove Eli, sign out, sign back in.
 await go('/friends');
 await js(`__t.click('Remove')`);
 ok('removing a friend empties the list', await until(has('No friends yet.')));
+// No longer friends, Eli's page hidden: no such player to Dara.
+await api('PATCH', '/api/profile', { publicProfile: false }, eli.token!);
+await go(`/players/${eliId}`);
+ok(
+  "a hidden player's page, to someone who is not their friend, says there is no such player",
+  await until(has('No such player')),
+  await js('__t.text().slice(0, 300)'),
+);
 await go('/account');
 await js(`__t.click('Sign out')`);
 ok(
