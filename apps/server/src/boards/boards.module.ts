@@ -12,6 +12,10 @@ import { BoardCatalog } from './catalog.js';
 @Module({
   imports: [AccountsModule, DatabaseModule, GravothModule, HeroesModule],
   controllers: [BoardsController],
-  providers: [BoardCatalog, Boards, provide(BuildCheck, { useClass: ValidatorBuildCheck })],
+  providers: [
+    BoardCatalog,
+    Boards,
+    provide(BuildCheck, { useClass: ValidatorBuildCheck }),
+  ],
 })
 export class BoardsModule {}

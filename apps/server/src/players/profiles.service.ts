@@ -3,7 +3,12 @@ import { eq, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
 import { profile, type Profile } from '../database/schema.js';
-import { baseDisplayName, displayNameProblem, FALLBACK_NAME, withDigits } from './display-names.js';
+import {
+  baseDisplayName,
+  displayNameProblem,
+  FALLBACK_NAME,
+  withDigits,
+} from './display-names.js';
 import type { ProfileView } from '@gravoth/contracts';
 export type { ProfileView };
 
@@ -41,7 +46,11 @@ export class Profiles {
   }
 
   async find(userId: string): Promise<Profile | undefined> {
-    const [row] = await this.db.select().from(profile).where(eq(profile.userId, userId)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(profile)
+      .where(eq(profile.userId, userId))
+      .limit(1);
     return row;
   }
 
@@ -68,7 +77,11 @@ export class Profiles {
       ...Array.from({ length: 6 }, () => withDigits(base.slice(0, 14), 6)),
     ];
     for (const displayName of candidates) {
-      const [row] = await this.db.insert(profile).values({ userId, displayName }).onConflictDoNothing().returning();
+      const [row] = await this.db
+        .insert(profile)
+        .values({ userId, displayName })
+        .onConflictDoNothing()
+        .returning();
       if (row !== undefined) return row;
       const mine = await this.find(userId);
       if (mine !== undefined) return mine;
@@ -79,23 +92,43 @@ export class Profiles {
   /** The owner's changes. A new name passes the filter and is free (409 `NAME_TAKEN`, 422 `NAME_NOT_ALLOWED`). */
   async update(userId: string, changes: ProfileChanges): Promise<Profile> {
     const current = await this.ensure(userId);
-    const values: Partial<typeof profile.$inferInsert> = { updatedAt: new Date() };
-    if (changes.displayName !== undefined && changes.displayName !== current.displayName) {
+    const values: Partial<typeof profile.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+    if (
+      changes.displayName !== undefined &&
+      changes.displayName !== current.displayName
+    ) {
       const problem = displayNameProblem(changes.displayName);
-      if (problem === 'format') throw new HttpError(HttpStatusCode.BAD_REQUEST, 'NAME_FORMAT');
-      if (problem === 'not-allowed') throw new HttpError(HttpStatusCode.UNPROCESSABLE_ENTITY, 'NAME_NOT_ALLOWED');
+      if (problem === 'format')
+        throw new HttpError(HttpStatusCode.BAD_REQUEST, 'NAME_FORMAT');
+      if (problem === 'not-allowed')
+        throw new HttpError(
+          HttpStatusCode.UNPROCESSABLE_ENTITY,
+          'NAME_NOT_ALLOWED',
+        );
       values.displayName = changes.displayName;
       values.nameChosen = true;
     }
-    for (const flag of ['publicProfile', 'allowFriendRequests', 'showOnline', 'emailFriendRequests'] as const) {
+    for (const flag of [
+      'publicProfile',
+      'allowFriendRequests',
+      'showOnline',
+      'emailFriendRequests',
+    ] as const) {
       const value = changes[flag];
       if (value !== undefined) values[flag] = value;
     }
     try {
-      const [row] = await this.db.update(profile).set(values).where(eq(profile.userId, userId)).returning();
+      const [row] = await this.db
+        .update(profile)
+        .set(values)
+        .where(eq(profile.userId, userId))
+        .returning();
       return row ?? current;
     } catch (error) {
-      if (isUniqueViolation(error, 'profiles_display_name_key')) throw new HttpError(HttpStatusCode.CONFLICT, 'NAME_TAKEN');
+      if (isUniqueViolation(error, 'profiles_display_name_key'))
+        throw new HttpError(HttpStatusCode.CONFLICT, 'NAME_TAKEN');
       throw error;
     }
   }

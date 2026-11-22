@@ -139,12 +139,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -274,12 +270,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -287,12 +279,8 @@
           "name": "sessions_impersonated_by_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "impersonated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["impersonated_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -542,12 +530,8 @@
           "name": "blocks_blocker_id_users_id_fk",
           "tableFrom": "blocks",
           "tableTo": "users",
-          "columnsFrom": [
-            "blocker_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["blocker_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -555,12 +539,8 @@
           "name": "blocks_blocked_id_users_id_fk",
           "tableFrom": "blocks",
           "tableTo": "users",
-          "columnsFrom": [
-            "blocked_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["blocked_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -568,10 +548,7 @@
       "compositePrimaryKeys": {
         "blocks_pkey": {
           "name": "blocks_pkey",
-          "columns": [
-            "blocker_id",
-            "blocked_id"
-          ]
+          "columns": ["blocker_id", "blocked_id"]
         }
       },
       "uniqueConstraints": {},
@@ -710,12 +687,8 @@
           "name": "friendships_requester_id_users_id_fk",
           "tableFrom": "friendships",
           "tableTo": "users",
-          "columnsFrom": [
-            "requester_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -723,12 +696,8 @@
           "name": "friendships_addressee_id_users_id_fk",
           "tableFrom": "friendships",
           "tableTo": "users",
-          "columnsFrom": [
-            "addressee_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["addressee_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -840,12 +809,8 @@
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -947,12 +912,8 @@
           "name": "heroes_user_id_users_id_fk",
           "tableFrom": "heroes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -962,10 +923,7 @@
         "heroes_id_user_key": {
           "name": "heroes_id_user_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "user_id"
-          ]
+          "columns": ["id", "user_id"]
         }
       },
       "policies": {},
@@ -1170,12 +1128,8 @@
           "name": "hero_builds_hero_id_heroes_id_fk",
           "tableFrom": "hero_builds",
           "tableTo": "heroes",
-          "columnsFrom": [
-            "hero_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["hero_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1185,18 +1139,12 @@
         "hero_builds_hero_revision_key": {
           "name": "hero_builds_hero_revision_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "hero_id",
-            "revision"
-          ]
+          "columns": ["hero_id", "revision"]
         },
         "hero_builds_id_hero_key": {
           "name": "hero_builds_id_hero_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "id",
-            "hero_id"
-          ]
+          "columns": ["id", "hero_id"]
         }
       },
       "policies": {},
@@ -1314,11 +1262,7 @@
         "leaderboards_key_hardcore_season_key": {
           "name": "leaderboards_key_hardcore_season_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "key",
-            "hardcore",
-            "season"
-          ]
+          "columns": ["key", "hardcore", "season"]
         }
       },
       "policies": {},
@@ -1538,12 +1482,8 @@
           "name": "leaderboard_entries_board_id_leaderboards_id_fk",
           "tableFrom": "leaderboard_entries",
           "tableTo": "leaderboards",
-          "columnsFrom": [
-            "board_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["board_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1551,12 +1491,8 @@
           "name": "leaderboard_entries_user_id_users_id_fk",
           "tableFrom": "leaderboard_entries",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1564,14 +1500,8 @@
           "name": "leaderboard_entries_hero_fk",
           "tableFrom": "leaderboard_entries",
           "tableTo": "heroes",
-          "columnsFrom": [
-            "hero_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsFrom": ["hero_id", "user_id"],
+          "columnsTo": ["id", "user_id"],
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
@@ -1579,14 +1509,8 @@
           "name": "leaderboard_entries_build_fk",
           "tableFrom": "leaderboard_entries",
           "tableTo": "hero_builds",
-          "columnsFrom": [
-            "build_id",
-            "hero_id"
-          ],
-          "columnsTo": [
-            "id",
-            "hero_id"
-          ],
+          "columnsFrom": ["build_id", "hero_id"],
+          "columnsTo": ["id", "hero_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1596,10 +1520,7 @@
         "leaderboard_entries_board_hero_key": {
           "name": "leaderboard_entries_board_hero_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "board_id",
-            "hero_id"
-          ]
+          "columns": ["board_id", "hero_id"]
         }
       },
       "policies": {},

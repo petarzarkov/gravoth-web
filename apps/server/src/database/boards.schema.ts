@@ -1,5 +1,17 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, foreignKey, index, integer, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { user } from './auth.schema.js';
 import { hero, heroBuild } from './heroes.schema.js';
 
@@ -22,11 +34,20 @@ export const leaderboard = pgTable(
     format: text('format', { enum: ['number', 'time_ms'] }).notNull(),
     minScore: bigint('min_score', { mode: 'number' }).notNull(),
     maxScore: bigint('max_score', { mode: 'number' }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
-    unique('leaderboards_key_hardcore_season_key').on(t.key, t.hardcore, t.season),
-    check('leaderboards_key_format', sql`${t.key} ~ '^[a-z][a-z0-9_]{1,39}$' AND ${t.key} NOT LIKE 'hc\\_%'`),
+    unique('leaderboards_key_hardcore_season_key').on(
+      t.key,
+      t.hardcore,
+      t.season,
+    ),
+    check(
+      'leaderboards_key_format',
+      sql`${t.key} ~ '^[a-z][a-z0-9_]{1,39}$' AND ${t.key} NOT LIKE 'hc\\_%'`,
+    ),
     check('leaderboards_sort', sql`${t.sort} IN ('asc', 'desc')`),
     check('leaderboards_format', sql`${t.format} IN ('number', 'time_ms')`),
     check('leaderboards_season', sql`${t.season} >= 0`),
@@ -60,24 +81,52 @@ export const leaderboardEntry = pgTable(
     score: bigint('score', { mode: 'number' }).notNull(),
     /** When the hero set the score (the device's clock, never later than the server's). */
     achievedAt: timestamp('achieved_at', { withTimezone: true }).notNull(),
-    recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow(),
-    verdict: text('verdict', { enum: ['pending', 'verified', 'flagged'] }).notNull().default('pending'),
+    recordedAt: timestamp('recorded_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    verdict: text('verdict', { enum: ['pending', 'verified', 'flagged'] })
+      .notNull()
+      .default('pending'),
     /** Why the rules checker flagged it, or what it could not do. */
     verdictNote: text('verdict_note'),
   },
   (t) => [
     unique('leaderboard_entries_board_hero_key').on(t.boardId, t.heroId),
-    foreignKey({ name: 'leaderboard_entries_hero_fk', columns: [t.heroId, t.userId], foreignColumns: [hero.id, hero.userId] })
+    foreignKey({
+      name: 'leaderboard_entries_hero_fk',
+      columns: [t.heroId, t.userId],
+      foreignColumns: [hero.id, hero.userId],
+    })
       .onDelete('cascade')
       .onUpdate('cascade'),
-    foreignKey({ name: 'leaderboard_entries_build_fk', columns: [t.buildId, t.heroId], foreignColumns: [heroBuild.id, heroBuild.heroId] })
+    foreignKey({
+      name: 'leaderboard_entries_build_fk',
+      columns: [t.buildId, t.heroId],
+      foreignColumns: [heroBuild.id, heroBuild.heroId],
+    })
       .onDelete('no action')
       .onUpdate('no action'),
-    check('leaderboard_entries_verdict', sql`${t.verdict} IN ('pending', 'verified', 'flagged')`),
-    check('leaderboard_entries_achieved', sql`${t.achievedAt} <= ${t.recordedAt}`),
+    check(
+      'leaderboard_entries_verdict',
+      sql`${t.verdict} IN ('pending', 'verified', 'flagged')`,
+    ),
+    check(
+      'leaderboard_entries_achieved',
+      sql`${t.achievedAt} <= ${t.recordedAt}`,
+    ),
     // The two orders a board ranks in: larger first, or smaller first; ties go to the earlier score.
-    index('leaderboard_entries_rank_desc_idx').on(t.boardId, t.score.desc(), t.achievedAt, t.id),
-    index('leaderboard_entries_rank_asc_idx').on(t.boardId, t.score.asc(), t.achievedAt, t.id),
+    index('leaderboard_entries_rank_desc_idx').on(
+      t.boardId,
+      t.score.desc(),
+      t.achievedAt,
+      t.id,
+    ),
+    index('leaderboard_entries_rank_asc_idx').on(
+      t.boardId,
+      t.score.asc(),
+      t.achievedAt,
+      t.id,
+    ),
     index('leaderboard_entries_user_idx').on(t.userId),
     index('leaderboard_entries_hero_idx').on(t.heroId, t.userId),
     index('leaderboard_entries_build_idx').on(t.buildId),

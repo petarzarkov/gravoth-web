@@ -1,5 +1,13 @@
 import { AuthContext, SessionGuard } from '@dunx/auth';
-import { Controller, Get, HttpStatusCode, Post, Public, UseGuards, type Input } from '@dunx/http';
+import {
+  Controller,
+  Get,
+  HttpStatusCode,
+  Post,
+  Public,
+  UseGuards,
+  type Input,
+} from '@dunx/http';
 import { RegisterHero } from '@gravoth/contracts';
 import { z } from 'zod';
 import { Builds, type BuildCard } from './builds.service.js';
@@ -19,13 +27,22 @@ export class HeroesController {
 
   @Get('/')
   async mine(): Promise<{ heroes: HeroView[] }> {
-    return { heroes: (await this.heroes.mine(this.context.require().user.id)).map(toHeroView) };
+    return {
+      heroes: (await this.heroes.mine(this.context.require().user.id)).map(
+        toHeroView,
+      ),
+    };
   }
 
   /** `created` is false when the hero was already registered (after a reinstall, say). 409 `HERO_NAME_TAKEN` for another class. */
   @Post('/', register)
-  async register({ body }: Input<typeof register>): Promise<{ hero: HeroView; created: boolean }> {
-    const { hero, created } = await this.heroes.register(this.context.require().user.id, body);
+  async register({
+    body,
+  }: Input<typeof register>): Promise<{ hero: HeroView; created: boolean }> {
+    const { hero, created } = await this.heroes.register(
+      this.context.require().user.id,
+      body,
+    );
     return { hero: toHeroView(hero), created };
   }
 }

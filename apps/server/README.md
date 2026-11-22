@@ -1,7 +1,10 @@
 # @gravoth/server
 
-Gravoth Online's API (`docs/online-plan.md`), a [dunx](https://github.com/petarzarkov/dunx)
-app scaffolded with `bunx @dunx/create-app`, its example routes since removed.
+Gravoth Online's API, a [dunx](https://github.com/petarzarkov/dunx) app in the
+gravoth-web monorepo. Its request and response shapes come from
+`@gravoth/contracts` (`packages/contracts`), and it serves the website
+(`apps/web`'s build) at `/`. The plan is in the game's repository
+(`docs/online-plan.md`).
 
 ```bash
 bun install
@@ -27,6 +30,7 @@ bun run mail:preview   # the mail templates at http://localhost:3035
 - **heroes / boards** - `/api/heroes` (register a hero, list mine), `/api/builds/:id` (a build card), `/api/leaderboards` (the boards, a board's top with each row's build, `/:key/me` for the caller's rank and neighbours, `?view=friends`, the hardcore twins, `POST /:key/scores`).
 - **cache** - Bun.RedisClient and a two-tier Cache in front of it.
 - **throttle** - A fixed-window rate limit per caller, with the counter in Redis.
+- **web** - the website's build (`WEB_ROOT`, default `apps/web/dist`): `SpaShell` answers its page for the paths it owns, with a strict content security policy, and `StaticFiles` its hashed assets.
 - **schedule** - @Cron, @Interval and @OnceOnBoot on Bun.cron, armed at boot.
 
 ## Services
@@ -45,6 +49,7 @@ bun run mail:preview   # the mail templates at http://localhost:3035
 - `src/auth/`, `src/players/`, `src/social/`, `src/heroes/`, `src/boards/` - the features
 - `src/mail/` - the mailer and its templates; `src/backup/` - the nightly dump
 - `src/gravoth/` - health, meta and the validator client
+- `src/web/` - the website's page and assets
 - `src/http/`, `src/cache/`, `src/throttle/`, `src/schedule/` - the scaffold's infrastructure
 - `src/*.test.ts` - the suites; `src/testing/` gives each booted app a Postgres database of its own
 
@@ -56,7 +61,6 @@ built with no arguments and boot fails saying so.
 
 ## Deploying
 
-`deploy-pi.sh` copies this folder, the validator and the Core sources it compiles to
-the Raspberry Pi and rebuilds the Compose stack there (`compose.prod.yml`: the API,
-Postgres, Redis, the rules checker and the tunnel). Secrets live only in the Pi's
-`server/.env`, written by the developer; `.env.example` names every one.
+The image (the repository's `Dockerfile`) is this app serving the built
+website; `compose.prod.yml` and `deploy-pi.sh` are at the repository's root.
+See `docs/deploy.md` there.

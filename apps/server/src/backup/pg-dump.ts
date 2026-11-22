@@ -23,20 +23,29 @@ export class PgDump {
 
   start(): DumpJob {
     const url = new URL(this.config.get('database').url);
-    const child = Bun.spawn(['pg_dump', '--format=custom', '--compress=6', '--no-owner', '--no-privileges'], {
-      env: {
-        PATH: Bun.env['PATH'] ?? '/usr/local/bin:/usr/bin:/bin',
-        PGHOST: url.hostname,
-        PGPORT: url.port === '' ? '5432' : url.port,
-        PGUSER: decodeURIComponent(url.username),
-        PGPASSWORD: decodeURIComponent(url.password),
-        PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
-        PGCONNECT_TIMEOUT: '10',
+    const child = Bun.spawn(
+      [
+        'pg_dump',
+        '--format=custom',
+        '--compress=6',
+        '--no-owner',
+        '--no-privileges',
+      ],
+      {
+        env: {
+          PATH: Bun.env['PATH'] ?? '/usr/local/bin:/usr/bin:/bin',
+          PGHOST: url.hostname,
+          PGPORT: url.port === '' ? '5432' : url.port,
+          PGUSER: decodeURIComponent(url.username),
+          PGPASSWORD: decodeURIComponent(url.password),
+          PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
+          PGCONNECT_TIMEOUT: '10',
+        },
+        stdin: 'ignore',
+        stdout: 'pipe',
+        stderr: 'pipe',
       },
-      stdin: 'ignore',
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
+    );
     return {
       stdout: child.stdout,
       exited: child.exited,

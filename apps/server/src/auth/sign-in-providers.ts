@@ -59,6 +59,10 @@ export class SignInProviders {
 
   /** What the game's SIGN IN row may show, in the order it shows them. */
   methods(): readonly SignInMethod[] {
-    return ['guest', 'email', ...(Object.keys(this.social()) as SocialProvider[])];
+    return [
+      'guest',
+      'email',
+      ...(Object.keys(this.social()) as SocialProvider[]),
+    ];
   }
 }

@@ -5,7 +5,11 @@ import { MailModule } from '../mail/mail.module.js';
 import { PlayersModule } from '../players/players.module.js';
 import { Blocks } from './blocks.service.js';
 import { Friends } from './friends.service.js';
-import { BlocksController, FriendsController, ProfileController } from './social.controllers.js';
+import {
+  BlocksController,
+  FriendsController,
+  ProfileController,
+} from './social.controllers.js';
 
 /** The player's profile, friends and blocks (docs/online-plan.md, step 6's first half). Chat and presence join here. */
 @Module({

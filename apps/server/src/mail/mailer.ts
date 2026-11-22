@@ -37,12 +37,22 @@ export class Mailer {
   }
 
   friendRequest(to: string, name: string, from: string): Promise<void> {
-    return this.send(to, FriendRequest.subject(from), FriendRequest, { name, from });
+    return this.send(to, FriendRequest.subject(from), FriendRequest, {
+      name,
+      from,
+    });
   }
 
-  private async send(to: string, subject: string, template: unknown, props: Record<string, unknown>): Promise<void> {
+  private async send(
+    to: string,
+    subject: string,
+    template: unknown,
+    props: Record<string, unknown>,
+  ): Promise<void> {
     if (Mailer.isPlaceholder(to)) {
-      this.logger.info('mail skipped: the account has no real address', { subject });
+      this.logger.info('mail skipped: the account has no real address', {
+        subject,
+      });
       return;
     }
     try {

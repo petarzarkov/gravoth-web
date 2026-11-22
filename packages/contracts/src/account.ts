@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { SignInMethod } from './constants.js';
 
-
 /** `GET /api/account/methods`: which sign-in buttons this server can honour, so a client shows no dead one. */
 export interface SignInMethods {
   readonly methods: readonly SignInMethod[];
@@ -33,8 +32,6 @@ export const DeleteAccount = z
   });
 
 export type DeleteAccount = z.infer<typeof DeleteAccount>;
-
-
 
 /** What `get-session` answers for a signed-in caller (the fields a client reads). */
 export interface SessionView {

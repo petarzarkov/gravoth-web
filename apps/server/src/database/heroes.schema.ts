@@ -13,7 +13,16 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { HERO_CLASSES, type Aura, type BuildDocument, type BuildSummary, type CardPage, type GearItem, type HeroClass, type SkillGem } from '@gravoth/contracts';
+import {
+  HERO_CLASSES,
+  type Aura,
+  type BuildDocument,
+  type BuildSummary,
+  type CardPage,
+  type GearItem,
+  type HeroClass,
+  type SkillGem,
+} from '@gravoth/contracts';
 import { user } from './auth.schema.js';
 import { jsonb } from './columns.js';
 
@@ -39,14 +48,24 @@ export const hero = pgTable(
     class: text('class', { enum: HERO_CLASSES }).notNull(),
     hardcore: boolean('hardcore').notNull().default(false),
     online: boolean('online').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     unique('heroes_id_user_key').on(t.id, t.userId),
     uniqueIndex('heroes_user_name_key').on(t.userId, sql`lower(${t.name})`),
-    check('heroes_name_length', sql`char_length(${t.name}) BETWEEN 1 AND 24 AND ${t.name} = btrim(${t.name})`),
-    check('heroes_class', sql`${t.class} IN ('barbarian', 'ranger', 'sorcerer', 'templar')`),
+    check(
+      'heroes_name_length',
+      sql`char_length(${t.name}) BETWEEN 1 AND 24 AND ${t.name} = btrim(${t.name})`,
+    ),
+    check(
+      'heroes_class',
+      sql`${t.class} IN ('barbarian', 'ranger', 'sorcerer', 'templar')`,
+    ),
   ],
 );
 
@@ -78,24 +97,41 @@ export const heroBuild = pgTable(
     skills: jsonb<SkillGem[]>('skills').notNull(),
     gear: jsonb<GearItem[]>('gear').notNull(),
     talents: jsonb<BuildDocument>('talents').notNull(),
-    atlas: jsonb<BuildDocument>('atlas').notNull().default(sql`'{}'::jsonb`),
-    auras: jsonb<Aura[]>('auras').notNull().default(sql`'[]'::jsonb`),
-    extras: jsonb<BuildDocument>('extras').notNull().default(sql`'{}'::jsonb`),
+    atlas: jsonb<BuildDocument>('atlas')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    auras: jsonb<Aura[]>('auras')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    extras: jsonb<BuildDocument>('extras')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     summary: jsonb<BuildSummary>('summary').notNull(),
     /** The rules checker's build card (`/saves/card`), when it read the hero's save. */
     card: jsonb<CardPage[]>('card'),
     /** SHA-256 of the build's content, so a resubmitted revision is recognised as the same build. */
     contentHash: text('content_hash').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     unique('hero_builds_hero_revision_key').on(t.heroId, t.revision),
     unique('hero_builds_id_hero_key').on(t.id, t.heroId),
     check('hero_builds_revision', sql`${t.revision} >= 0`),
     check('hero_builds_level', sql`${t.level} BETWEEN 1 AND 100`),
-    check('hero_builds_game_version', sql`${t.gameVersion} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,4}$'`),
-    check('hero_builds_numbers', sql`${t.dps} >= 0 AND ${t.clearDps} >= 0 AND ${t.ehp} >= 0 AND ${t.life} >= 0 AND ${t.energyShield} >= 0`),
-    check('hero_builds_json_shapes', sql`jsonb_typeof(${t.skills}) = 'array' AND jsonb_typeof(${t.gear}) = 'array' AND jsonb_typeof(${t.auras}) = 'array' AND jsonb_typeof(${t.summary}) = 'object'`),
+    check(
+      'hero_builds_game_version',
+      sql`${t.gameVersion} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,4}$'`,
+    ),
+    check(
+      'hero_builds_numbers',
+      sql`${t.dps} >= 0 AND ${t.clearDps} >= 0 AND ${t.ehp} >= 0 AND ${t.life} >= 0 AND ${t.energyShield} >= 0`,
+    ),
+    check(
+      'hero_builds_json_shapes',
+      sql`jsonb_typeof(${t.skills}) = 'array' AND jsonb_typeof(${t.gear}) = 'array' AND jsonb_typeof(${t.auras}) = 'array' AND jsonb_typeof(${t.summary}) = 'object'`,
+    ),
     check('hero_builds_hash', sql`${t.contentHash} ~ '^[0-9a-f]{64}$'`),
     // The armory's sorts.
     index('hero_builds_dps_idx').on(t.dps),

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { HERO_CLASSES, type HeroClass } from './constants.js';
 
-
 /** `POST /api/heroes`: a hero the server should know, by its name on this account. */
 export const RegisterHero = z
   .object({

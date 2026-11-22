@@ -18,11 +18,39 @@ const palette = {
 const font = "'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 const styles = {
-  body: { margin: 0, padding: 0, backgroundColor: palette.page, color: palette.text, fontFamily: font },
-  wordmark: { padding: '0 4px 16px', color: palette.accent, fontSize: '20px', fontWeight: 700, letterSpacing: '6px' },
-  card: { backgroundColor: palette.card, border: `1px solid ${palette.edge}`, borderRadius: '8px', padding: '28px 24px' },
-  heading: { margin: '0 0 16px', color: palette.text, fontSize: '22px', lineHeight: '30px', fontWeight: 600 },
-  paragraph: { margin: '0 0 16px', color: palette.text, fontSize: '16px', lineHeight: '24px' },
+  body: {
+    margin: 0,
+    padding: 0,
+    backgroundColor: palette.page,
+    color: palette.text,
+    fontFamily: font,
+  },
+  wordmark: {
+    padding: '0 4px 16px',
+    color: palette.accent,
+    fontSize: '20px',
+    fontWeight: 700,
+    letterSpacing: '6px',
+  },
+  card: {
+    backgroundColor: palette.card,
+    border: `1px solid ${palette.edge}`,
+    borderRadius: '8px',
+    padding: '28px 24px',
+  },
+  heading: {
+    margin: '0 0 16px',
+    color: palette.text,
+    fontSize: '22px',
+    lineHeight: '30px',
+    fontWeight: 600,
+  },
+  paragraph: {
+    margin: '0 0 16px',
+    color: palette.text,
+    fontSize: '16px',
+    lineHeight: '24px',
+  },
   button: {
     display: 'inline-block',
     backgroundColor: palette.accent,
@@ -34,12 +62,31 @@ const styles = {
     borderRadius: '6px',
     textDecoration: 'none',
   },
-  fallback: { margin: '0 0 16px', color: palette.muted, fontSize: '13px', lineHeight: '20px', wordBreak: 'break-all' },
+  fallback: {
+    margin: '0 0 16px',
+    color: palette.muted,
+    fontSize: '13px',
+    lineHeight: '20px',
+    wordBreak: 'break-all',
+  },
   link: { color: palette.accent },
-  footer: { padding: '16px 4px 0', color: palette.muted, fontSize: '12px', lineHeight: '18px' },
+  footer: {
+    padding: '16px 4px 0',
+    color: palette.muted,
+    fontSize: '12px',
+    lineHeight: '18px',
+  },
 } satisfies Record<string, CSSProperties>;
 
-export function Layout({ preview, heading, children }: { preview: string; heading: string; children: ReactNode }) {
+export function Layout({
+  preview,
+  heading,
+  children,
+}: {
+  preview: string;
+  heading: string;
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
       <head>
@@ -51,14 +98,29 @@ export function Layout({ preview, heading, children }: { preview: string; headin
       </head>
       <body style={styles.body}>
         {/* The line a mail app shows beside the subject; kept out of the plain-text body. */}
-        <div data-skip-in-text="true" style={{ display: 'none', maxHeight: 0, overflow: 'hidden' }}>
+        <div
+          data-skip-in-text="true"
+          style={{ display: 'none', maxHeight: 0, overflow: 'hidden' }}
+        >
           {preview}
         </div>
-        <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ backgroundColor: palette.page }}>
+        <table
+          role="presentation"
+          width="100%"
+          cellPadding={0}
+          cellSpacing={0}
+          style={{ backgroundColor: palette.page }}
+        >
           <tbody>
             <tr>
               <td align="center" style={{ padding: '32px 16px' }}>
-                <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} style={{ maxWidth: '520px' }}>
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellPadding={0}
+                  cellSpacing={0}
+                  style={{ maxWidth: '520px' }}
+                >
                   <tbody>
                     <tr>
                       <td data-skip-in-text="true" style={styles.wordmark}>
@@ -73,7 +135,8 @@ export function Layout({ preview, heading, children }: { preview: string; headin
                     </tr>
                     <tr>
                       <td style={styles.footer}>
-                        This mail is about your Gravoth account. It comes from an address that does not take replies.
+                        This mail is about your Gravoth account. It comes from
+                        an address that does not take replies.
                       </td>
                     </tr>
                   </tbody>

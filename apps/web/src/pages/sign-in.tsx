@@ -1,4 +1,8 @@
-import { PASSWORD_LIMITS, SOCIAL_PROVIDERS, type SocialProvider } from '@gravoth/contracts/constants';
+import {
+  PASSWORD_LIMITS,
+  SOCIAL_PROVIDERS,
+  type SocialProvider,
+} from '@gravoth/contracts/constants';
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, api } from '../api.js';
 import { Panel } from '../components/bits.js';
@@ -9,11 +13,16 @@ import { useSession } from '../session.js';
 
 type Mode = 'sign-in' | 'sign-up' | 'forgot';
 
-const PROVIDER_NAMES: Record<SocialProvider, string> = { google: 'Google', discord: 'Discord' };
+const PROVIDER_NAMES: Record<SocialProvider, string> = {
+  google: 'Google',
+  discord: 'Discord',
+};
 
 /** Only a path on this site: a `next` of `//evil.example` or `https://...` goes home instead. */
 export const safeNext = (next: string | null): string =>
-  next !== null && next.startsWith('/') && !next.startsWith('//') ? next : '/account';
+  next !== null && next.startsWith('/') && !next.startsWith('//')
+    ? next
+    : '/account';
 
 export const SignInPage = () => {
   const { session, methods, refresh } = useSession();
@@ -29,12 +38,20 @@ export const SignInPage = () => {
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (session !== null && session !== undefined) navigate(next, { replace: true });
+    if (session !== null && session !== undefined)
+      navigate(next, { replace: true });
   }, [session, next, navigate]);
 
-  const providers = SOCIAL_PROVIDERS.filter((provider) => methods.includes(provider));
+  const providers = SOCIAL_PROVIDERS.filter((provider) =>
+    methods.includes(provider),
+  );
 
-  const fail = (caught: unknown) => setError(caught instanceof ApiError ? messageFor(caught.code) : "Can't reach the server.");
+  const fail = (caught: unknown) =>
+    setError(
+      caught instanceof ApiError
+        ? messageFor(caught.code)
+        : "Can't reach the server.",
+    );
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -46,7 +63,12 @@ export const SignInPage = () => {
         await api.requestPasswordReset(email.trim());
         setNotice('If an account uses that email, a reset link is on its way.');
       } else {
-        if (mode === 'sign-up') await api.signUp(name.trim() === '' ? 'Hero' : name.trim(), email.trim(), password);
+        if (mode === 'sign-up')
+          await api.signUp(
+            name.trim() === '' ? 'Hero' : name.trim(),
+            email.trim(),
+            password,
+          );
         else await api.signIn(email.trim(), password);
         await refresh();
       }
@@ -70,18 +92,42 @@ export const SignInPage = () => {
     }
   };
 
-  const title = mode === 'sign-up' ? 'Create an account' : mode === 'forgot' ? 'Reset your password' : 'Sign in';
+  const title =
+    mode === 'sign-up'
+      ? 'Create an account'
+      : mode === 'forgot'
+        ? 'Reset your password'
+        : 'Sign in';
 
   return (
     <>
-      <PageTitle title={title} sub="The same account as in the game: your heroes, records and friends." />
+      <PageTitle
+        title={title}
+        sub="The same account as in the game: your heroes, records and friends."
+      />
       <div className="auth">
         <Panel>
-          <div className="segmented segmented-full" role="tablist" aria-label="Sign in or create an account">
-            <button type="button" role="tab" aria-selected={mode === 'sign-in'} className={mode === 'sign-in' ? 'segment active' : 'segment'} onClick={() => setMode('sign-in')}>
+          <div
+            className="segmented segmented-full"
+            role="tablist"
+            aria-label="Sign in or create an account"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'sign-in'}
+              className={mode === 'sign-in' ? 'segment active' : 'segment'}
+              onClick={() => setMode('sign-in')}
+            >
               Sign in
             </button>
-            <button type="button" role="tab" aria-selected={mode === 'sign-up'} className={mode === 'sign-up' ? 'segment active' : 'segment'} onClick={() => setMode('sign-up')}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'sign-up'}
+              className={mode === 'sign-up' ? 'segment active' : 'segment'}
+              onClick={() => setMode('sign-up')}
+            >
               Create account
             </button>
           </div>
@@ -90,7 +136,13 @@ export const SignInPage = () => {
             <>
               <div className="providers">
                 {providers.map((provider) => (
-                  <button key={provider} type="button" className={`button button-provider provider-${provider}`} disabled={busy} onClick={() => void social(provider)}>
+                  <button
+                    key={provider}
+                    type="button"
+                    className={`button button-provider provider-${provider}`}
+                    disabled={busy}
+                    onClick={() => void social(provider)}
+                  >
                     Continue with {PROVIDER_NAMES[provider]}
                   </button>
                 ))}
@@ -105,12 +157,24 @@ export const SignInPage = () => {
             {mode === 'sign-up' ? (
               <label className="field">
                 <span>Name</span>
-                <input value={name} onChange={(event) => setName(event.target.value)} autoComplete="nickname" maxLength={40} placeholder="Shown until you pick a display name" />
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  autoComplete="nickname"
+                  maxLength={40}
+                  placeholder="Shown until you pick a display name"
+                />
               </label>
             ) : null}
             <label className="field">
               <span>Email</span>
-              <input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+              />
             </label>
             {mode === 'forgot' ? null : (
               <label className="field">
@@ -122,7 +186,9 @@ export const SignInPage = () => {
                   maxLength={PASSWORD_LIMITS.max}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  autoComplete={mode === 'sign-up' ? 'new-password' : 'current-password'}
+                  autoComplete={
+                    mode === 'sign-up' ? 'new-password' : 'current-password'
+                  }
                 />
               </label>
             )}
@@ -136,18 +202,36 @@ export const SignInPage = () => {
                 {notice}
               </p>
             )}
-            <button type="submit" className="button button-primary" disabled={busy}>
-              {busy ? 'One moment' : mode === 'sign-up' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Sign in'}
+            <button
+              type="submit"
+              className="button button-primary"
+              disabled={busy}
+            >
+              {busy
+                ? 'One moment'
+                : mode === 'sign-up'
+                  ? 'Create account'
+                  : mode === 'forgot'
+                    ? 'Send reset link'
+                    : 'Sign in'}
             </button>
           </form>
 
           <p className="auth-foot">
             {mode === 'forgot' ? (
-              <button type="button" className="link" onClick={() => setMode('sign-in')}>
+              <button
+                type="button"
+                className="link"
+                onClick={() => setMode('sign-in')}
+              >
                 Back to sign in
               </button>
             ) : (
-              <button type="button" className="link" onClick={() => setMode('forgot')}>
+              <button
+                type="button"
+                className="link"
+                onClick={() => setMode('forgot')}
+              >
                 Forgot your password?
               </button>
             )}

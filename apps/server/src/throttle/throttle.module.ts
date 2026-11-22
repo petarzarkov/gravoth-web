@@ -42,13 +42,20 @@ import { AppConfigService } from '../config.js';
         return {
           ...config.get('throttle'),
           prefix: config.get('appName'),
-          store: reachable ? new RedisThrottleStore(redis) : new MemoryThrottleStore(),
+          store: reachable
+            ? new RedisThrottleStore(redis)
+            : new MemoryThrottleStore(),
           // Who is counted: the caller's address (Cloudflare's, read through the
           // trusted proxy headers in production).
           subject: (req: Bun.BunRequest) => address.of(req),
         };
       },
-      inject: [AppConfigService, RedisConnection, ClientAddress, Logger] as const,
+      inject: [
+        AppConfigService,
+        RedisConnection,
+        ClientAddress,
+        Logger,
+      ] as const,
     }),
   ],
 })

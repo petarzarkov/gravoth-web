@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { DISPLAY_NAME_PATTERN, DISPLAY_NAME_RULE } from './constants.js';
 
-
 export const DisplayName = z
   .string()
   .regex(DISPLAY_NAME_PATTERN, DISPLAY_NAME_RULE);
@@ -22,9 +21,10 @@ export const UpdateProfile = z
   });
 
 /** A player, by display name (any case): a friend request or a block. */
-export const ToPlayer = z
-  .object({ displayName: DisplayName })
-  .meta({ id: 'ToPlayer', description: 'A player, by display name (any case)' });
+export const ToPlayer = z.object({ displayName: DisplayName }).meta({
+  id: 'ToPlayer',
+  description: 'A player, by display name (any case)',
+});
 
 export const RequestId = z.object({ id: z.uuid() });
 export const PlayerId = z.object({ userId: z.uuid() });

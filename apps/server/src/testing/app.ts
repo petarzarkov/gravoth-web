@@ -12,10 +12,14 @@ export interface TestApp {
 }
 
 /** The real app on port 0, over a database of its own (testing/database.ts). */
-export const startTestApp = async (options: { overrides?: readonly Registration[]; config?: ConfigSource } = {}): Promise<TestApp> => {
+export const startTestApp = async (
+  options: { overrides?: readonly Registration[]; config?: ConfigSource } = {},
+): Promise<TestApp> => {
   const database = await createTestDatabase();
   const app = await createApp({
-    ...(options.overrides === undefined ? {} : { overrides: options.overrides }),
+    ...(options.overrides === undefined
+      ? {}
+      : { overrides: options.overrides }),
     config: { ...options.config, DATABASE_URL: database.url },
   });
   const base = new URL(await app.listen(0)).origin;

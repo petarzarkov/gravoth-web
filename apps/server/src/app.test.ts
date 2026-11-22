@@ -23,7 +23,12 @@ describe('Gravoth routes', () => {
     const response = await fetch(`${base}/api/health`);
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { status: string; database: string; validator: string; uptimeSeconds: number };
+    const body = (await response.json()) as {
+      status: string;
+      database: string;
+      validator: string;
+      uptimeSeconds: number;
+    };
     expect(body.status).toBe('ok');
     // No validator runs beside a test.
     expect(body.validator).toBe('down');
@@ -35,7 +40,10 @@ describe('Gravoth routes', () => {
     const response = await fetch(`${base}/api/meta`);
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { service: string; minGameVersion: string };
+    const body = (await response.json()) as {
+      service: string;
+      minGameVersion: string;
+    };
     expect(body.service).toBe('gravoth');
     expect(body.minGameVersion).toMatch(/^\d+\.\d+\.\d+$/);
   });
@@ -79,7 +87,9 @@ describe('the scaffold examples are gone', () => {
   it('documents exactly the game, account, profile, friends, heroes and board routes', async () => {
     const response = await fetch(`${base}/api/openapi.json`);
     expect(response.status).toBe(200);
-    const document = (await response.json()) as { paths: Record<string, unknown> };
+    const document = (await response.json()) as {
+      paths: Record<string, unknown>;
+    };
 
     // better-auth's own endpoints are contributed under /api/auth; everything else is ours.
     const ours = Object.keys(document.paths)

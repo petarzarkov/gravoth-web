@@ -1,5 +1,12 @@
 import type { SessionView, SignInMethod } from '@gravoth/contracts';
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
 import { api } from './api.js';
 
 /**
@@ -16,7 +23,9 @@ interface SessionState {
 const SessionContext = createContext<SessionState | null>(null);
 
 export const SessionProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<SessionView | null | undefined>(undefined);
+  const [session, setSession] = useState<SessionView | null | undefined>(
+    undefined,
+  );
   const [methods, setMethods] = useState<readonly SignInMethod[]>([]);
 
   const refresh = useCallback(async () => {
@@ -27,16 +36,26 @@ export const SessionProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // The first check, and the methods the server offers; `refresh` is for after a sign-in or out.
   useEffect(() => {
-    void refresh();
+    let live = true;
+    api
+      .session()
+      .then((answer) => live && setSession(answer ?? null))
+      .catch(() => live && setSession(null));
     api
       .methods()
-      .then((answer) => setMethods(answer.methods))
-      .catch(() => setMethods(['email']));
-  }, [refresh]);
+      .then((answer) => live && setMethods(answer.methods))
+      .catch(() => live && setMethods(['email']));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   return (
-    <SessionContext.Provider value={{ session, methods, refresh }}>{children}</SessionContext.Provider>
+    <SessionContext.Provider value={{ session, methods, refresh }}>
+      {children}
+    </SessionContext.Provider>
   );
 };
 

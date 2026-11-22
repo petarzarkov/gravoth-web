@@ -138,13 +138,9 @@
         "accounts_user_id_users_id_fk": {
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -273,26 +269,18 @@
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "sessions_impersonated_by_users_id_fk": {
           "name": "sessions_impersonated_by_users_id_fk",
           "tableFrom": "sessions",
-          "columnsFrom": [
-            "impersonated_by"
-          ],
+          "columnsFrom": ["impersonated_by"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "set null"
         }
@@ -541,26 +529,18 @@
         "blocks_blocker_id_users_id_fk": {
           "name": "blocks_blocker_id_users_id_fk",
           "tableFrom": "blocks",
-          "columnsFrom": [
-            "blocker_id"
-          ],
+          "columnsFrom": ["blocker_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "blocks_blocked_id_users_id_fk": {
           "name": "blocks_blocked_id_users_id_fk",
           "tableFrom": "blocks",
-          "columnsFrom": [
-            "blocked_id"
-          ],
+          "columnsFrom": ["blocked_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -568,10 +548,7 @@
       "compositePrimaryKeys": {
         "blocks_pkey": {
           "name": "blocks_pkey",
-          "columns": [
-            "blocker_id",
-            "blocked_id"
-          ]
+          "columns": ["blocker_id", "blocked_id"]
         }
       },
       "uniqueConstraints": {},
@@ -709,26 +686,18 @@
         "friendships_requester_id_users_id_fk": {
           "name": "friendships_requester_id_users_id_fk",
           "tableFrom": "friendships",
-          "columnsFrom": [
-            "requester_id"
-          ],
+          "columnsFrom": ["requester_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "friendships_addressee_id_users_id_fk": {
           "name": "friendships_addressee_id_users_id_fk",
           "tableFrom": "friendships",
-          "columnsFrom": [
-            "addressee_id"
-          ],
+          "columnsFrom": ["addressee_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -839,13 +808,9 @@
         "profiles_user_id_users_id_fk": {
           "name": "profiles_user_id_users_id_fk",
           "tableFrom": "profiles",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -946,13 +911,9 @@
         "heroes_user_id_users_id_fk": {
           "name": "heroes_user_id_users_id_fk",
           "tableFrom": "heroes",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -961,10 +922,7 @@
       "uniqueConstraints": {
         "heroes_id_user_key": {
           "name": "heroes_id_user_key",
-          "columns": [
-            "id",
-            "user_id"
-          ],
+          "columns": ["id", "user_id"],
           "nullsNotDistinct": false
         }
       },
@@ -1169,13 +1127,9 @@
         "hero_builds_hero_id_heroes_id_fk": {
           "name": "hero_builds_hero_id_heroes_id_fk",
           "tableFrom": "hero_builds",
-          "columnsFrom": [
-            "hero_id"
-          ],
+          "columnsFrom": ["hero_id"],
           "tableTo": "heroes",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         }
@@ -1184,18 +1138,12 @@
       "uniqueConstraints": {
         "hero_builds_hero_revision_key": {
           "name": "hero_builds_hero_revision_key",
-          "columns": [
-            "hero_id",
-            "revision"
-          ],
+          "columns": ["hero_id", "revision"],
           "nullsNotDistinct": false
         },
         "hero_builds_id_hero_key": {
           "name": "hero_builds_id_hero_key",
-          "columns": [
-            "id",
-            "hero_id"
-          ],
+          "columns": ["id", "hero_id"],
           "nullsNotDistinct": false
         }
       },
@@ -1313,11 +1261,7 @@
       "uniqueConstraints": {
         "leaderboards_key_hardcore_season_key": {
           "name": "leaderboards_key_hardcore_season_key",
-          "columns": [
-            "key",
-            "hardcore",
-            "season"
-          ],
+          "columns": ["key", "hardcore", "season"],
           "nullsNotDistinct": false
         }
       },
@@ -1537,56 +1481,36 @@
         "leaderboard_entries_board_id_leaderboards_id_fk": {
           "name": "leaderboard_entries_board_id_leaderboards_id_fk",
           "tableFrom": "leaderboard_entries",
-          "columnsFrom": [
-            "board_id"
-          ],
+          "columnsFrom": ["board_id"],
           "tableTo": "leaderboards",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "leaderboard_entries_user_id_users_id_fk": {
           "name": "leaderboard_entries_user_id_users_id_fk",
           "tableFrom": "leaderboard_entries",
-          "columnsFrom": [
-            "user_id"
-          ],
+          "columnsFrom": ["user_id"],
           "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "cascade"
         },
         "leaderboard_entries_hero_fk": {
           "name": "leaderboard_entries_hero_fk",
           "tableFrom": "leaderboard_entries",
-          "columnsFrom": [
-            "hero_id",
-            "user_id"
-          ],
+          "columnsFrom": ["hero_id", "user_id"],
           "tableTo": "heroes",
-          "columnsTo": [
-            "id",
-            "user_id"
-          ],
+          "columnsTo": ["id", "user_id"],
           "onUpdate": "cascade",
           "onDelete": "cascade"
         },
         "leaderboard_entries_build_fk": {
           "name": "leaderboard_entries_build_fk",
           "tableFrom": "leaderboard_entries",
-          "columnsFrom": [
-            "build_id",
-            "hero_id"
-          ],
+          "columnsFrom": ["build_id", "hero_id"],
           "tableTo": "hero_builds",
-          "columnsTo": [
-            "id",
-            "hero_id"
-          ],
+          "columnsTo": ["id", "hero_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1595,10 +1519,7 @@
       "uniqueConstraints": {
         "leaderboard_entries_board_hero_key": {
           "name": "leaderboard_entries_board_hero_key",
-          "columns": [
-            "board_id",
-            "hero_id"
-          ],
+          "columns": ["board_id", "hero_id"],
           "nullsNotDistinct": false
         }
       },

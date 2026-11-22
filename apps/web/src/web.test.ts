@@ -35,22 +35,37 @@ describe('format', () => {
 
 describe('api', () => {
   test('the code comes from either error shape', () => {
-    expect(errorCode(409, { message: 'NAME_TAKEN' })).toBe('NAME_TAKEN');
-    expect(errorCode(401, { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email or password' })).toBe('INVALID_EMAIL_OR_PASSWORD');
+    expect(errorCode(409, { error: 'NAME_TAKEN', status: 409 })).toBe(
+      'NAME_TAKEN',
+    );
+    expect(errorCode(400, { message: 'Bad input' })).toBe('Bad input');
+    expect(
+      errorCode(401, {
+        code: 'INVALID_EMAIL_OR_PASSWORD',
+        message: 'Invalid email or password',
+      }),
+    ).toBe('INVALID_EMAIL_OR_PASSWORD');
     expect(errorCode(502, null)).toBe('HTTP_502');
   });
 
   test('a query leaves out what is unset', () => {
-    expect(withQuery('/api/leaderboards/marks', { hardcore: true, class: undefined, take: 3, cursor: '' })).toBe(
-      '/api/leaderboards/marks?hardcore=true&take=3',
-    );
+    expect(
+      withQuery('/api/leaderboards/marks', {
+        hardcore: true,
+        class: undefined,
+        take: 3,
+        cursor: '',
+      }),
+    ).toBe('/api/leaderboards/marks?hardcore=true&take=3');
     expect(withQuery('/x')).toBe('/x');
   });
 });
 
 describe('router', () => {
   test('patterns match one segment per param', () => {
-    expect(matchPath('/boards/:key', '/boards/pit_floor')).toEqual({ key: 'pit_floor' });
+    expect(matchPath('/boards/:key', '/boards/pit_floor')).toEqual({
+      key: 'pit_floor',
+    });
     expect(matchPath('/boards/:key', '/boards/pit_floor/extra')).toBeNull();
     expect(matchPath('/', '/')).toEqual({});
     expect(matchPath('/builds/:id', '/builds/%E2%9C%93')).toEqual({ id: '✓' });

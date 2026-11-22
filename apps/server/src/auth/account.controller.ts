@@ -1,9 +1,20 @@
 import { SessionGuard } from '@dunx/auth';
-import { Controller, Get, HttpStatusCode, Post, Public, UseGuards, type Input } from '@dunx/http';
+import {
+  Controller,
+  Get,
+  HttpStatusCode,
+  Post,
+  Public,
+  UseGuards,
+  type Input,
+} from '@dunx/http';
 import { DeleteAccount, type SignInMethod } from '@gravoth/contracts';
 import { Accounts, type AccountView } from './accounts.service.js';
 
-const deleteAccount = { body: DeleteAccount, status: HttpStatusCode.OK } as const;
+const deleteAccount = {
+  body: DeleteAccount,
+  status: HttpStatusCode.OK,
+} as const;
 
 /**
  * The game's account routes (step 2). Sign-up, sign-in and sign-out are better-auth's,
@@ -34,7 +45,9 @@ export class AccountController {
    * DELETE with a body is dropped by some clients, Unity's among them.
    */
   @Post('/delete', deleteAccount)
-  async remove({ body }: Input<typeof deleteAccount>): Promise<{ deleted: true }> {
+  async remove({
+    body,
+  }: Input<typeof deleteAccount>): Promise<{ deleted: true }> {
     await this.accounts.delete(body.password);
     return { deleted: true };
   }

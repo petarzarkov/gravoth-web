@@ -1,8 +1,12 @@
 import { z } from 'zod';
-import { HERO_CLASSES, type BoardFormat, type BoardSort, type HeroClass } from './constants.js';
+import {
+  HERO_CLASSES,
+  type BoardFormat,
+  type BoardSort,
+  type HeroClass,
+} from './constants.js';
 import { BuildSnapshot, type BuildView } from './build.js';
 import { PageQuery, type Page } from './pagination.js';
-
 
 /** A board's key in a path: the game's own (`pit_floor`, `hc_pit_floor`). */
 export const BoardKey = z.object({

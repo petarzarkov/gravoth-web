@@ -6,20 +6,33 @@ import { PgDump } from './pg-dump.js';
 
 /** Every backup's key: `postgres/gravoth-2026-11-22T03-30-00Z.dump`. */
 export const BACKUP_PREFIX = 'postgres/';
-const KEY = /^postgres\/gravoth-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z\.dump$/;
+const KEY =
+  /^postgres\/gravoth-(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z\.dump$/;
 
-export const backupKey = (at: Date): string => `${BACKUP_PREFIX}gravoth-${at.toISOString().slice(0, 19).replaceAll(':', '-')}Z.dump`;
+export const backupKey = (at: Date): string =>
+  `${BACKUP_PREFIX}gravoth-${at.toISOString().slice(0, 19).replaceAll(':', '-')}Z.dump`;
 
 /** When a backup was taken, read back from its key; undefined for a key this job did not write. */
 export const backupTime = (key: string): Date | undefined => {
   const match = KEY.exec(key);
-  return match === null ? undefined : new Date(`${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`);
+  return match === null
+    ? undefined
+    : new Date(`${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`);
 };
 
 export type BackupResult =
   | { readonly status: 'skipped' }
-  | { readonly status: 'done'; readonly key: string; readonly bytes: number; readonly pruned: readonly string[] }
-  | { readonly status: 'failed'; readonly key: string; readonly reason: string };
+  | {
+      readonly status: 'done';
+      readonly key: string;
+      readonly bytes: number;
+      readonly pruned: readonly string[];
+    }
+  | {
+      readonly status: 'failed';
+      readonly key: string;
+      readonly reason: string;
+    };
 
 /**
  * The nightly logical backup (docs/online-plan.md, "Backups"): at 03:30 (SCHEDULE_TZ, UTC by default) `pg_dump`'s
@@ -50,7 +63,9 @@ export class DatabaseBackup {
   async run(now = new Date()): Promise<BackupResult> {
     const storage = this.target.storage;
     if (storage === undefined) {
-      this.logger.info('database backup skipped: R2 is not configured (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET)');
+      this.logger.info(
+        'database backup skipped: R2 is not configured (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET)',
+      );
       return { status: 'skipped' };
     }
     const key = backupKey(now);
@@ -64,14 +79,20 @@ export class DatabaseBackup {
       reason = `upload failed: ${(error as Error).message}`;
     }
     const code = await job.exited;
-    if (reason === undefined && code !== 0) reason = `pg_dump exited ${code}: ${(await job.stderr).trim().slice(0, 500)}`;
+    if (reason === undefined && code !== 0)
+      reason = `pg_dump exited ${code}: ${(await job.stderr).trim().slice(0, 500)}`;
     if (reason !== undefined) {
       await storage.delete(key).catch(() => undefined);
       this.logger.error('database backup failed', { key, reason });
       return { status: 'failed', key, reason };
     }
     const pruned = await this.prune(now);
-    this.logger.info('database backed up', { to: this.target.description, key, bytes, pruned: pruned.length });
+    this.logger.info('database backed up', {
+      to: this.target.description,
+      key,
+      bytes,
+      pruned: pruned.length,
+    });
     return { status: 'done', key, bytes, pruned };
   }
 
@@ -79,7 +100,8 @@ export class DatabaseBackup {
   private async prune(now: Date): Promise<string[]> {
     const storage = this.target.storage;
     if (storage === undefined) return [];
-    const cutoff = now.getTime() - this.config.get('backup').keepDays * 86_400_000;
+    const cutoff =
+      now.getTime() - this.config.get('backup').keepDays * 86_400_000;
     const old: string[] = [];
     for await (const entry of storage.list({ prefix: BACKUP_PREFIX })) {
       const taken = backupTime(entry.key);

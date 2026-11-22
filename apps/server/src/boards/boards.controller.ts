@@ -1,12 +1,37 @@
 import { Auth, AuthContext, SessionGuard } from '@dunx/auth';
-import { Controller, Get, HttpStatusCode, Post, Public, Throttle, UseGuards, type Input } from '@dunx/http';
-import { AroundMe, BoardKey, ListBoards, ReadBoard, SubmitScore } from '@gravoth/contracts';
-import { Boards, type BoardPage, type BoardView, type Neighbourhood, type SubmitResult } from './boards.service.js';
+import {
+  Controller,
+  Get,
+  HttpStatusCode,
+  Post,
+  Public,
+  Throttle,
+  UseGuards,
+  type Input,
+} from '@dunx/http';
+import {
+  AroundMe,
+  BoardKey,
+  ListBoards,
+  ReadBoard,
+  SubmitScore,
+} from '@gravoth/contracts';
+import {
+  Boards,
+  type BoardPage,
+  type BoardView,
+  type Neighbourhood,
+  type SubmitResult,
+} from './boards.service.js';
 
 const listBoards = { query: ListBoards } as const;
 const readBoard = { params: BoardKey, query: ReadBoard } as const;
 const aroundMe = { params: BoardKey, query: AroundMe } as const;
-const submit = { params: BoardKey, body: SubmitScore, status: HttpStatusCode.OK } as const;
+const submit = {
+  params: BoardKey,
+  body: SubmitScore,
+  status: HttpStatusCode.OK,
+} as const;
 
 /**
  * The boards (step 4): every board, the top of one with each row's whole build, the caller's place with the rows
@@ -24,23 +49,52 @@ export class BoardsController {
 
   @Public()
   @Get('/', listBoards)
-  async list({ query }: Input<typeof listBoards>): Promise<{ boards: BoardView[] }> {
+  async list({
+    query,
+  }: Input<typeof listBoards>): Promise<{ boards: BoardView[] }> {
     return { boards: await this.boards.list(query) };
   }
 
   /** A public read that still knows the caller when there is one: their own hidden name, and the friends view. */
   @Public()
   @Get('/:key', readBoard)
-  async read({ req, params, query }: Input<typeof readBoard>): Promise<BoardPage> {
-    const board = await this.boards.resolve(params.key, query.hardcore, query.season);
-    const caller = req.headers.has('authorization') || req.headers.has('cookie') ? (await this.auth.api.getSession({ headers: req.headers }))?.user.id : undefined;
-    return this.boards.read(board, query, { caller, friends: query.view === 'friends', heroClass: query.class });
+  async read({
+    req,
+    params,
+    query,
+  }: Input<typeof readBoard>): Promise<BoardPage> {
+    const board = await this.boards.resolve(
+      params.key,
+      query.hardcore,
+      query.season,
+    );
+    const caller =
+      req.headers.has('authorization') || req.headers.has('cookie')
+        ? (await this.auth.api.getSession({ headers: req.headers }))?.user.id
+        : undefined;
+    return this.boards.read(board, query, {
+      caller,
+      friends: query.view === 'friends',
+      heroClass: query.class,
+    });
   }
 
   @Get('/:key/me', aroundMe)
-  async around({ params, query }: Input<typeof aroundMe>): Promise<Neighbourhood> {
-    const board = await this.boards.resolve(params.key, query.hardcore, query.season);
-    return this.boards.around(board, this.context.require().user.id, query.around, { friends: query.view === 'friends', heroClass: query.class });
+  async around({
+    params,
+    query,
+  }: Input<typeof aroundMe>): Promise<Neighbourhood> {
+    const board = await this.boards.resolve(
+      params.key,
+      query.hardcore,
+      query.season,
+    );
+    return this.boards.around(
+      board,
+      this.context.require().user.id,
+      query.around,
+      { friends: query.view === 'friends', heroClass: query.class },
+    );
   }
 
   /** 404 `BOARD_NOT_FOUND` / `HERO_NOT_FOUND`, 409 `BUILD_REVISION_TAKEN`, 422 `HARDCORE_MISMATCH` / `SCORE_OUT_OF_RANGE`. */

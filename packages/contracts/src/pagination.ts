@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { PAGE_LIMITS } from './constants.js';
 
-
 /**
  * The query every growing list takes: `take` rows, and the `cursor` from a
  * page's `meta.nextCursor` (or `meta.previousCursor` with

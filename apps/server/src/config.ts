@@ -92,7 +92,10 @@ const envSchema = z.object({
   /** Resend's API key, for the domain mail.petarzarkov.com. Unset: mails are logged, never sent. */
   RESEND_API_KEY: z.string().min(1).optional(),
   /** The sender players see. Its domain is the one verified in Resend. */
-  MAIL_FROM: z.string().min(3).default('Gravoth <no-reply@mail.petarzarkov.com>'),
+  MAIL_FROM: z
+    .string()
+    .min(3)
+    .default('Gravoth <no-reply@mail.petarzarkov.com>'),
   /**
    * The nightly backup's Cloudflare R2 bucket and its API token (Object Read & Write on that bucket). All four or
    * none; none skips the backup with a log line.
@@ -137,7 +140,12 @@ export interface AppConfig {
   /** No trailing slash. */
   readonly publicUrl: string;
   readonly appName: string;
-  readonly log: { readonly level: LogLevel; readonly file: string | undefined; readonly requestBody: boolean; readonly responseBody: boolean };
+  readonly log: {
+    readonly level: LogLevel;
+    readonly file: string | undefined;
+    readonly requestBody: boolean;
+    readonly responseBody: boolean;
+  };
   readonly corsOrigin: string;
   readonly trustProxy: boolean;
   readonly database: { readonly url: string; readonly poolMax: number };
@@ -147,8 +155,14 @@ export interface AppConfig {
   readonly google: OAuthClient | undefined;
   readonly discord: OAuthClient | undefined;
   /** Resend's key (undefined: mails go to the log) and the sender. */
-  readonly mail: { readonly resendApiKey: string | undefined; readonly from: string };
-  readonly backup: { readonly r2: R2Bucket | undefined; readonly keepDays: number };
+  readonly mail: {
+    readonly resendApiKey: string | undefined;
+    readonly from: string;
+  };
+  readonly backup: {
+    readonly r2: R2Bucket | undefined;
+    readonly keepDays: number;
+  };
   readonly authorization: { readonly enabled: boolean };
   readonly throttle: { readonly limit: number; readonly windowSeconds: number };
   readonly schedule: { readonly tz: string };
@@ -194,23 +208,44 @@ export const validate = (env: ConfigSource): AppConfig => {
         '(for example the output of `openssl rand -base64 48`) in server/.env as AUTH_SECRET.',
     );
   }
-  if (production && value.DATABASE_URL === undefined && value.POSTGRES_PASSWORD === LOCAL_DATABASE_PASSWORD) {
+  if (
+    production &&
+    value.DATABASE_URL === undefined &&
+    value.POSTGRES_PASSWORD === LOCAL_DATABASE_PASSWORD
+  ) {
     problems.push(
       'POSTGRES_PASSWORD: unset in production. Put a random string (for example the output of `openssl rand -hex 32`) ' +
         'in server/.env as POSTGRES_PASSWORD before the database first starts.',
     );
   }
   for (const [id, secret] of PAIRS) {
-    if ((value[id] === undefined) !== (value[secret] === undefined)) problems.push(`${id} and ${secret} are set together or not at all.`);
+    if ((value[id] === undefined) !== (value[secret] === undefined))
+      problems.push(`${id} and ${secret} are set together or not at all.`);
   }
-  const r2Parts = [value.R2_ACCOUNT_ID, value.R2_ACCESS_KEY_ID, value.R2_SECRET_ACCESS_KEY, value.R2_BUCKET];
-  if (r2Parts.some((part) => part === undefined) && r2Parts.some((part) => part !== undefined)) {
-    problems.push('R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET are set together or not at all.');
+  const r2Parts = [
+    value.R2_ACCOUNT_ID,
+    value.R2_ACCESS_KEY_ID,
+    value.R2_SECRET_ACCESS_KEY,
+    value.R2_BUCKET,
+  ];
+  if (
+    r2Parts.some((part) => part === undefined) &&
+    r2Parts.some((part) => part !== undefined)
+  ) {
+    problems.push(
+      'R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET are set together or not at all.',
+    );
   }
-  if (problems.length > 0) throw new Error(`Configuration is invalid:\n - ${problems.join('\n - ')}`);
+  if (problems.length > 0)
+    throw new Error(`Configuration is invalid:\n - ${problems.join('\n - ')}`);
 
-  const client = (clientId: string | undefined, clientSecret: string | undefined): OAuthClient | undefined =>
-    clientId === undefined || clientSecret === undefined ? undefined : { clientId, clientSecret };
+  const client = (
+    clientId: string | undefined,
+    clientSecret: string | undefined,
+  ): OAuthClient | undefined =>
+    clientId === undefined || clientSecret === undefined
+      ? undefined
+      : { clientId, clientSecret };
   const databaseUrl =
     value.DATABASE_URL ??
     `postgres://${encodeURIComponent(value.POSTGRES_USER)}:${encodeURIComponent(value.POSTGRES_PASSWORD)}` +
@@ -231,9 +266,17 @@ export const validate = (env: ConfigSource): AppConfig => {
   return {
     port: value.PORT,
     hostname: value.HOST,
-    publicUrl: (value.PUBLIC_URL ?? (production ? DEFAULT_PUBLIC_URL : `http://localhost:${value.PORT}`)).replace(/\/+$/, ''),
+    publicUrl: (
+      value.PUBLIC_URL ??
+      (production ? DEFAULT_PUBLIC_URL : `http://localhost:${value.PORT}`)
+    ).replace(/\/+$/, ''),
     appName: '@gravoth/server',
-    log: { level: value.LOG_LEVEL, file: value.LOG_FILE, requestBody: value.LOG_REQUEST_BODY, responseBody: value.LOG_RESPONSE_BODY },
+    log: {
+      level: value.LOG_LEVEL,
+      file: value.LOG_FILE,
+      requestBody: value.LOG_REQUEST_BODY,
+      responseBody: value.LOG_RESPONSE_BODY,
+    },
     corsOrigin: value.CORS_ORIGIN,
     trustProxy: value.TRUST_PROXY,
     database: { url: databaseUrl, poolMax: value.DATABASE_POOL_MAX },
@@ -245,10 +288,18 @@ export const validate = (env: ConfigSource): AppConfig => {
     mail: { resendApiKey: value.RESEND_API_KEY, from: value.MAIL_FROM },
     backup: { r2, keepDays: value.BACKUP_KEEP_DAYS },
     authorization: { enabled: true },
-    throttle: { limit: value.THROTTLE_LIMIT, windowSeconds: value.THROTTLE_WINDOW_SECONDS },
+    throttle: {
+      limit: value.THROTTLE_LIMIT,
+      windowSeconds: value.THROTTLE_WINDOW_SECONDS,
+    },
     schedule: { tz: value.SCHEDULE_TZ },
     validator: { url: value.VALIDATOR_URL },
-    web: { root: value.WEB_ROOT === undefined ? DEFAULT_WEB_ROOT : resolve(value.WEB_ROOT) },
+    web: {
+      root:
+        value.WEB_ROOT === undefined
+          ? DEFAULT_WEB_ROOT
+          : resolve(value.WEB_ROOT),
+    },
   };
 };
 

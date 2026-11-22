@@ -17,7 +17,6 @@ const key = z
 const label = z.string().min(1).max(80);
 const count = (max: number) => z.number().int().min(0).max(max);
 
-
 /** One line on an item: an implicit, an affix with its tier, a unique's line, a corruption. */
 export const AffixLine = z.object({
   text: z.string().min(1).max(160),

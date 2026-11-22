@@ -1,6 +1,18 @@
 import { Auth, betterAuthDocument } from '@dunx/auth';
-import { ConfigInput, Logger, provide, type ConfigSource, type Registration } from '@dunx/core';
-import { HttpFactory, RedisRelay, StaticFiles, ThrottleGuard, type HttpApp } from '@dunx/http';
+import {
+  ConfigInput,
+  Logger,
+  provide,
+  type ConfigSource,
+  type Registration,
+} from '@dunx/core';
+import {
+  HttpFactory,
+  RedisRelay,
+  StaticFiles,
+  ThrottleGuard,
+  type HttpApp,
+} from '@dunx/http';
 import { OpenApiModule } from '@dunx/openapi';
 import { SwaggerRenderer } from '@dunx/openapi/swagger';
 import { AppModule } from './app.module.js';
@@ -19,10 +31,16 @@ import { SpaShell } from './web/spa-shell.middleware.js';
  * `overrides` and `config` are for a test: an override replaces a binding (the mail transport, the sign-in
  * providers) everywhere before anything is built, and `config` is laid over `Bun.env` (a test's own database).
  */
-export const createApp = async (options: { overrides?: readonly Registration[]; config?: ConfigSource } = {}): Promise<HttpApp> => {
+export const createApp = async (
+  options: { overrides?: readonly Registration[]; config?: ConfigSource } = {},
+): Promise<HttpApp> => {
   const overrides = [
     ...(options.overrides ?? []),
-    ...(options.config === undefined ? [] : [provide(ConfigInput, { useValue: { ...Bun.env, ...options.config } })]),
+    ...(options.config === undefined
+      ? []
+      : [
+          provide(ConfigInput, { useValue: { ...Bun.env, ...options.config } }),
+        ]),
   ];
   const app = await HttpFactory.create(
     OpenApiModule.forRootAsync({

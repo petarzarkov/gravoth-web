@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "Gravoth Online: the API (apps/server), the website (apps/web) and the contracts both import (packages/contracts). A Bun monorepo on dunx.",
-  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "prepare": "bun scripts/install-hooks.ts",
     "check": "bun run lint:check && bun run format:check && bun run typecheck && bun run test",

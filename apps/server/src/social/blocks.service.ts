@@ -24,28 +24,46 @@ export class Blocks {
   async block(displayName: string): Promise<BlockView> {
     const me = requireAccount(this.context);
     const target = await this.profiles.findByName(displayName);
-    if (target === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
-    if (target.userId === me.id) throw new HttpError(HttpStatusCode.BAD_REQUEST, 'CANNOT_BLOCK_SELF');
+    if (target === undefined)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
+    if (target.userId === me.id)
+      throw new HttpError(HttpStatusCode.BAD_REQUEST, 'CANNOT_BLOCK_SELF');
     const row = await this.db.transaction(async (tx) => {
       await tx
         .delete(friendship)
         .where(
           or(
-            and(eq(friendship.requesterId, me.id), eq(friendship.addresseeId, target.userId)),
-            and(eq(friendship.requesterId, target.userId), eq(friendship.addresseeId, me.id)),
+            and(
+              eq(friendship.requesterId, me.id),
+              eq(friendship.addresseeId, target.userId),
+            ),
+            and(
+              eq(friendship.requesterId, target.userId),
+              eq(friendship.addresseeId, me.id),
+            ),
           ),
         );
-      const [inserted] = await tx.insert(block).values({ blockerId: me.id, blockedId: target.userId }).onConflictDoNothing().returning();
+      const [inserted] = await tx
+        .insert(block)
+        .values({ blockerId: me.id, blockedId: target.userId })
+        .onConflictDoNothing()
+        .returning();
       if (inserted !== undefined) return inserted;
       const [existing] = await tx
         .select()
         .from(block)
-        .where(and(eq(block.blockerId, me.id), eq(block.blockedId, target.userId)))
+        .where(
+          and(eq(block.blockerId, me.id), eq(block.blockedId, target.userId)),
+        )
         .limit(1);
       return existing;
     });
     if (row === undefined) throw new Error('block not stored');
-    return { userId: target.userId, displayName: target.displayName, blockedAt: row.createdAt.toISOString() };
+    return {
+      userId: target.userId,
+      displayName: target.displayName,
+      blockedAt: row.createdAt.toISOString(),
+    };
   }
 
   async unblock(userId: string): Promise<void> {
@@ -54,7 +72,8 @@ export class Blocks {
       .delete(block)
       .where(and(eq(block.blockerId, me.id), eq(block.blockedId, userId)))
       .returning({ blockedId: block.blockedId });
-    if (gone.length === 0) throw new HttpError(HttpStatusCode.NOT_FOUND, 'BLOCK_NOT_FOUND');
+    if (gone.length === 0)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'BLOCK_NOT_FOUND');
   }
 
   /** Whom the caller blocked, newest first. */
@@ -69,8 +88,15 @@ export class Blocks {
       idColumn: 'blockedId',
     });
     return mapPage(rows, async (data) => {
-      const names = await displayNames(this.db, data.map((row) => row.blockedId));
-      return data.map((row) => ({ userId: row.blockedId, displayName: names.get(row.blockedId) ?? '', blockedAt: row.createdAt.toISOString() }));
+      const names = await displayNames(
+        this.db,
+        data.map((row) => row.blockedId),
+      );
+      return data.map((row) => ({
+        userId: row.blockedId,
+        displayName: names.get(row.blockedId) ?? '',
+        blockedAt: row.createdAt.toISOString(),
+      }));
     });
   }
 }

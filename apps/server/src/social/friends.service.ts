@@ -4,17 +4,29 @@ import { paginate, type Page } from '@dunx/infra/pagination';
 import { and, eq, or } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
-import { block, friendship, user, type Friendship } from '../database/schema.js';
+import {
+  block,
+  friendship,
+  user,
+  type Friendship,
+} from '../database/schema.js';
 import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Mailer } from '../mail/mailer.js';
 import { Profiles } from '../players/profiles.service.js';
 import { displayNames, requireAccount, type Caller } from './players.js';
-import type { FriendView, RequestOutcome, RequestView } from '@gravoth/contracts';
+import type {
+  FriendView,
+  RequestOutcome,
+  RequestView,
+} from '@gravoth/contracts';
 export type { FriendView, RequestOutcome, RequestView };
 
 /** The row of a pair, whichever of the two asked. */
 const pairOf = (a: string, b: string) =>
-  or(and(eq(friendship.requesterId, a), eq(friendship.addresseeId, b)), and(eq(friendship.requesterId, b), eq(friendship.addresseeId, a)));
+  or(
+    and(eq(friendship.requesterId, a), eq(friendship.addresseeId, b)),
+    and(eq(friendship.requesterId, b), eq(friendship.addresseeId, a)),
+  );
 
 /**
  * Friend requests and friendships (docs/online-plan.md, step 6's first half): one row per pair (friendships), pending
@@ -33,31 +45,47 @@ export class Friends {
   async request(displayName: string): Promise<RequestOutcome> {
     const me = requireAccount(this.context);
     const target = await this.profiles.findByName(displayName);
-    if (target === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
-    if (target.userId === me.id) throw new HttpError(HttpStatusCode.BAD_REQUEST, 'CANNOT_FRIEND_SELF');
+    if (target === undefined)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
+    if (target.userId === me.id)
+      throw new HttpError(HttpStatusCode.BAD_REQUEST, 'CANNOT_FRIEND_SELF');
     const [targetUser] = await this.db
-      .select({ guest: user.isAnonymous, email: user.email, emailVerified: user.emailVerified })
+      .select({
+        guest: user.isAnonymous,
+        email: user.email,
+        emailVerified: user.emailVerified,
+      })
       .from(user)
       .where(eq(user.id, target.userId))
       .limit(1);
-    if (targetUser === undefined || targetUser.guest === true) throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
+    if (targetUser === undefined || targetUser.guest === true)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
 
     const blocks = await this.db
       .select({ blockerId: block.blockerId })
       .from(block)
       .where(
-        or(and(eq(block.blockerId, target.userId), eq(block.blockedId, me.id)), and(eq(block.blockerId, me.id), eq(block.blockedId, target.userId))),
+        or(
+          and(eq(block.blockerId, target.userId), eq(block.blockedId, me.id)),
+          and(eq(block.blockerId, me.id), eq(block.blockedId, target.userId)),
+        ),
       );
-    if (blocks.some((row) => row.blockerId === target.userId)) throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
-    if (blocks.length > 0) throw new HttpError(HttpStatusCode.CONFLICT, 'PLAYER_BLOCKED');
+    if (blocks.some((row) => row.blockerId === target.userId))
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'PLAYER_NOT_FOUND');
+    if (blocks.length > 0)
+      throw new HttpError(HttpStatusCode.CONFLICT, 'PLAYER_BLOCKED');
 
     const existing = await this.pair(me.id, target.userId);
     if (existing !== undefined) return this.answerExisting(me, existing);
-    if (!target.allowFriendRequests) throw new HttpError(HttpStatusCode.FORBIDDEN, 'REQUESTS_CLOSED');
+    if (!target.allowFriendRequests)
+      throw new HttpError(HttpStatusCode.FORBIDDEN, 'REQUESTS_CLOSED');
 
     let row: Friendship | undefined;
     try {
-      [row] = await this.db.insert(friendship).values({ requesterId: me.id, addresseeId: target.userId }).returning();
+      [row] = await this.db
+        .insert(friendship)
+        .values({ requesterId: me.id, addresseeId: target.userId })
+        .returning();
     } catch (error) {
       // Both asked at once: the pair's unique index let one row in. Answer as if this request came second.
       if (!isUniqueViolation(error, 'friendships_pair_key')) throw error;
@@ -71,7 +99,10 @@ export class Friends {
       const from = (await this.profiles.ensure(me.id)).displayName;
       await this.mail.friendRequest(targetUser.email, target.displayName, from);
     }
-    return { status: 'pending', request: this.requestView(row, me.id, target.displayName) };
+    return {
+      status: 'pending',
+      request: this.requestView(row, me.id, target.displayName),
+    };
   }
 
   async accept(requestId: string): Promise<FriendView> {
@@ -79,20 +110,36 @@ export class Friends {
     const [row] = await this.db
       .update(friendship)
       .set({ status: 'accepted', respondedAt: new Date() })
-      .where(and(eq(friendship.id, requestId), eq(friendship.addresseeId, me.id), eq(friendship.status, 'pending')))
+      .where(
+        and(
+          eq(friendship.id, requestId),
+          eq(friendship.addresseeId, me.id),
+          eq(friendship.status, 'pending'),
+        ),
+      )
       .returning();
-    if (row === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
-    return this.friendView(row, me.id, (await displayNames(this.db, [row.requesterId])).get(row.requesterId) ?? '');
+    if (row === undefined)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
+    return this.friendView(
+      row,
+      me.id,
+      (await displayNames(this.db, [row.requesterId])).get(row.requesterId) ??
+        '',
+    );
   }
 
   async decline(requestId: string): Promise<void> {
     const me = requireAccount(this.context);
-    await this.deletePending(and(eq(friendship.id, requestId), eq(friendship.addresseeId, me.id)));
+    await this.deletePending(
+      and(eq(friendship.id, requestId), eq(friendship.addresseeId, me.id)),
+    );
   }
 
   async cancel(requestId: string): Promise<void> {
     const me = requireAccount(this.context);
-    await this.deletePending(and(eq(friendship.id, requestId), eq(friendship.requesterId, me.id)));
+    await this.deletePending(
+      and(eq(friendship.id, requestId), eq(friendship.requesterId, me.id)),
+    );
   }
 
   async remove(friendId: string): Promise<void> {
@@ -101,7 +148,8 @@ export class Friends {
       .delete(friendship)
       .where(and(pairOf(me.id, friendId), eq(friendship.status, 'accepted')))
       .returning({ id: friendship.id });
-    if (gone.length === 0) throw new HttpError(HttpStatusCode.NOT_FOUND, 'FRIEND_NOT_FOUND');
+    if (gone.length === 0)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'FRIEND_NOT_FOUND');
   }
 
   /** The caller's friends, newest friendship first. */
@@ -111,39 +159,75 @@ export class Friends {
       db: this.db,
       table: friendship,
       options: { ...page, order: 'desc' },
-      where: and(eq(friendship.status, 'accepted'), or(eq(friendship.requesterId, me.id), eq(friendship.addresseeId, me.id))),
+      where: and(
+        eq(friendship.status, 'accepted'),
+        or(
+          eq(friendship.requesterId, me.id),
+          eq(friendship.addresseeId, me.id),
+        ),
+      ),
       orderBy: 'respondedAt',
     });
     return mapPage(rows, async (data) => {
-      const names = await displayNames(this.db, data.map((row) => this.other(row, me.id)));
-      return data.map((row) => this.friendView(row, me.id, names.get(this.other(row, me.id)) ?? ''));
+      const names = await displayNames(
+        this.db,
+        data.map((row) => this.other(row, me.id)),
+      );
+      return data.map((row) =>
+        this.friendView(row, me.id, names.get(this.other(row, me.id)) ?? ''),
+      );
     });
   }
 
   /** Requests waiting on the caller (`incoming`) or sent by the caller (`outgoing`), newest first. */
-  async requests(direction: 'incoming' | 'outgoing', page: PageQuery): Promise<Page<RequestView>> {
+  async requests(
+    direction: 'incoming' | 'outgoing',
+    page: PageQuery,
+  ): Promise<Page<RequestView>> {
     const me = requireAccount(this.context);
     const rows = await paginate<typeof friendship, Friendship>({
       db: this.db,
       table: friendship,
       options: { ...page, order: 'desc' },
-      where: and(eq(friendship.status, 'pending'), eq(direction === 'incoming' ? friendship.addresseeId : friendship.requesterId, me.id)),
+      where: and(
+        eq(friendship.status, 'pending'),
+        eq(
+          direction === 'incoming'
+            ? friendship.addresseeId
+            : friendship.requesterId,
+          me.id,
+        ),
+      ),
       orderBy: 'createdAt',
     });
     return mapPage(rows, async (data) => {
-      const names = await displayNames(this.db, data.map((row) => this.other(row, me.id)));
-      return data.map((row) => this.requestView(row, me.id, names.get(this.other(row, me.id)) ?? ''));
+      const names = await displayNames(
+        this.db,
+        data.map((row) => this.other(row, me.id)),
+      );
+      return data.map((row) =>
+        this.requestView(row, me.id, names.get(this.other(row, me.id)) ?? ''),
+      );
     });
   }
 
   private async pair(a: string, b: string): Promise<Friendship | undefined> {
-    const [row] = await this.db.select().from(friendship).where(pairOf(a, b)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(friendship)
+      .where(pairOf(a, b))
+      .limit(1);
     return row;
   }
 
-  private async answerExisting(me: Caller, row: Friendship): Promise<RequestOutcome> {
-    if (row.status === 'accepted') throw new HttpError(HttpStatusCode.CONFLICT, 'ALREADY_FRIENDS');
-    if (row.requesterId === me.id) throw new HttpError(HttpStatusCode.CONFLICT, 'ALREADY_REQUESTED');
+  private async answerExisting(
+    me: Caller,
+    row: Friendship,
+  ): Promise<RequestOutcome> {
+    if (row.status === 'accepted')
+      throw new HttpError(HttpStatusCode.CONFLICT, 'ALREADY_FRIENDS');
+    if (row.requesterId === me.id)
+      throw new HttpError(HttpStatusCode.CONFLICT, 'ALREADY_REQUESTED');
     return { status: 'accepted', friend: await this.accept(row.id) };
   }
 
@@ -152,18 +236,31 @@ export class Friends {
       .delete(friendship)
       .where(and(where, eq(friendship.status, 'pending')))
       .returning({ id: friendship.id });
-    if (gone.length === 0) throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
+    if (gone.length === 0)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
   }
 
   private other(row: Friendship, me: string): string {
     return row.requesterId === me ? row.addresseeId : row.requesterId;
   }
 
-  private friendView(row: Friendship, me: string, displayName: string): FriendView {
-    return { userId: this.other(row, me), displayName, since: (row.respondedAt ?? row.createdAt).toISOString() };
+  private friendView(
+    row: Friendship,
+    me: string,
+    displayName: string,
+  ): FriendView {
+    return {
+      userId: this.other(row, me),
+      displayName,
+      since: (row.respondedAt ?? row.createdAt).toISOString(),
+    };
   }
 
-  private requestView(row: Friendship, me: string, displayName: string): RequestView {
+  private requestView(
+    row: Friendship,
+    me: string,
+    displayName: string,
+  ): RequestView {
     return {
       id: row.id,
       userId: this.other(row, me),

@@ -2,16 +2,24 @@ import type { SqlTransaction } from '@dunx/infra/db';
 import { HttpError, HttpStatusCode } from '@dunx/http';
 import { and, eq } from 'drizzle-orm';
 import { Db } from '../database/db.js';
-import { hero, heroBuild, profile, type Hero, type HeroBuild } from '../database/schema.js';
+import {
+  hero,
+  heroBuild,
+  profile,
+  type Hero,
+  type HeroBuild,
+} from '../database/schema.js';
 import type * as schema from '../database/schema.js';
 import type { BuildSnapshot, BuildSummary, CardPage } from '@gravoth/contracts';
-import { toHeroView, type HeroView } from './heroes.service.js';
+import { toHeroView } from './heroes.service.js';
 import type { BuildCard, BuildView } from '@gravoth/contracts';
 export type { BuildCard, BuildView };
 
 /** What the rules checker worked out for a build, laid over what the game sent. */
 export interface CheckedNumbers {
-  readonly summary?: Partial<Pick<BuildSummary, 'dps' | 'clearDps' | 'ehp' | 'life'>> | undefined;
+  readonly summary?:
+    | Partial<Pick<BuildSummary, 'dps' | 'clearDps' | 'ehp' | 'life'>>
+    | undefined;
   readonly card?: CardPage[] | undefined;
 }
 
@@ -49,7 +57,8 @@ const canonical = (value: unknown): string => {
   return JSON.stringify(value);
 };
 
-export const buildHash = (build: BuildSnapshot): string => new Bun.CryptoHasher('sha256').update(canonical(build)).digest('hex');
+export const buildHash = (build: BuildSnapshot): string =>
+  new Bun.CryptoHasher('sha256').update(canonical(build)).digest('hex');
 
 /**
  * Hero builds: immutable snapshots (a trigger refuses every UPDATE), one per hero and revision. Posting the same
@@ -60,15 +69,26 @@ export class Builds {
   constructor(private readonly db: Db) {}
 
   /** The hero's build at `build.revision`, stored now unless the same one already is. Inside the caller's transaction. */
-  async snapshot(tx: SqlTransaction<typeof schema>, owner: Hero, build: BuildSnapshot, checked: CheckedNumbers): Promise<HeroBuild> {
+  async snapshot(
+    tx: SqlTransaction<typeof schema>,
+    owner: Hero,
+    build: BuildSnapshot,
+    checked: CheckedNumbers,
+  ): Promise<HeroBuild> {
     const contentHash = buildHash(build);
     const [existing] = await tx
       .select()
       .from(heroBuild)
-      .where(and(eq(heroBuild.heroId, owner.id), eq(heroBuild.revision, build.revision)))
+      .where(
+        and(
+          eq(heroBuild.heroId, owner.id),
+          eq(heroBuild.revision, build.revision),
+        ),
+      )
       .limit(1);
     if (existing !== undefined) {
-      if (existing.contentHash !== contentHash) throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
+      if (existing.contentHash !== contentHash)
+        throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
       return existing;
     }
     const summary = { ...build.summary, ...checked.summary };
@@ -102,27 +122,42 @@ export class Builds {
     const [raced] = await tx
       .select()
       .from(heroBuild)
-      .where(and(eq(heroBuild.heroId, owner.id), eq(heroBuild.revision, build.revision)))
+      .where(
+        and(
+          eq(heroBuild.heroId, owner.id),
+          eq(heroBuild.revision, build.revision),
+        ),
+      )
       .limit(1);
-    if (raced === undefined || raced.contentHash !== contentHash) throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
+    if (raced === undefined || raced.contentHash !== contentHash)
+      throw new HttpError(HttpStatusCode.CONFLICT, 'BUILD_REVISION_TAKEN');
     return raced;
   }
 
   /** The build card for `GET /api/builds/:id`. */
   async card(id: string): Promise<BuildCard> {
     const [row] = await this.db
-      .select({ build: heroBuild, hero, displayName: profile.displayName, publicProfile: profile.publicProfile })
+      .select({
+        build: heroBuild,
+        hero,
+        displayName: profile.displayName,
+        publicProfile: profile.publicProfile,
+      })
       .from(heroBuild)
       .innerJoin(hero, eq(hero.id, heroBuild.heroId))
       .leftJoin(profile, eq(profile.userId, hero.userId))
       .where(eq(heroBuild.id, id))
       .limit(1);
-    if (row === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'BUILD_NOT_FOUND');
+    if (row === undefined)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'BUILD_NOT_FOUND');
     return {
       ...toBuildView(row.build),
       card: row.build.card,
       hero: toHeroView(row.hero),
-      player: row.publicProfile === true && row.displayName !== null ? { displayName: row.displayName } : null,
+      player:
+        row.publicProfile === true && row.displayName !== null
+          ? { displayName: row.displayName }
+          : null,
     };
   }
 }

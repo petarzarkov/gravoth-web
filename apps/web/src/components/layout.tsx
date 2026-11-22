@@ -3,11 +3,26 @@ import { api } from '../api.js';
 import { Link, useNavigation } from '../router.js';
 import { isGuest, useSession } from '../session.js';
 
+/** Boards stays lit on a board and a build card, which are its pages. */
+const sectionOf = (pathname: string): string =>
+  pathname === '/' ||
+  pathname.startsWith('/boards/') ||
+  pathname.startsWith('/builds/')
+    ? '/'
+    : pathname;
+
 const NavLink = ({ to, children }: { to: string; children: ReactNode }) => {
   const { location } = useNavigation();
-  const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
+  const active =
+    to === '/'
+      ? sectionOf(location.pathname) === '/'
+      : location.pathname.startsWith(to);
   return (
-    <Link to={to} className={active ? 'nav-link active' : 'nav-link'} aria-current={active ? 'page' : undefined}>
+    <Link
+      to={to}
+      className={active ? 'nav-link active' : 'nav-link'}
+      aria-current={active ? 'page' : undefined}
+    >
       {children}
     </Link>
   );
@@ -51,16 +66,27 @@ export const Layout = ({ children }: { children: ReactNode }) => {
           ·
         </span>
         <span>The records and builds the game sends</span>
-        {version === null ? null : <span className="foot-version">server {version}</span>}
+        {version === null ? null : (
+          <span className="foot-version">server {version}</span>
+        )}
       </footer>
     </div>
   );
 };
 
 /** The page's heading, and the browser tab's title. */
-export const PageTitle = ({ title, sub, children }: { title: string; sub?: ReactNode; children?: ReactNode }) => {
+export const PageTitle = ({
+  title,
+  sub,
+  children,
+}: {
+  title: string;
+  sub?: ReactNode;
+  children?: ReactNode;
+}) => {
   useEffect(() => {
-    document.title = title === 'Gravoth Online' ? title : `${title} · Gravoth Online`;
+    document.title =
+      title === 'Gravoth Online' ? title : `${title} · Gravoth Online`;
   }, [title]);
   return (
     <div className="page-title">

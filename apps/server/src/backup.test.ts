@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { LocalStorageOptions, type Storage } from '@dunx/infra/files';
 import { RecordingLogger } from '@dunx/testing';
 import { BackupTarget } from './backup/backup-target.js';
-import { backupKey, backupTime, DatabaseBackup } from './backup/database-backup.js';
+import {
+  backupKey,
+  backupTime,
+  DatabaseBackup,
+} from './backup/database-backup.js';
 import { PgDump, type DumpJob } from './backup/pg-dump.js';
 import { AppConfigService, validate } from './config.js';
 
@@ -41,7 +45,9 @@ class FakeDump extends PgDump {
         },
       }),
       exited: Promise.resolve(code),
-      stderr: Promise.resolve(code === 0 ? '' : 'pg_dump: error: connection to server failed'),
+      stderr: Promise.resolve(
+        code === 0 ? '' : 'pg_dump: error: connection to server failed',
+      ),
       kill: () => undefined,
     };
   }
@@ -61,17 +67,25 @@ afterAll(async () => {
 
 const keys = async (storage: Storage): Promise<string[]> => {
   const found: string[] = [];
-  for await (const entry of storage.list({ prefix: 'postgres/' })) found.push(entry.key);
+  for await (const entry of storage.list({ prefix: 'postgres/' }))
+    found.push(entry.key);
   return found.sort();
 };
 
 describe('the nightly database backup', () => {
   it('is skipped with a log line while R2 is not configured', async () => {
     const logger = new RecordingLogger();
-    const backup = new DatabaseBackup(new BackupTarget(config), new FakeDump(config, dumpBytes), config, logger);
+    const backup = new DatabaseBackup(
+      new BackupTarget(config),
+      new FakeDump(config, dumpBytes),
+      config,
+      logger,
+    );
 
     expect(await backup.run()).toEqual({ status: 'skipped' });
-    expect(JSON.stringify(logger.entries)).toContain('database backup skipped: R2 is not configured');
+    expect(JSON.stringify(logger.entries)).toContain(
+      'database backup skipped: R2 is not configured',
+    );
   });
 
   it('names each backup by the moment it was taken, and reads the moment back', () => {
@@ -91,23 +105,44 @@ describe('the nightly database backup', () => {
     await target.storage.write(recent, 'recent');
     await target.storage.write('postgres/notes.txt', 'not a backup');
 
-    const backup = new DatabaseBackup(target, new FakeDump(config, dumpBytes), config, new RecordingLogger());
+    const backup = new DatabaseBackup(
+      target,
+      new FakeDump(config, dumpBytes),
+      config,
+      new RecordingLogger(),
+    );
     const result = await backup.run(now);
 
-    expect(result).toEqual({ status: 'done', key: backupKey(now), bytes: dumpBytes.length, pruned: [old] });
-    expect(await target.storage.read(backupKey(now))).toBe('PGDMP custom-format dump');
-    expect(await keys(target.storage)).toEqual([backupKey(now), recent, 'postgres/notes.txt'].sort());
+    expect(result).toEqual({
+      status: 'done',
+      key: backupKey(now),
+      bytes: dumpBytes.length,
+      pruned: [old],
+    });
+    expect(await target.storage.read(backupKey(now))).toBe(
+      'PGDMP custom-format dump',
+    );
+    expect(await keys(target.storage)).toEqual(
+      [backupKey(now), recent, 'postgres/notes.txt'].sort(),
+    );
   });
 
   it('leaves nothing behind when pg_dump fails, and says why', async () => {
     const target = new FolderTarget(config, root);
     const now = new Date('2026-11-23T03:30:00.000Z');
-    const backup = new DatabaseBackup(target, new FakeDump(config, dumpBytes, 1), config, new RecordingLogger());
+    const backup = new DatabaseBackup(
+      target,
+      new FakeDump(config, dumpBytes, 1),
+      config,
+      new RecordingLogger(),
+    );
 
     const result = await backup.run(now);
 
     expect(result.status).toBe('failed');
-    expect(result.status === 'failed' ? result.reason : '').toContain('pg_dump exited 1');
+    expect(result.status === 'failed' ? result.reason : '').toContain(
+      'pg_dump exited 1',
+    );
     expect(await target.storage.exists(backupKey(now))).toBe(false);
   });
 

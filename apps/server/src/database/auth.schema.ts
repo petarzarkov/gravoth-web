@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { boolean, check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 /**
  * better-auth's four tables (with the columns its `admin` and `anonymous` plugins add), in Postgres. better-auth's
@@ -10,8 +19,10 @@ import { boolean, check, index, pgTable, text, timestamp, uniqueIndex, uuid } fr
  * user is one 16-byte type. One `account` row per sign-in a user has linked: `credential` (email and password),
  * `google`, `discord`.
  */
-const created = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
-const updated = () => timestamp('updated_at', { withTimezone: true }).notNull().defaultNow();
+const created = () =>
+  timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
+const updated = () =>
+  timestamp('updated_at', { withTimezone: true }).notNull().defaultNow();
 
 export const user = pgTable(
   'users',
@@ -50,7 +61,9 @@ export const session = pgTable(
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
     /** `admin` plugin. */
-    impersonatedBy: uuid('impersonated_by').references(() => user.id, { onDelete: 'set null' }),
+    impersonatedBy: uuid('impersonated_by').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     createdAt: created(),
     updatedAt: updated(),
   },
@@ -75,8 +88,12 @@ export const account = pgTable(
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     idToken: text('id_token'),
-    accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
-    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', {
+      withTimezone: true,
+    }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {
+      withTimezone: true,
+    }),
     scope: text('scope'),
     password: text('password'),
     createdAt: created(),
@@ -87,7 +104,10 @@ export const account = pgTable(
     uniqueIndex('accounts_provider_account_key').on(t.providerId, t.accountId),
     // One row per linked provider: a user has at most one password, one Google and one Discord.
     uniqueIndex('accounts_user_provider_key').on(t.userId, t.providerId),
-    check('accounts_password_only_credential', sql`${t.password} IS NULL OR ${t.providerId} = 'credential'`),
+    check(
+      'accounts_password_only_credential',
+      sql`${t.password} IS NULL OR ${t.providerId} = 'credential'`,
+    ),
   ],
 );
 
@@ -101,7 +121,10 @@ export const verification = pgTable(
     createdAt: created(),
     updatedAt: updated(),
   },
-  (t) => [index('verifications_identifier_idx').on(t.identifier), index('verifications_expires_idx').on(t.expiresAt)],
+  (t) => [
+    index('verifications_identifier_idx').on(t.identifier),
+    index('verifications_expires_idx').on(t.expiresAt),
+  ],
 );
 
 export type AuthUser = typeof user.$inferSelect;

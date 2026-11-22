@@ -13,7 +13,6 @@ export const HERO_CLASSES = [
 ] as const;
 export type HeroClass = (typeof HERO_CLASSES)[number];
 
-
 export const ITEM_SLOTS = [
   'MainHand',
   'OffHand',
@@ -30,7 +29,6 @@ export type ItemSlot = (typeof ITEM_SLOTS)[number];
 
 export const RARITIES = ['Normal', 'Magic', 'Rare', 'Unique'] as const;
 export type Rarity = (typeof RARITIES)[number];
-
 
 export type BoardSort = 'asc' | 'desc';
 export type BoardFormat = 'number' | 'time_ms';
@@ -100,12 +98,10 @@ export const BOARDS: readonly BoardDefinition[] = [
 export const hardcoreTitle = (title: string): string =>
   `Hardcore ${title.charAt(0).toLowerCase()}${title.slice(1)}`;
 
-
 /** 3 to 20 letters, digits, `_` or `-`, starting with a letter or digit. The word filter is the server's. */
 export const DISPLAY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/;
 export const DISPLAY_NAME_RULE =
   '3 to 20 letters, digits, _ or -, starting with a letter or digit';
-
 
 /** The third-party sign-ins, each offered only while the server has its client. */
 export const SOCIAL_PROVIDERS = ['google', 'discord'] as const;
@@ -114,10 +110,8 @@ export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
 /** A sign-in method a client can offer, as `GET /api/account/methods` lists it. */
 export type SignInMethod = 'guest' | 'email' | SocialProvider;
 
-
 /** better-auth's limits on a password (`emailAndPassword` in the server's auth module). */
 export const PASSWORD_LIMITS = { min: 8, max: 128 } as const;
-
 
 /** better-auth's routes, under `/api/auth`, that a browser client calls. */
 export const AUTH_ROUTES = {
@@ -130,7 +124,6 @@ export const AUTH_ROUTES = {
   resetPassword: '/api/auth/reset-password',
   sendVerificationEmail: '/api/auth/send-verification-email',
 } as const;
-
 
 /**
  * The error codes the API answers with (the `message` of an error body), by
@@ -171,7 +164,6 @@ export const ERROR_CODES = [
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
-
 
 /**
  * Keyset pagination as `@dunx/infra/pagination` answers it. The limits are

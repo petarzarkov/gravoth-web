@@ -17,7 +17,9 @@ import { Mailer } from './mailer.js';
       useFactory: (config: AppConfigService) => {
         const { resendApiKey, from } = config.get('mail');
         return {
-          ...(resendApiKey === undefined ? {} : { transport: new ResendTransport({ apiKey: resendApiKey }) }),
+          ...(resendApiKey === undefined
+            ? {}
+            : { transport: new ResendTransport({ apiKey: resendApiKey }) }),
           renderer: new ReactEmailRenderer(),
           from,
           // Resend's default limit is two requests a second.

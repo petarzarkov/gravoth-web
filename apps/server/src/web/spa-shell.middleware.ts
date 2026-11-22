@@ -25,10 +25,22 @@ import {
 export class SpaShell implements Middleware {
   constructor(private readonly options: StaticOptions) {}
 
-  async handle(req: BunRequest, ctx: RouteContext, next: Next): Promise<Response> {
-    if (ctx.get(UNMATCHED) !== true || (req.method !== 'GET' && req.method !== 'HEAD')) return next();
+  async handle(
+    req: BunRequest,
+    ctx: RouteContext,
+    next: Next,
+  ): Promise<Response> {
+    if (
+      ctx.get(UNMATCHED) !== true ||
+      (req.method !== 'GET' && req.method !== 'HEAD')
+    )
+      return next();
     const { pathname } = new URL(req.url);
-    if (!SpaShell.owns(pathname) || !(req.headers.get('accept') ?? '').includes('text/html')) return next();
+    if (
+      !SpaShell.owns(pathname) ||
+      !(req.headers.get('accept') ?? '').includes('text/html')
+    )
+      return next();
 
     const index = Bun.file(`${this.options.root}/index.html`);
     if (!(await index.exists())) return next();
@@ -52,4 +64,5 @@ export class SpaShell implements Middleware {
 }
 
 /** Bun's bundler names every asset by an 8-character content hash (`apps/web/build.ts`). */
-export const isHashedAsset = (pathname: string): boolean => /^\/assets\/[^/]+-[a-z0-9]{8}\.[a-z0-9]+(\.map)?$/.test(pathname);
+export const isHashedAsset = (pathname: string): boolean =>
+  /^\/assets\/[^/]+-[a-z0-9]{8}\.[a-z0-9]+(\.map)?$/.test(pathname);

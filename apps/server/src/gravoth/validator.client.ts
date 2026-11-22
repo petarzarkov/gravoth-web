@@ -40,7 +40,9 @@ export class ValidatorClient {
 
   async up(): Promise<boolean> {
     try {
-      const res = await fetch(this.url('/health'), { signal: AbortSignal.timeout(1000) });
+      const res = await fetch(this.url('/health'), {
+        signal: AbortSignal.timeout(1000),
+      });
       return res.ok;
     } catch {
       return false;
@@ -48,16 +50,28 @@ export class ValidatorClient {
   }
 
   async check(save: string): Promise<SaveReport> {
-    const res = await fetch(this.url('/saves/check'), { method: 'POST', body: save, headers: { 'content-type': 'text/plain' }, signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error(`validator /saves/check answered ${res.status}`);
+    const res = await fetch(this.url('/saves/check'), {
+      method: 'POST',
+      body: save,
+      headers: { 'content-type': 'text/plain' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok)
+      throw new Error(`validator /saves/check answered ${res.status}`);
     return (await res.json()) as SaveReport;
   }
 
   /** The hero's build card, or null when the save holds no such hero. */
   async card(save: string, heroId: number): Promise<CardPage[] | null> {
-    const res = await fetch(this.url(`/saves/card/${heroId}`), { method: 'POST', body: save, headers: { 'content-type': 'text/plain' }, signal: AbortSignal.timeout(5000) });
+    const res = await fetch(this.url(`/saves/card/${heroId}`), {
+      method: 'POST',
+      body: save,
+      headers: { 'content-type': 'text/plain' },
+      signal: AbortSignal.timeout(5000),
+    });
     if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`validator /saves/card answered ${res.status}`);
+    if (!res.ok)
+      throw new Error(`validator /saves/card answered ${res.status}`);
     return (await res.json()) as CardPage[];
   }
 }

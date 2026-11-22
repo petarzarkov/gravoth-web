@@ -11,7 +11,13 @@ export const Spinner = ({ label = 'Loading' }: { label?: string }) => (
   </div>
 );
 
-export const ErrorNote = ({ error, retry }: { error: ApiError; retry?: () => void }) => (
+export const ErrorNote = ({
+  error,
+  retry,
+}: {
+  error: ApiError;
+  retry?: () => void;
+}) => (
   <div className="note note-error" role="alert">
     <span>
       {error.status === 0
@@ -37,12 +43,20 @@ export const Loaded = <T,>({
   children: (value: T) => ReactNode;
 }) => {
   if (load.state === 'loading') return <Spinner />;
-  if (load.state === 'error') return <ErrorNote error={load.error} {...(retry === undefined ? {} : { retry })} />;
+  if (load.state === 'error')
+    return (
+      <ErrorNote
+        error={load.error}
+        {...(retry === undefined ? {} : { retry })}
+      />
+    );
   return <>{children(load.value)}</>;
 };
 
 export const ClassBadge = ({ heroClass }: { heroClass: HeroClass }) => (
-  <span className={`class-badge class-${heroClass}`}>{CLASS_NAMES[heroClass]}</span>
+  <span className={`class-badge class-${heroClass}`}>
+    {CLASS_NAMES[heroClass]}
+  </span>
 );
 
 export const HardcoreBadge = () => (
@@ -53,11 +67,17 @@ export const HardcoreBadge = () => (
 
 export const VerdictBadge = ({ verdict }: { verdict: ShownVerdict }) =>
   verdict === 'verified' ? (
-    <span className="badge badge-verified" title="Checked against the save by the rules checker">
+    <span
+      className="badge badge-verified"
+      title="Checked against the save by the rules checker"
+    >
       Verified
     </span>
   ) : (
-    <span className="badge badge-pending" title="Not checked against a save yet">
+    <span
+      className="badge badge-pending"
+      title="Not checked against a save yet"
+    >
       Pending
     </span>
   );
@@ -84,4 +104,6 @@ export const Panel = ({
   </section>
 );
 
-export const Empty = ({ children }: { children: ReactNode }) => <p className="empty">{children}</p>;
+export const Empty = ({ children }: { children: ReactNode }) => (
+  <p className="empty">{children}</p>
+);

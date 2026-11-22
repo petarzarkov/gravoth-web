@@ -15,6 +15,8 @@ const result = await Bun.build({
   minify: true,
   sourcemap: 'linked',
   target: 'browser',
+  // Absolute asset URLs: the page is served at nested paths (/boards/pit_floor).
+  publicPath: '/',
   naming: {
     entry: '[dir]/[name].[ext]',
     chunk: 'assets/[name]-[hash].[ext]',

@@ -13,4 +13,3 @@ export interface HealthView {
   readonly database: 'up' | 'down';
   readonly validator: 'up' | 'down';
 }
-

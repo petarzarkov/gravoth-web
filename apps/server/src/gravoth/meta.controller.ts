@@ -20,9 +20,22 @@ export class MetaController {
    * the rules checker answer, for the uptime monitor.
    */
   @Get('/health')
-  async health(): Promise<{ status: 'ok'; uptimeSeconds: number; database: 'up' | 'down'; validator: 'up' | 'down' }> {
-    const [database, validator] = await Promise.all([this.databaseUp(), this.validator.up()]);
-    return { status: 'ok', uptimeSeconds: this.meta.uptimeSeconds(), database: database ? 'up' : 'down', validator: validator ? 'up' : 'down' };
+  async health(): Promise<{
+    status: 'ok';
+    uptimeSeconds: number;
+    database: 'up' | 'down';
+    validator: 'up' | 'down';
+  }> {
+    const [database, validator] = await Promise.all([
+      this.databaseUp(),
+      this.validator.up(),
+    ]);
+    return {
+      status: 'ok',
+      uptimeSeconds: this.meta.uptimeSeconds(),
+      database: database ? 'up' : 'down',
+      validator: validator ? 'up' : 'down',
+    };
   }
 
   @Get('/meta')
@@ -32,7 +45,10 @@ export class MetaController {
 
   private async databaseUp(): Promise<boolean> {
     try {
-      await Promise.race([this.database.ping(), Bun.sleep(1000).then(() => Promise.reject(new Error('timeout')))]);
+      await Promise.race([
+        this.database.ping(),
+        Bun.sleep(1000).then(() => Promise.reject(new Error('timeout'))),
+      ]);
       return true;
     } catch {
       return false;

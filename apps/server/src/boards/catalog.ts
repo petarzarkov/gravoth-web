@@ -2,7 +2,12 @@ import { Logger, type OnInit } from '@dunx/core';
 import { sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { leaderboard } from '../database/schema.js';
-import { BOARDS, HARDCORE_PREFIX, hardcoreTitle, type BoardDefinition } from '@gravoth/contracts';
+import {
+  BOARDS,
+  HARDCORE_PREFIX,
+  hardcoreTitle,
+  type BoardDefinition,
+} from '@gravoth/contracts';
 
 export { BOARDS, HARDCORE_PREFIX, type BoardDefinition };
 
@@ -27,7 +32,11 @@ export class BoardCatalog implements OnInit {
       .values(rows)
       .onConflictDoUpdate({
         target: [leaderboard.key, leaderboard.hardcore, leaderboard.season],
-        set: { title: sql`excluded.title`, minScore: sql`excluded.min_score`, maxScore: sql`excluded.max_score` },
+        set: {
+          title: sql`excluded.title`,
+          minScore: sql`excluded.min_score`,
+          maxScore: sql`excluded.max_score`,
+        },
       });
     this.logger.info('boards ready', { boards: rows.length });
   }

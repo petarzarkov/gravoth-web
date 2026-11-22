@@ -1,4 +1,4 @@
-import type { BoardFormat, ErrorCode, HeroClass } from '@gravoth/contracts';
+import type { BoardFormat, HeroClass } from '@gravoth/contracts';
 
 /** A board's score as the game shows it: a count, or a time (`4:07.250`, `1:02:03`). */
 export const formatScore = (score: number, format: BoardFormat): string => {
@@ -39,7 +39,11 @@ export const formatDate = (iso: string): string => {
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
     ? iso
-    : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    : date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
 };
 
 /** A skill or support id the game sent without a name: `blade_vortex` reads `Blade Vortex`. */
@@ -65,12 +69,15 @@ export const SLOT_NAMES: Record<string, string> = {
   Ring2: 'Ring',
 };
 
-const MESSAGES: Partial<Record<ErrorCode | string, string>> = {
+/** Keyed by the API's codes (`ErrorCode`) and better-auth's. */
+const MESSAGES: Record<string, string> = {
   UNAUTHENTICATED: 'Sign in first.',
-  NAME_FORMAT: 'Names are 3 to 20 letters, digits, _ or -, starting with a letter or digit.',
+  NAME_FORMAT:
+    'Names are 3 to 20 letters, digits, _ or -, starting with a letter or digit.',
   NAME_TAKEN: 'That name is taken.',
   NAME_NOT_ALLOWED: "That name isn't allowed.",
-  GUEST_ACCOUNT: 'Guest accounts have no friends list. Create an account first.',
+  GUEST_ACCOUNT:
+    'Guest accounts have no friends list. Create an account first.',
   PLAYER_NOT_FOUND: 'No player has that name.',
   CANNOT_FRIEND_SELF: "That's you.",
   CANNOT_BLOCK_SELF: "That's you.",

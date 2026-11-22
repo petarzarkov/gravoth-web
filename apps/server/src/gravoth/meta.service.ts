@@ -9,7 +9,12 @@ export class GravothMeta {
     return Math.floor((Date.now() - this.startedAt) / 1000);
   }
 
-  info(): { service: 'gravoth'; version: string; commit: string; minGameVersion: string } {
+  info(): {
+    service: 'gravoth';
+    version: string;
+    commit: string;
+    minGameVersion: string;
+  } {
     return {
       service: 'gravoth',
       version: process.env['npm_package_version'] ?? '0.1.0',

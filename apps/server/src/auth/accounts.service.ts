@@ -28,14 +28,22 @@ export class Accounts {
     const { user } = this.caller.require();
     const context = await this.auth.$context;
     const linked = await context.internalAdapter.findAccounts(user.id);
-    const guest = (user as { isAnonymous?: boolean | null }).isAnonymous === true;
+    const guest =
+      (user as { isAnonymous?: boolean | null }).isAnonymous === true;
     return {
       id: user.id,
       name: user.name,
       email: Mailer.isPlaceholder(user.email) ? null : user.email,
       emailVerified: user.emailVerified,
       guest,
-      signIn: linked.map((account) => (account.providerId === CREDENTIAL ? 'email' : account.providerId) as SignInMethod).sort(),
+      signIn: linked
+        .map(
+          (account) =>
+            (account.providerId === CREDENTIAL
+              ? 'email'
+              : account.providerId) as SignInMethod,
+        )
+        .sort(),
       createdAt: new Date(user.createdAt).toISOString(),
     };
   }
@@ -49,24 +57,33 @@ export class Accounts {
   async delete(password: string | undefined): Promise<void> {
     const { user } = this.caller.require();
     const context = await this.auth.$context;
-    const credential = (await context.internalAdapter.findAccounts(user.id)).find(
-      (account) => account.providerId === CREDENTIAL && account.password,
-    );
+    const credential = (
+      await context.internalAdapter.findAccounts(user.id)
+    ).find((account) => account.providerId === CREDENTIAL && account.password);
     if (credential?.password) {
       if (password === undefined || password === '') {
         throw new HttpError(HttpStatusCode.BAD_REQUEST, 'PASSWORD_REQUIRED');
       }
-      if (!(await context.password.verify({ hash: credential.password, password }))) {
+      if (
+        !(await context.password.verify({
+          hash: credential.password,
+          password,
+        }))
+      ) {
         throw new HttpError(HttpStatusCode.FORBIDDEN, 'INVALID_PASSWORD');
       }
     }
     await context.internalAdapter.deleteUserSessions(user.id);
     await context.internalAdapter.deleteUser(user.id);
-    if (user.emailVerified) await this.mail.accountDeleted(user.email, user.name);
+    if (user.emailVerified)
+      await this.mail.accountDeleted(user.email, user.name);
   }
 
   /** The reset page's form: `done`, or why the new password was refused. */
-  async resetPassword(token: string, newPassword: string): Promise<'done' | 'expired' | 'too-short' | 'too-long'> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<'done' | 'expired' | 'too-short' | 'too-long'> {
     const context = await this.auth.$context;
     const { minPasswordLength, maxPasswordLength } = context.password.config;
     if (newPassword.length < minPasswordLength) return 'too-short';

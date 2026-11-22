@@ -1,0 +1,68 @@
+# gravoth-web
+
+Gravoth Online: the server behind the game's accounts, boards and friends, and
+the website that shows them. A Bun monorepo on
+[dunx](https://github.com/petarzarkov/dunx), started from the developer's
+[`dunx-template`](https://github.com/petarzarkov/dunx-template) (its lint,
+format, hooks and conventions) with the server moved in from the game's
+repository.
+
+| Path                 | What it is                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups |
+| `apps/web`           | `@gravoth/web`: the website (React on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Built into `apps/web/dist`, served by the API  |
+| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod            |
+| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                              |
+
+The game itself (Unity, `Gravoth.Core`, the rules checker in
+`dotnet/Gravoth.Validator`) lives in its own repository. The product plan and
+the decisions are there too: `docs/online-plan.md`, `docs/poc-decisions.md`,
+and the one open-issues list at the top of `docs/status.md`.
+
+## Quick start
+
+```bash
+bun install
+docker compose -f apps/server/compose.yml up -d   # Postgres and Redis for development
+bun run dev                                        # the API on http://localhost:3000
+bun run build                                      # the website into apps/web/dist; the API now serves it at /
+```
+
+For the website with hot reload instead, run the API with the dev server's
+origin trusted, and the dev server beside it:
+
+```bash
+CORS_ORIGIN=http://localhost:3001 bun run dev      # the API
+bun run dev:web                                    # http://localhost:3001, /api passed through to :3000
+```
+
+```
+http://localhost:3000/                  the website (after bun run build)
+http://localhost:3000/api/health        Postgres and the rules checker, up or down
+http://localhost:3000/api/docs          Swagger UI over the OpenAPI document
+http://localhost:3000/api/openapi.json  the document, better-auth's routes included
+```
+
+## Scripts
+
+| Script                    | What it does                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| `bun run check`           | lint, format, types and every suite: what CI runs                               |
+| `bun run dev`             | the API, restarting on a change                                                 |
+| `bun run dev:web`         | the website with hot reload on :3001                                            |
+| `bun run build`           | the website into `apps/web/dist`                                                |
+| `bun run typecheck`       | `tsc` over the contracts, the server and the website                            |
+| `bun run test`            | contracts, website, then the server (which starts and removes its own Postgres) |
+| `bun run lint` / `format` | oxlint and oxfmt, fixing                                                        |
+
+The server's own scripts (`db:generate`, `mail:preview`) are in
+`apps/server/package.json`.
+
+## Deploying
+
+One image (`Dockerfile`): the API serving the built website.
+`compose.prod.yml` runs it with Postgres, Redis, the rules checker (built from
+the game's repository) and the Cloudflare Tunnel. `deploy-pi.sh` copies both
+repositories' parts to the Raspberry Pi and rebuilds there, only when the
+developer asks. Everything about it, the setup list included, is in
+`docs/deploy.md`.

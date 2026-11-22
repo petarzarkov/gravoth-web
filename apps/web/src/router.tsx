@@ -64,15 +64,22 @@ export const Router = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  const navigate = useCallback((to: string, options: { replace?: boolean } = {}) => {
-    if (options.replace === true) window.history.replaceState(null, '', to);
-    else window.history.pushState(null, '', to);
-    setLocation(current());
-    window.scrollTo({ top: 0 });
-  }, []);
+  const navigate = useCallback(
+    (to: string, options: { replace?: boolean } = {}) => {
+      if (options.replace === true) window.history.replaceState(null, '', to);
+      else window.history.pushState(null, '', to);
+      setLocation(current());
+      window.scrollTo({ top: 0 });
+    },
+    [],
+  );
 
   const value = useMemo(() => ({ location, navigate }), [location, navigate]);
-  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
+  return (
+    <NavigationContext.Provider value={value}>
+      {children}
+    </NavigationContext.Provider>
+  );
 };
 
 export const useNavigation = (): Navigation => {
@@ -111,7 +118,10 @@ export const Link = ({
   to,
   children,
   ...rest
-}: { to: string; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) => {
+}: { to: string; children: ReactNode } & Omit<
+  AnchorHTMLAttributes<HTMLAnchorElement>,
+  'href'
+>) => {
   const { navigate } = useNavigation();
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     rest.onClick?.(event);

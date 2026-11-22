@@ -35,12 +35,17 @@ export class ApiError extends Error {
   }
 }
 
-/** The code out of an error body: dunx answers `{ message }`, better-auth `{ code, message }`. */
+/** The code out of an error body: dunx answers `{ error, status }`, better-auth `{ code, message }`. */
 export const errorCode = (status: number, body: unknown): string => {
   if (typeof body === 'object' && body !== null) {
-    const { code, message } = body as { code?: unknown; message?: unknown };
-    if (typeof code === 'string' && code !== '') return code;
-    if (typeof message === 'string' && message !== '') return message;
+    const { code, error, message } = body as {
+      code?: unknown;
+      error?: unknown;
+      message?: unknown;
+    };
+    for (const value of [code, error, message]) {
+      if (typeof value === 'string' && value !== '') return value;
+    }
   }
   return `HTTP_${status}`;
 };
@@ -79,12 +84,15 @@ export const request = async <T>(
       parsed = { message: text.slice(0, 200) };
     }
   }
-  if (!response.ok) throw new ApiError(response.status, errorCode(response.status, parsed));
+  if (!response.ok)
+    throw new ApiError(response.status, errorCode(response.status, parsed));
   return parsed as T;
 };
 
-const get = <T>(path: string, query?: Query) => request<T>('GET', withQuery(path, query));
-const post = <T>(path: string, body: unknown = {}) => request<T>('POST', path, body);
+const get = <T>(path: string, query?: Query) =>
+  request<T>('GET', withQuery(path, query));
+const post = <T>(path: string, body: unknown = {}) =>
+  request<T>('POST', path, body);
 
 export interface BoardQuery {
   readonly hardcore?: boolean | undefined;
@@ -99,9 +107,12 @@ export const api = {
   meta: () => get<MetaInfo>('/api/meta'),
 
   // Boards and builds: public.
-  boards: (hardcore: boolean) => get<BoardList>('/api/leaderboards', { hardcore }),
+  boards: (hardcore: boolean) =>
+    get<BoardList>('/api/leaderboards', { hardcore }),
   board: (key: string, query: BoardQuery = {}) =>
-    get<BoardPage>(`/api/leaderboards/${encodeURIComponent(key)}`, { ...query }),
+    get<BoardPage>(`/api/leaderboards/${encodeURIComponent(key)}`, {
+      ...query,
+    }),
   aroundMe: (key: string, query: BoardQuery & { around?: number } = {}) =>
     get<Neighbourhood>(`/api/leaderboards/${encodeURIComponent(key)}/me`, {
       hardcore: query.hardcore,
@@ -109,13 +120,18 @@ export const api = {
       view: query.view,
       around: query.around,
     }),
-  build: (id: string) => get<BuildCard>(`/api/builds/${encodeURIComponent(id)}`),
+  build: (id: string) =>
+    get<BuildCard>(`/api/builds/${encodeURIComponent(id)}`),
 
   // The session (better-auth).
   session: () => get<SessionView | null>(AUTH_ROUTES.session),
   methods: () => get<SignInMethods>('/api/account/methods'),
   signIn: (email: string, password: string) =>
-    post<unknown>(AUTH_ROUTES.signInEmail, { email, password, rememberMe: true }),
+    post<unknown>(AUTH_ROUTES.signInEmail, {
+      email,
+      password,
+      rememberMe: true,
+    }),
   signUp: (name: string, email: string, password: string) =>
     post<unknown>(AUTH_ROUTES.signUpEmail, { name, email, password }),
   /** Starts a provider's redirect: the answer's `url` is where the browser goes next. */
@@ -129,26 +145,43 @@ export const api = {
   requestPasswordReset: (email: string) =>
     post<unknown>(AUTH_ROUTES.requestPasswordReset, { email }),
   sendVerification: (email: string) =>
-    post<unknown>(AUTH_ROUTES.sendVerificationEmail, { email, callbackURL: '/account' }),
+    post<unknown>(AUTH_ROUTES.sendVerificationEmail, {
+      email,
+      callbackURL: '/account',
+    }),
 
   // The account and the profile.
   account: () => get<AccountView>('/api/account'),
   deleteAccount: (password?: string) =>
-    post<{ deleted: true }>('/api/account/delete', password === undefined ? {} : { password }),
+    post<{ deleted: true }>(
+      '/api/account/delete',
+      password === undefined ? {} : { password },
+    ),
   profile: () => get<ProfileView>('/api/profile'),
-  updateProfile: (changes: UpdateProfile) => request<ProfileView>('PATCH', '/api/profile', changes),
+  updateProfile: (changes: UpdateProfile) =>
+    request<ProfileView>('PATCH', '/api/profile', changes),
   heroes: () => get<MyHeroes>('/api/heroes'),
 
   // Friends and blocks.
-  friends: (cursor?: string) => get<Page<FriendView>>('/api/friends', { take: 100, cursor }),
-  incoming: () => get<Page<RequestView>>('/api/friends/requests/incoming', { take: 100 }),
-  outgoing: () => get<Page<RequestView>>('/api/friends/requests/outgoing', { take: 100 }),
-  askFriend: (displayName: string) => post<RequestOutcome>('/api/friends/requests', { displayName }),
-  accept: (id: string) => post<FriendView>(`/api/friends/requests/${id}/accept`),
-  decline: (id: string) => post<{ declined: true }>(`/api/friends/requests/${id}/decline`),
-  cancel: (id: string) => post<{ cancelled: true }>(`/api/friends/requests/${id}/cancel`),
-  unfriend: (userId: string) => post<{ removed: true }>(`/api/friends/${userId}/remove`),
+  friends: (cursor?: string) =>
+    get<Page<FriendView>>('/api/friends', { take: 100, cursor }),
+  incoming: () =>
+    get<Page<RequestView>>('/api/friends/requests/incoming', { take: 100 }),
+  outgoing: () =>
+    get<Page<RequestView>>('/api/friends/requests/outgoing', { take: 100 }),
+  askFriend: (displayName: string) =>
+    post<RequestOutcome>('/api/friends/requests', { displayName }),
+  accept: (id: string) =>
+    post<FriendView>(`/api/friends/requests/${id}/accept`),
+  decline: (id: string) =>
+    post<{ declined: true }>(`/api/friends/requests/${id}/decline`),
+  cancel: (id: string) =>
+    post<{ cancelled: true }>(`/api/friends/requests/${id}/cancel`),
+  unfriend: (userId: string) =>
+    post<{ removed: true }>(`/api/friends/${userId}/remove`),
   blocks: () => get<Page<BlockView>>('/api/blocks', { take: 100 }),
-  block: (displayName: string) => post<BlockView>('/api/blocks', { displayName }),
-  unblock: (userId: string) => post<{ unblocked: true }>(`/api/blocks/${userId}/remove`),
+  block: (displayName: string) =>
+    post<BlockView>('/api/blocks', { displayName }),
+  unblock: (userId: string) =>
+    post<{ unblocked: true }>(`/api/blocks/${userId}/remove`),
 };

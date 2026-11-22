@@ -1,4 +1,7 @@
-import { ValidatorClient, type HeroSummary } from '../gravoth/validator.client.js';
+import {
+  ValidatorClient,
+  type HeroSummary,
+} from '../gravoth/validator.client.js';
 import type { Hero, Leaderboard } from '../database/schema.js';
 import type { BuildSnapshot } from '@gravoth/contracts';
 import type { CheckedNumbers } from '../heroes/builds.service.js';
@@ -49,7 +52,8 @@ export class ValidatorBuildCheck extends BuildCheck {
   }
 
   async check(input: BuildCheckInput): Promise<BuildCheckResult> {
-    if (input.save === undefined || input.saveHeroId === undefined) return { verdict: 'pending', note: 'no save came with the score' };
+    if (input.save === undefined || input.saveHeroId === undefined)
+      return { verdict: 'pending', note: 'no save came with the score' };
     let report;
     try {
       report = await this.validator.check(input.save);
@@ -58,33 +62,54 @@ export class ValidatorBuildCheck extends BuildCheck {
     }
     if (!report.ok) {
       return report.needsNewerBuild
-        ? { verdict: 'pending', note: 'the rules checker needs a newer build of the game' }
+        ? {
+            verdict: 'pending',
+            note: 'the rules checker needs a newer build of the game',
+          }
         : { verdict: 'flagged', note: 'the save does not read' };
     }
-    const found = report.heroes.find((summary) => summary.id === input.saveHeroId);
-    if (found === undefined) return { verdict: 'flagged', note: 'the hero is not in the save' };
+    const found = report.heroes.find(
+      (summary) => summary.id === input.saveHeroId,
+    );
+    if (found === undefined)
+      return { verdict: 'flagged', note: 'the hero is not in the save' };
     const mismatch = this.contradiction(input, found);
     if (mismatch !== undefined) return { verdict: 'flagged', note: mismatch };
 
     let card;
     try {
-      card = (await this.validator.card(input.save, input.saveHeroId)) ?? undefined;
+      card =
+        (await this.validator.card(input.save, input.saveHeroId)) ?? undefined;
     } catch {
       card = undefined;
     }
     return {
       verdict: 'verified',
       note: null,
-      summary: { dps: found.dps, clearDps: found.clearDps, ehp: found.ehp, life: Math.round(found.life) },
+      summary: {
+        dps: found.dps,
+        clearDps: found.clearDps,
+        ehp: found.ehp,
+        life: Math.round(found.life),
+      },
       card,
     };
   }
 
-  private contradiction(input: BuildCheckInput, found: HeroSummary): string | undefined {
-    if (found.name.trim().toLowerCase() !== input.hero.name.toLowerCase()) return `the save's hero is named ${found.name}`;
-    if (found.class.toLowerCase() !== input.hero.class) return `the save's hero is a ${found.class}`;
-    if (found.level !== input.build.level) return `the save's hero is level ${found.level}`;
-    if (input.board.key === 'chart_tier' && input.score > found.highestChartTier) {
+  private contradiction(
+    input: BuildCheckInput,
+    found: HeroSummary,
+  ): string | undefined {
+    if (found.name.trim().toLowerCase() !== input.hero.name.toLowerCase())
+      return `the save's hero is named ${found.name}`;
+    if (found.class.toLowerCase() !== input.hero.class)
+      return `the save's hero is a ${found.class}`;
+    if (found.level !== input.build.level)
+      return `the save's hero is level ${found.level}`;
+    if (
+      input.board.key === 'chart_tier' &&
+      input.score > found.highestChartTier
+    ) {
       return `the save's highest chart tier is ${found.highestChartTier}`;
     }
     return undefined;

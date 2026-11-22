@@ -20,28 +20,60 @@ export class GuestUpgrade {
     if (guestId === userId) return;
     const moved = await this.db.transaction(async (tx) => {
       const taken = new Set(
-        (await tx.select({ name: hero.name }).from(hero).where(eq(hero.userId, userId))).map((row) => row.name.toLowerCase()),
+        (
+          await tx
+            .select({ name: hero.name })
+            .from(hero)
+            .where(eq(hero.userId, userId))
+        ).map((row) => row.name.toLowerCase()),
       );
-      const heroes = await tx.select({ id: hero.id, name: hero.name }).from(hero).where(eq(hero.userId, guestId));
+      const heroes = await tx
+        .select({ id: hero.id, name: hero.name })
+        .from(hero)
+        .where(eq(hero.userId, guestId));
       for (const { id, name } of heroes) {
         let free = name;
-        for (let n = 2; taken.has(free.toLowerCase()); n++) free = `${name.slice(0, 20).trimEnd()} ${n}`;
+        for (let n = 2; taken.has(free.toLowerCase()); n++)
+          free = `${name.slice(0, 20).trimEnd()} ${n}`;
         taken.add(free.toLowerCase());
-        await tx.update(hero).set({ userId, name: free, updatedAt: new Date() }).where(eq(hero.id, id));
+        await tx
+          .update(hero)
+          .set({ userId, name: free, updatedAt: new Date() })
+          .where(eq(hero.id, id));
       }
 
-      const [guestProfile] = await tx.select().from(profile).where(eq(profile.userId, guestId)).limit(1);
-      const [ownProfile] = await tx.select().from(profile).where(eq(profile.userId, userId)).limit(1);
-      if (guestProfile?.nameChosen && ownProfile !== undefined && !ownProfile.nameChosen) {
+      const [guestProfile] = await tx
+        .select()
+        .from(profile)
+        .where(eq(profile.userId, guestId))
+        .limit(1);
+      const [ownProfile] = await tx
+        .select()
+        .from(profile)
+        .where(eq(profile.userId, userId))
+        .limit(1);
+      if (
+        guestProfile?.nameChosen &&
+        ownProfile !== undefined &&
+        !ownProfile.nameChosen
+      ) {
         // The guest's row goes first, so the name is free for the unique index.
         await tx.delete(profile).where(eq(profile.userId, guestId));
         await tx
           .update(profile)
-          .set({ displayName: guestProfile.displayName, nameChosen: true, updatedAt: new Date() })
+          .set({
+            displayName: guestProfile.displayName,
+            nameChosen: true,
+            updatedAt: new Date(),
+          })
           .where(eq(profile.userId, userId));
       }
       return heroes.length;
     });
-    this.logger.info('guest account upgraded', { guestId, userId, heroes: moved });
+    this.logger.info('guest account upgraded', {
+      guestId,
+      userId,
+      heroes: moved,
+    });
   }
 }

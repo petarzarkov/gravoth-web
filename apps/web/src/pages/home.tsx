@@ -18,7 +18,9 @@ const BoardCard = ({ board }: { board: BoardView }) => {
     <Panel className="board-card">
       <Link to={boardHref(board)} className="board-card-title">
         <h2>{board.title}</h2>
-        <span className="board-card-hint">{board.sort === 'asc' ? 'Fastest first' : 'Highest first'}</span>
+        <span className="board-card-hint">
+          {board.sort === 'asc' ? 'Fastest first' : 'Highest first'}
+        </span>
       </Link>
       <Loaded load={top}>
         {(page) =>
@@ -27,14 +29,21 @@ const BoardCard = ({ board }: { board: BoardView }) => {
           ) : (
             <ol className="podium">
               {page.entries.data.map((entry) => (
-                <li key={entry.id} className={`podium-row podium-${entry.rank}`}>
+                <li
+                  key={entry.id}
+                  className={`podium-row podium-${entry.rank}`}
+                >
                   <span className="podium-rank">{entry.rank}</span>
                   <Link to={`/builds/${entry.build.id}`} className="podium-who">
                     <span className="podium-hero">{entry.hero.name}</span>
-                    <span className="podium-player">{entry.player.displayName}</span>
+                    <span className="podium-player">
+                      {entry.player.displayName}
+                    </span>
                   </Link>
                   <ClassBadge heroClass={entry.hero.class} />
-                  <span className="podium-score">{formatScore(entry.score, board.format)}</span>
+                  <span className="podium-score">
+                    {formatScore(entry.score, board.format)}
+                  </span>
                 </li>
               ))}
             </ol>
@@ -52,7 +61,9 @@ export const HomePage = () => {
   const query = useQuery();
   const { navigate } = useNavigation();
   const hardcore = query.get('hardcore') === 'true';
-  const [boards, reload] = useLoad(`boards:${hardcore}`, () => api.boards(hardcore));
+  const [boards, reload] = useLoad(`boards:${hardcore}`, () =>
+    api.boards(hardcore),
+  );
 
   return (
     <>
@@ -86,7 +97,10 @@ export const HomePage = () => {
           ) : (
             <div className="board-grid">
               {list.boards.map((board) => (
-                <BoardCard key={`${board.key}:${board.hardcore}`} board={board} />
+                <BoardCard
+                  key={`${board.key}:${board.hardcore}`}
+                  board={board}
+                />
               ))}
             </div>
           )

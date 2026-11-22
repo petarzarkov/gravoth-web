@@ -1,4 +1,10 @@
-import { Auth, AuthContext, AuthModule, bunPassword, SessionGuard } from '@dunx/auth';
+import {
+  Auth,
+  AuthContext,
+  AuthModule,
+  bunPassword,
+  SessionGuard,
+} from '@dunx/auth';
 import { drizzleDatabase } from '@dunx/auth/drizzle';
 import { Logger, Module } from '@dunx/core';
 import { DbConnection } from '@dunx/infra/db';
@@ -41,7 +47,12 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
     AccountServicesModule,
     AuthModule.forRootAsync(
       {
-        imports: [DatabaseModule, MailModule, PlayersModule, AccountServicesModule],
+        imports: [
+          DatabaseModule,
+          MailModule,
+          PlayersModule,
+          AccountServicesModule,
+        ],
         useFactory: (
           config: AppConfigService,
           connection: DbConnection,
@@ -58,15 +69,23 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
             // better-auth's own lines through the app's logger, so they are JSON in
             // production like every other line.
             logger: {
-              log: (level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: unknown[]) =>
-                logger[level](`[better-auth] ${message}`, ...(args.length === 0 ? [] : [{ details: args }])),
+              log: (
+                level: 'debug' | 'info' | 'warn' | 'error',
+                message: string,
+                ...args: unknown[]
+              ) =>
+                logger[level](
+                  `[better-auth] ${message}`,
+                  ...(args.length === 0 ? [] : [{ details: args }]),
+                ),
             },
             secret: config.get('auth.secret'),
             // better-auth rejects a browser request whose Origin is not this (or a trusted origin below), and builds
             // every OAuth redirect URI from it: `<PUBLIC_URL>/api/auth/callback/<provider>`.
             baseURL: publicUrl,
             basePath: '/api/auth',
-            trustedOrigins: website === undefined || website === 'null' ? [] : [website],
+            trustedOrigins:
+              website === undefined || website === 'null' ? [] : [website],
             // The tables are drizzle's (database/auth.schema.ts), the pool the app's own.
             database: drizzleDatabase(connection),
             // Postgres makes the ids (uuid columns with gen_random_uuid()), so every foreign key to a user is one type.
@@ -74,10 +93,15 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
               database: { generateId: 'uuid' as const },
               // Behind the Cloudflare Tunnel the caller's address is Cloudflare's header,
               // which better-auth's own rate limit counts by.
-              ipAddress: { ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'] },
+              ipAddress: {
+                ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'],
+              },
             },
             // A session lives `AUTH_SESSION_DAYS` unused, and a day of use extends it.
-            session: { expiresIn: config.get('auth.sessionDays') * 86_400, updateAge: 86_400 },
+            session: {
+              expiresIn: config.get('auth.sessionDays') * 86_400,
+              updateAge: 86_400,
+            },
             emailAndPassword: {
               enabled: true,
               minPasswordLength: 8,
@@ -87,12 +111,28 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
               // Playing never waits on a mail; the account shows whether the address is confirmed.
               requireEmailVerification: false,
               revokeSessionsOnPasswordReset: true,
-              sendResetPassword: async ({ user, token }: { user: { email: string; name: string }; token: string }) =>
-                mail.passwordReset(user.email, user.name, `${publicUrl}${PAGES.resetPassword}?token=${encodeURIComponent(token)}`),
+              sendResetPassword: async ({
+                user,
+                token,
+              }: {
+                user: { email: string; name: string };
+                token: string;
+              }) =>
+                mail.passwordReset(
+                  user.email,
+                  user.name,
+                  `${publicUrl}${PAGES.resetPassword}?token=${encodeURIComponent(token)}`,
+                ),
             },
             emailVerification: {
               sendOnSignUp: true,
-              sendVerificationEmail: async ({ user, token }: { user: { email: string; name: string }; token: string }) =>
+              sendVerificationEmail: async ({
+                user,
+                token,
+              }: {
+                user: { email: string; name: string };
+                token: string;
+              }) =>
                 mail.verification(
                   user.email,
                   user.name,
@@ -115,8 +155,16 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
               user: {
                 create: {
                   // After the user's transaction commits: the profile, under a free display name.
-                  after: async (user: { id: string; name: string; isAnonymous?: boolean | null }) => {
-                    await profiles.ensure(user.id, user.name, user.isAnonymous === true);
+                  after: async (user: {
+                    id: string;
+                    name: string;
+                    isAnonymous?: boolean | null;
+                  }) => {
+                    await profiles.ensure(
+                      user.id,
+                      user.name,
+                      user.isAnonymous === true,
+                    );
                   },
                 },
               },
@@ -144,7 +192,15 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
             ],
           };
         },
-        inject: [AppConfigService, DbConnection, Mailer, SignInProviders, Profiles, GuestUpgrade, Logger] as const,
+        inject: [
+          AppConfigService,
+          DbConnection,
+          Mailer,
+          SignInProviders,
+          Profiles,
+          GuestUpgrade,
+          Logger,
+        ] as const,
       },
       '/auth',
     ),

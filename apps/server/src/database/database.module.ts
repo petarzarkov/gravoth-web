@@ -1,5 +1,10 @@
 import { Module } from '@dunx/core';
-import { DbConnection, DbModule, QueryMetrics, SqlOptions } from '@dunx/infra/db';
+import {
+  DbConnection,
+  DbModule,
+  QueryMetrics,
+  SqlOptions,
+} from '@dunx/infra/db';
 import { AppConfigService } from '../config.js';
 import { Db } from './db.js';
 import { Migrations } from './migrations.js';

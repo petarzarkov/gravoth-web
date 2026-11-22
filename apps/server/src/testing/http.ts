@@ -14,13 +14,23 @@ export const call = async <T = Record<string, unknown>>(
   const response = await fetch(`${base}${path}`, {
     method,
     headers: {
-      ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
-      ...(options.token === undefined ? {} : { authorization: `Bearer ${options.token}` }),
+      ...(options.body === undefined
+        ? {}
+        : { 'content-type': 'application/json' }),
+      ...(options.token === undefined
+        ? {}
+        : { authorization: `Bearer ${options.token}` }),
     },
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    ...(options.body === undefined
+      ? {}
+      : { body: JSON.stringify(options.body) }),
   });
   const text = await response.text();
-  return { status: response.status, body: (text === '' ? {} : JSON.parse(text)) as T, token: response.headers.get('set-auth-token') };
+  return {
+    status: response.status,
+    body: (text === '' ? {} : JSON.parse(text)) as T,
+    token: response.headers.get('set-auth-token'),
+  };
 };
 
 export interface Player {
@@ -30,17 +40,54 @@ export interface Player {
 }
 
 /** A new email-and-password account, and its profile's display name. */
-export const signUp = async (base: string, name: string, email: string, password = 'a long enough password'): Promise<Player> => {
-  const reply = await call<{ user: { id: string } }>(base, 'POST', '/api/auth/sign-up/email', { body: { name, email, password } });
-  if (reply.status !== 200 || reply.token === null) throw new Error(`sign-up ${email} answered ${reply.status}: ${JSON.stringify(reply.body)}`);
-  const profile = await call<{ displayName: string }>(base, 'GET', '/api/profile', { token: reply.token });
-  return { token: reply.token, id: reply.body.user.id, displayName: profile.body.displayName };
+export const signUp = async (
+  base: string,
+  name: string,
+  email: string,
+  password = 'a long enough password',
+): Promise<Player> => {
+  const reply = await call<{ user: { id: string } }>(
+    base,
+    'POST',
+    '/api/auth/sign-up/email',
+    { body: { name, email, password } },
+  );
+  if (reply.status !== 200 || reply.token === null)
+    throw new Error(
+      `sign-up ${email} answered ${reply.status}: ${JSON.stringify(reply.body)}`,
+    );
+  const profile = await call<{ displayName: string }>(
+    base,
+    'GET',
+    '/api/profile',
+    { token: reply.token },
+  );
+  return {
+    token: reply.token,
+    id: reply.body.user.id,
+    displayName: profile.body.displayName,
+  };
 };
 
 /** A new guest account. */
 export const guest = async (base: string): Promise<Player> => {
-  const reply = await call<{ user: { id: string } }>(base, 'POST', '/api/auth/sign-in/anonymous', { body: {} });
-  if (reply.status !== 200 || reply.token === null) throw new Error(`guest sign-in answered ${reply.status}`);
-  const profile = await call<{ displayName: string }>(base, 'GET', '/api/profile', { token: reply.token });
-  return { token: reply.token, id: reply.body.user.id, displayName: profile.body.displayName };
+  const reply = await call<{ user: { id: string } }>(
+    base,
+    'POST',
+    '/api/auth/sign-in/anonymous',
+    { body: {} },
+  );
+  if (reply.status !== 200 || reply.token === null)
+    throw new Error(`guest sign-in answered ${reply.status}`);
+  const profile = await call<{ displayName: string }>(
+    base,
+    'GET',
+    '/api/profile',
+    { token: reply.token },
+  );
+  return {
+    token: reply.token,
+    id: reply.body.user.id,
+    displayName: profile.body.displayName,
+  };
 };

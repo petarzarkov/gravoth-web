@@ -13,8 +13,14 @@ import { SessionProvider } from './session.js';
 
 const routes: readonly RouteDefinition[] = [
   { pattern: '/', render: () => <HomePage /> },
-  { pattern: '/boards/:key', render: ({ key }) => <BoardPage key={key} boardKey={key ?? ''} /> },
-  { pattern: '/builds/:id', render: ({ id }) => <BuildPage key={id} id={id ?? ''} /> },
+  {
+    pattern: '/boards/:key',
+    render: ({ key }) => <BoardPage key={key} boardKey={key ?? ''} />,
+  },
+  {
+    pattern: '/builds/:id',
+    render: ({ id }) => <BuildPage key={id} id={id ?? ''} />,
+  },
   { pattern: '/sign-in', render: () => <SignInPage /> },
   { pattern: '/account', render: () => <AccountPage /> },
   { pattern: '/friends', render: () => <FriendsPage /> },

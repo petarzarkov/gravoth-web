@@ -8,7 +8,9 @@ import { SQL } from 'bun';
 export const testServerUrl = (): string => {
   const url = Bun.env['TEST_DATABASE_URL'];
   if (url === undefined || url === '') {
-    throw new Error('TEST_DATABASE_URL is unset: run the suites with `bun run test`, which starts Postgres from compose.yml.');
+    throw new Error(
+      'TEST_DATABASE_URL is unset: run the suites with `bun run test`, which starts Postgres from compose.yml.',
+    );
   }
   return url;
 };

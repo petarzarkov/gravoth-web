@@ -2,7 +2,7 @@ import { HttpError, HttpStatusCode } from '@dunx/http';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
-import { hero, type Hero, type HeroClass } from '../database/schema.js';
+import { hero, type Hero } from '../database/schema.js';
 import type { HeroView, RegisterHero } from '@gravoth/contracts';
 export type { HeroView, RegisterHero };
 
@@ -24,11 +24,23 @@ export const toHeroView = (row: Hero): HeroView => ({
 export class Heroes {
   constructor(private readonly db: Db) {}
 
-  async register(userId: string, input: RegisterHero): Promise<{ hero: Hero; created: boolean }> {
+  async register(
+    userId: string,
+    input: RegisterHero,
+  ): Promise<{ hero: Hero; created: boolean }> {
     const existing = await this.byName(userId, input.name);
-    if (existing !== undefined) return { hero: await this.reconcile(existing, input), created: false };
+    if (existing !== undefined)
+      return { hero: await this.reconcile(existing, input), created: false };
     try {
-      const [row] = await this.db.insert(hero).values({ userId, name: input.name, class: input.class, hardcore: input.hardcore }).returning();
+      const [row] = await this.db
+        .insert(hero)
+        .values({
+          userId,
+          name: input.name,
+          class: input.class,
+          hardcore: input.hardcore,
+        })
+        .returning();
       if (row === undefined) throw new Error('hero not stored');
       return { hero: row, created: true };
     } catch (error) {
@@ -41,11 +53,19 @@ export class Heroes {
   }
 
   async mine(userId: string): Promise<Hero[]> {
-    return this.db.select().from(hero).where(eq(hero.userId, userId)).orderBy(asc(hero.createdAt), asc(hero.id));
+    return this.db
+      .select()
+      .from(hero)
+      .where(eq(hero.userId, userId))
+      .orderBy(asc(hero.createdAt), asc(hero.id));
   }
 
   async find(id: string): Promise<Hero | undefined> {
-    const [row] = await this.db.select().from(hero).where(eq(hero.id, id)).limit(1);
+    const [row] = await this.db
+      .select()
+      .from(hero)
+      .where(eq(hero.id, id))
+      .limit(1);
     return row;
   }
 
@@ -56,23 +76,34 @@ export class Heroes {
       .from(hero)
       .where(and(eq(hero.id, id), eq(hero.userId, userId)))
       .limit(1);
-    if (row === undefined) throw new HttpError(HttpStatusCode.NOT_FOUND, 'HERO_NOT_FOUND');
+    if (row === undefined)
+      throw new HttpError(HttpStatusCode.NOT_FOUND, 'HERO_NOT_FOUND');
     return row;
   }
 
-  private async byName(userId: string, name: string): Promise<Hero | undefined> {
+  private async byName(
+    userId: string,
+    name: string,
+  ): Promise<Hero | undefined> {
     const [row] = await this.db
       .select()
       .from(hero)
-      .where(and(eq(hero.userId, userId), sql`lower(${hero.name}) = lower(${name})`))
+      .where(
+        and(eq(hero.userId, userId), sql`lower(${hero.name}) = lower(${name})`),
+      )
       .limit(1);
     return row;
   }
 
   private async reconcile(existing: Hero, input: RegisterHero): Promise<Hero> {
-    if (existing.class !== input.class) throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_NAME_TAKEN');
+    if (existing.class !== input.class)
+      throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_NAME_TAKEN');
     if (existing.hardcore === input.hardcore) return existing;
-    const [row] = await this.db.update(hero).set({ hardcore: input.hardcore, updatedAt: new Date() }).where(eq(hero.id, existing.id)).returning();
+    const [row] = await this.db
+      .update(hero)
+      .set({ hardcore: input.hardcore, updatedAt: new Date() })
+      .where(eq(hero.id, existing.id))
+      .returning();
     return row ?? existing;
   }
 }

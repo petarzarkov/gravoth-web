@@ -1,10 +1,34 @@
 import { AuthContext, SessionGuard } from '@dunx/auth';
-import { Controller, Get, HttpStatusCode, Patch, Post, Throttle, UseGuards, type Input } from '@dunx/http';
+import {
+  Controller,
+  Get,
+  HttpStatusCode,
+  Patch,
+  Post,
+  Throttle,
+  UseGuards,
+  type Input,
+} from '@dunx/http';
 import type { Page } from '@dunx/infra/pagination';
-import { PageQuery, PlayerId, RequestId, ToPlayer, UpdateProfile } from '@gravoth/contracts';
-import { Profiles, toProfileView, type ProfileView } from '../players/profiles.service.js';
+import {
+  PageQuery,
+  PlayerId,
+  RequestId,
+  ToPlayer,
+  UpdateProfile,
+} from '@gravoth/contracts';
+import {
+  Profiles,
+  toProfileView,
+  type ProfileView,
+} from '../players/profiles.service.js';
 import { Blocks, type BlockView } from './blocks.service.js';
-import { Friends, type FriendView, type RequestOutcome, type RequestView } from './friends.service.js';
+import {
+  Friends,
+  type FriendView,
+  type RequestOutcome,
+  type RequestView,
+} from './friends.service.js';
 import { callerOf } from './players.js';
 
 const ok = HttpStatusCode.OK;
@@ -27,13 +51,21 @@ export class ProfileController {
   @Get('/')
   async mine(): Promise<ProfileView> {
     const { user } = this.context.require();
-    return toProfileView(await this.profiles.ensure(user.id, user.name, callerOf(this.context).guest));
+    return toProfileView(
+      await this.profiles.ensure(
+        user.id,
+        user.name,
+        callerOf(this.context).guest,
+      ),
+    );
   }
 
   /** 409 `NAME_TAKEN`, 422 `NAME_NOT_ALLOWED` (the word filter). */
   @Patch('/', updateProfile)
   async update({ body }: Input<typeof updateProfile>): Promise<ProfileView> {
-    return toProfileView(await this.profiles.update(callerOf(this.context).id, body));
+    return toProfileView(
+      await this.profiles.update(callerOf(this.context).id, body),
+    );
   }
 }
 
@@ -78,13 +110,17 @@ export class FriendsController {
   }
 
   @Post('/requests/:id/decline', onRequest)
-  async decline({ params }: Input<typeof onRequest>): Promise<{ declined: true }> {
+  async decline({
+    params,
+  }: Input<typeof onRequest>): Promise<{ declined: true }> {
     await this.friends.decline(params.id);
     return { declined: true };
   }
 
   @Post('/requests/:id/cancel', onRequest)
-  async cancel({ params }: Input<typeof onRequest>): Promise<{ cancelled: true }> {
+  async cancel({
+    params,
+  }: Input<typeof onRequest>): Promise<{ cancelled: true }> {
     await this.friends.cancel(params.id);
     return { cancelled: true };
   }
@@ -113,7 +149,9 @@ export class BlocksController {
   }
 
   @Post('/:userId/remove', onPlayer)
-  async unblock({ params }: Input<typeof onPlayer>): Promise<{ unblocked: true }> {
+  async unblock({
+    params,
+  }: Input<typeof onPlayer>): Promise<{ unblocked: true }> {
     await this.blocks.unblock(params.userId);
     return { unblocked: true };
   }

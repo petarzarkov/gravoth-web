@@ -1,8 +1,14 @@
 # @gravoth/server
 
-Notes for an agent working in this application. It is a
+Notes for an agent working in this application, the API of the gravoth-web
+monorepo (the repository's `AGENTS.md` has the developer's rules). It is a
 [dunx](https://github.com/petarzarkov/dunx) app, scaffolded by
 `bunx @dunx/create-app`.
+
+**Shapes come from `@gravoth/contracts`.** A request schema or a response shape
+a client reads is declared in `packages/contracts` and imported here; a service
+re-exports the type at most. `src/contracts.test.ts` checks that every error
+code thrown here is in the contracts' `ERROR_CODES`.
 
 ## Commands
 
@@ -32,6 +38,7 @@ bun run mail:preview   # the mail templates
 - `src/social/` - profile, friends, blocks; `src/heroes/` - heroes and builds; `src/boards/` - the boards
 - `src/mail/` - the mailer and its React Email templates; `src/backup/` - the nightly dump to R2
 - `src/cache/`, `src/throttle/`, `src/schedule/` - the scaffold's infrastructure
+- `src/web/` - the website's page (`SpaShell`) and the static options
 - `src/*.test.ts` - the suites; `src/testing/` boots the app over a fresh database; `src/test.preload.ts` quiets the logs
 - `scripts/test.ts` - what `bun run test` runs
 - `bunfig.toml` - the preload line constructor injection needs
@@ -55,6 +62,7 @@ bottom is what stops that starting a server.
 - **social, heroes, boards** - `/api/profile`, `/api/friends`, `/api/blocks`, `/api/heroes`, `/api/builds/:id`, `/api/leaderboards`.
 - **cache** - Bun.RedisClient and a two-tier Cache in front of it.
 - **throttle** - A fixed-window rate limit per caller, with the counter in Redis.
+- **web** - the website's build at `/` (`src/web/`): the page for the paths it owns, then its hashed assets. Never under `/api`.
 - **schedule** - @Cron, @Interval and @OnceOnBoot on Bun.cron, armed at boot.
 
 ## Services

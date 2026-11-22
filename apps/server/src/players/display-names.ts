@@ -16,21 +16,69 @@ export const FALLBACK_NAME = 'Hero';
 
 /** Refused anywhere in the name. */
 const ANYWHERE = [
-  'fuck', 'cunt', 'nigg', 'fagg', 'faggot', 'retard', 'hitler', 'whore', 'rapist', 'molest', 'kkk',
+  'fuck',
+  'cunt',
+  'nigg',
+  'fagg',
+  'faggot',
+  'retard',
+  'hitler',
+  'whore',
+  'rapist',
+  'molest',
+  'kkk',
   // Posing as the game or its staff.
-  'gravoth', 'admin', 'moderator', 'official',
+  'gravoth',
+  'admin',
+  'moderator',
+  'official',
 ];
 
 /** Refused as a whole word: the name itself, or one of its parts split at `_`, `-` and digits. */
 const WHOLE_WORDS = new Set([
-  'shit', 'bitch', 'slut', 'cock', 'dick', 'pussy', 'porn', 'rape', 'fag', 'sex', 'ass', 'anal', 'penis', 'vagina', 'nazi', 'cum', 'tits',
-  'mod', 'staff', 'support', 'system', 'dev', 'developer', 'gm', 'server', 'null', 'undefined',
+  'shit',
+  'bitch',
+  'slut',
+  'cock',
+  'dick',
+  'pussy',
+  'porn',
+  'rape',
+  'fag',
+  'sex',
+  'ass',
+  'anal',
+  'penis',
+  'vagina',
+  'nazi',
+  'cum',
+  'tits',
+  'mod',
+  'staff',
+  'support',
+  'system',
+  'dev',
+  'developer',
+  'gm',
+  'server',
+  'null',
+  'undefined',
 ]);
 
-const LOOK_ALIKES: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', $: 's', v: 'u' };
+const LOOK_ALIKES: Record<string, string> = {
+  '0': 'o',
+  '1': 'i',
+  '3': 'e',
+  '4': 'a',
+  '5': 's',
+  '7': 't',
+  '@': 'a',
+  $: 's',
+  v: 'u',
+};
 
 const fold = (text: string): string =>
-  [...text.toLowerCase()].map((c) => LOOK_ALIKES[c] ?? c).join('');
+  Array.from(text.toLowerCase(), (c) => LOOK_ALIKES[c] ?? c).join('');
 
 export type NameProblem = 'format' | 'not-allowed';
 
@@ -40,10 +88,21 @@ export const displayNameProblem = (name: string): NameProblem | undefined => {
   // Both spellings: folded (`fvck` is `fuck`) and as typed (folding `v` would hide `gravoth` as `grauoth`).
   const plain = name.replace(/[_-]/g, '').toLowerCase();
   const joined = fold(plain);
-  if (ANYWHERE.some((word) => joined.includes(word) || plain.includes(word))) return 'not-allowed';
+  if (ANYWHERE.some((word) => joined.includes(word) || plain.includes(word)))
+    return 'not-allowed';
   // Whole words are checked before folding digits, so `Ana2` is the word `ana` and not `anaz`.
-  const parts = name.toLowerCase().split(/[_\-0-9]+/).filter((part) => part.length > 0);
-  const words = [...parts, ...parts.map(fold), plain, plain.replace(/[0-9]+$/, ''), joined, joined.replace(/[0-9]+$/, '')];
+  const parts = name
+    .toLowerCase()
+    .split(/[_\-0-9]+/)
+    .filter((part) => part.length > 0);
+  const words = [
+    ...parts,
+    ...parts.map(fold),
+    plain,
+    plain.replace(/[0-9]+$/, ''),
+    joined,
+    joined.replace(/[0-9]+$/, ''),
+  ];
   if (words.some((word) => WHOLE_WORDS.has(word))) return 'not-allowed';
   return undefined;
 };
@@ -54,7 +113,10 @@ export const displayNameProblem = (name: string): NameProblem | undefined => {
  * adds digits until it is free.
  */
 export const baseDisplayName = (name: string): string => {
-  const letters = name.normalize('NFKD').replace(/[^A-Za-z0-9]/g, '').slice(0, 14);
+  const letters = name
+    .normalize('NFKD')
+    .replace(/[^A-Za-z0-9]/g, '')
+    .slice(0, 14);
   if (letters.length < 3) return FALLBACK_NAME;
   return displayNameProblem(letters) === undefined ? letters : FALLBACK_NAME;
 };
