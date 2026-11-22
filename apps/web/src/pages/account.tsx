@@ -20,6 +20,7 @@ import {
 import { useEffect, useState, type FormEvent } from 'react';
 import { ApiError, api } from '../api.js';
 import { Empty, HeroBadges, Loaded, Panel } from '../components/bits.js';
+import { CloudSavePanel } from '../components/cloud-save-panel.js';
 import { PageTitle } from '../components/layout.js';
 import { PicturePicker } from '../components/picture-picker.js';
 import { useLoad } from '../components/use-load.js';
@@ -270,6 +271,9 @@ export const AccountPage = () => {
               }
             </Loaded>
           </Panel>
+          {account.state === 'ready' && !account.value.guest ? (
+            <CloudSavePanel userId={account.value.id} />
+          ) : null}
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 6 }}>
           <Loaded load={account} retry={reloadAccount}>
@@ -338,8 +342,8 @@ export const AccountPage = () => {
                       >
                         <Stack gap="md">
                           <Text size="sm">
-                            Your heroes, records, builds and friends are deleted
-                            with it. This can't be undone.
+                            Your heroes, records, builds, cloud save and friends
+                            are deleted with it. This can't be undone.
                           </Text>
                           {hasPassword ? (
                             <PasswordInput

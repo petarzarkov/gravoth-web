@@ -10,7 +10,15 @@ import {
   borderWidth,
   portraitSrc,
 } from './components/avatar.js';
-import { formatCompact, formatScore, messageFor, titleOf } from './format.js';
+import {
+  formatBytes,
+  formatCompact,
+  formatPlayTime,
+  formatRelative,
+  formatScore,
+  messageFor,
+  titleOf,
+} from './format.js';
 import { matchPath } from './router.js';
 import { safeNext } from './pages/sign-in.js';
 
@@ -30,6 +38,33 @@ describe('format', () => {
     expect(formatCompact(12_345)).toBe('12.3k');
     expect(formatCompact(4_560_000)).toBe('4.56M');
     expect(formatCompact(100_000)).toBe('100k');
+  });
+
+  test("a cloud save's play time reads in hours and minutes", () => {
+    expect(formatPlayTime(0)).toBe('0:00');
+    expect(formatPlayTime(59)).toBe('0:00');
+    expect(formatPlayTime(3_725)).toBe('1:02');
+    expect(formatPlayTime(148_020)).toBe('41:07');
+  });
+
+  test('a size reads in B, KB or MB', () => {
+    expect(formatBytes(512)).toBe('512 B');
+    expect(formatBytes(12_345)).toBe('12.3 KB');
+    expect(formatBytes(999_999)).toBe('1 MB');
+    expect(formatBytes(3_000_000)).toBe('3 MB');
+  });
+
+  test('a time reads as how long ago it was', () => {
+    const now = Date.parse('2026-11-22T12:00:00Z');
+    const ago = (seconds: number) =>
+      formatRelative(new Date(now - seconds * 1000).toISOString(), now);
+    expect(ago(10)).toBe('just now');
+    expect(ago(300)).toBe('5 minutes ago');
+    expect(ago(3_300)).toBe('1 hour ago');
+    expect(ago(86_400)).toBe('yesterday');
+    expect(ago(3 * 86_400)).toBe('3 days ago');
+    expect(ago(70 * 86_400)).toBe('2 months ago');
+    expect(formatRelative('not a time', now)).toBe('not a time');
   });
 
   test('an id without a name reads as words', () => {

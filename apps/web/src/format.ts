@@ -46,6 +46,44 @@ export const formatDate = (iso: string): string => {
       });
 };
 
+/** Play time as the game's choice card shows it: hours and minutes (`0:05`, `41:07`). */
+export const formatPlayTime = (seconds: number): string => {
+  const minutes = Math.floor(Math.max(0, seconds) / 60);
+  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`;
+};
+
+/** A size in bytes: `512 B`, `12.3 KB`, `2.95 MB` (1 KB is 1,000 bytes). */
+export const formatBytes = (bytes: number): string => {
+  if (bytes < 1000) return `${Math.max(0, Math.round(bytes))} B`;
+  if (bytes < 999_500) return `${trim(bytes / 1000)} KB`;
+  return `${trim(bytes / 1_000_000)} MB`;
+};
+
+const RELATIVE_STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ['minute', 60],
+  ['hour', 3_600],
+  ['day', 86_400],
+  ['week', 604_800],
+  ['month', 2_629_800],
+  ['year', 31_557_600],
+];
+
+/** How long ago `iso` was: `just now`, `5 minutes ago`, `yesterday`, `3 months ago`. */
+export const formatRelative = (iso: string, now = Date.now()): string => {
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return iso;
+  const seconds = Math.max(0, (now - at) / 1000);
+  if (seconds < 45) return 'just now';
+  // The largest unit the time nearly fills (55 minutes reads as an hour).
+  let [unit, size] = RELATIVE_STEPS[0] ?? ['minute', 60];
+  for (const step of RELATIVE_STEPS)
+    if (seconds >= step[1] * 0.9) [unit, size] = step;
+  return new Intl.RelativeTimeFormat('en-GB', { numeric: 'auto' }).format(
+    -Math.max(1, Math.round(seconds / size)),
+    unit,
+  );
+};
+
 /** A skill or support id the game sent without a name: `blade_vortex` reads `Blade Vortex`. */
 export const titleOf = (id: string, name?: string): string =>
   name ??

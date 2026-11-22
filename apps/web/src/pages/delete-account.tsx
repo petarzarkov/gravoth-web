@@ -23,10 +23,10 @@ export const DeleteAccountPage = () => {
           Deleting a Gravoth Online account removes, at once and for good: the
           account and its sign-ins (email and password, Google, Discord), your
           display name and privacy settings, your heroes and every build they
-          posted, your records on the leaderboards, your friends, friend
-          requests and blocks. A confirmation mail goes to a confirmed address.
-          The nightly backups that still hold them are deleted as they turn 30
-          days old.
+          posted, your records on the leaderboards, the cloud save the game
+          keeps, your friends, friend requests and blocks. A confirmation mail
+          goes to a confirmed address. The nightly backups that still hold them
+          are deleted as they turn 30 days old.
         </Text>
         <Text mb="lg">
           Your heroes on your phone are not affected: the game plays offline and

@@ -6,6 +6,8 @@ import type {
   BoardList,
   BoardPage,
   BuildCard,
+  CloudSaveDeleted,
+  CloudSaveView,
   FriendView,
   HeroClass,
   MetaInfo,
@@ -63,7 +65,7 @@ export const withQuery = (path: string, query: Query = {}): string => {
 };
 
 export const request = async <T>(
-  method: 'GET' | 'POST' | 'PATCH',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
 ): Promise<T> => {
@@ -163,6 +165,9 @@ export const api = {
   updateProfile: (changes: UpdateProfile) =>
     request<ProfileView>('PATCH', '/api/profile', changes),
   heroes: () => get<MyHeroes>('/api/heroes'),
+  /** The game's cloud save, without its data: what it is, not the save itself. */
+  cloudSave: () => get<CloudSaveView>('/api/saves/me', { data: false }),
+  deleteCloudSave: () => request<CloudSaveDeleted>('DELETE', '/api/saves/me'),
 
   // Friends and blocks.
   friends: (cursor?: string) =>
