@@ -2,7 +2,7 @@
 
 The product plan (what each step gives players, the decisions behind it) is in
 the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
-(decisions 171, 216, 218 and 219). This page is the code's side.
+(decisions 171, 216, 218, 219 and 225). This page is the code's side.
 
 ```
  the game (Unity, Android)          the website (apps/web, Cloudflare Pages)
@@ -24,15 +24,15 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's C# client mirrors the same shapes by hand; the OpenAPI document at
   `/api/openapi.json` is the reference for it.
 - **`apps/server`** is the API. Each feature is a dunx module (`auth`,
-  `players`, `social`, `heroes`, `boards`, `mail`, `backup`) over one Postgres
+  `players`, `social`, `heroes`, `boards`, `saves`, `mail`, `backup`) over one Postgres
   pool (drizzle over `Bun.SQL`). better-auth serves sign-in under `/api/auth`:
   the game sends `Authorization: Bearer`, the website a first-party cookie.
   `web/` serves the website's build.
 - **`apps/web`** is the website: React 19 with Mantine 9 (`theme.ts`, the
   game's palette, always dark) on Bun's bundler, and a small history router
   (`router.tsx`). Pages: the boards
-  (`/`, `/boards/:key`), a build card (`/builds/:id`), sign-in, the account and
-  friends. Every request goes through `api.ts`, typed by the contracts.
+  (`/`, `/boards/:key`), a build card (`/builds/:id`), sign-in, the account
+  (with the cloud save) and friends. Every request goes through `api.ts`, typed by the contracts.
 
 ## The database
 
@@ -40,16 +40,17 @@ Everything a player has hangs off their user row, so deleting the user deletes
 it all in one statement, and the database refuses data that does not fit
 together. The tables (`apps/server/src/database/`):
 
-| Table                       | What it holds                                                                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `users`, `accounts`         | better-auth's user, and one row per linked sign-in (`credential`, `google`, `discord`)                                           |
-| `sessions`, `verifications` | sessions (the bearer token) and mail-link codes                                                                                  |
-| `profiles`                  | the display name (unique in any case, format-checked, word-filtered), the picture (a portrait or the sign-in's photo), the flags |
-| `friendships`, `blocks`     | one row per pair whichever asked (`pending` or `accepted`), never oneself; blocks one way                                        |
-| `heroes`                    | a hero the server knows: name (once per player), class, hardcore, online                                                         |
-| `hero_builds`               | an immutable snapshot of a hero's whole build at a revision (a trigger refuses any update); the sorted numbers lifted to columns |
-| `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                          |
-| `leaderboard_entries`       | a hero's best on a board with the build that set it; the database checks that build is the hero's and the hero the player's      |
+| Table                       | What it holds                                                                                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`, `accounts`         | better-auth's user, and one row per linked sign-in (`credential`, `google`, `discord`)                                                                     |
+| `sessions`, `verifications` | sessions (the bearer token) and mail-link codes                                                                                                            |
+| `profiles`                  | the display name (unique in any case, format-checked, word-filtered), the picture (a portrait or the sign-in's photo), the flags                           |
+| `friendships`, `blocks`     | one row per pair whichever asked (`pending` or `accepted`), never oneself; blocks one way                                                                  |
+| `heroes`                    | a hero the server knows: name (once per player), class, hardcore, online                                                                                   |
+| `hero_builds`               | an immutable snapshot of a hero's whole build at a revision (a trigger refuses any update); the sorted numbers lifted to columns                           |
+| `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                                                    |
+| `leaderboard_entries`       | a hero's best on a board with the build that set it; the database checks that build is the hero's and the hero the player's                                |
+| `cloud_saves`               | the game's cloud save, one per account (never a guest's): the decoded bytes (`bytea`), their size and SHA-256, the description, play time and game version |
 
 A player's picture is one of the game's 42 portraits (`AVATAR_PORTRAITS`, a
 random one at sign-up) or their Google or Discord photo. The photo is linked,
@@ -69,6 +70,23 @@ server never calls a provider with them. Guests with no heroes and no use in
 30 days are deleted every day at 04:15 (`players/guest-cleanup.ts`), and the
 request logs never hold a sign-in's one-time `code` or `state`
 (`http/log-redaction.ts`).
+
+## The cloud save
+
+The game keeps its heroes on the phone; since Google Play's cloud saves went
+(decision 215), its cloud-save seam (`CloudSync.IProvider`, decision 87's rule:
+compare fingerprints, upload at most once a minute and on pause, ask the player
+when the two differ) has this server as its provider (decision 225).
+`/api/saves/me` holds one copy per account: `GET` (with `?data=false` the
+website reads everything but the bytes), `PUT` replacing it whole (base64 that
+must encode back to itself, at most 3 MB decoded, 413 `SAVE_TOO_LARGE` over it,
+240 writes an hour per caller) and `DELETE`. A guest gets 403 `GUEST_ACCOUNT`:
+it has no way back in to read a copy, so its save stays on the phone, and a
+guest that signs up has nothing to move. The bytes are stored decoded, as
+`bytea` (`database/columns.ts`: `Bun.SQL` sends a `Uint8Array` as binary and
+reads a `Buffer` back, so the column passes the value through), and a check
+holds `size` to `octet_length(data)`. The copy goes with its user, and the
+nightly dump carries it like every table.
 
 ## The website, and its copy on the API
 

@@ -10,7 +10,7 @@ repository.
 
 | Path                 | What it is                                                                                                                                                                                                       |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards), Postgres, Resend mail, R2 backups                            |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes and their builds; the boards; the game's cloud save), Postgres, Resend mail, R2 backups     |
 | `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account and friends. Deployed to Cloudflare Pages by CI; the API serves a copy too |
 | `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                                       |
 | `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                         |
@@ -69,7 +69,8 @@ bun run e2e        # GAME_REPO=../bloodline by default; KEEP=1 leaves the stack 
 rules checker built from the game's repository) beside an S3 mock in place of
 R2, with throwaway secrets and every mail written to the log. It writes a real
 save with the game's own Core (`e2e/savegen`), then drives the API the way the
-game does (`e2e/api.e2e.ts`: guests and their upgrade, the confirmation and
+game does (`e2e/saves.e2e.ts`: the cloud save written, read back to the byte,
+replaced and deleted; `e2e/api.e2e.ts`: guests and their upgrade, the confirmation and
 reset mails' links, verified, pending and flagged records, friends, blocks,
 privacy, the rules checker and Redis down, account deletion, a backup restored
 into a scratch database) and the website in headless Chrome
