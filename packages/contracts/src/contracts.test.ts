@@ -7,6 +7,10 @@ import {
   AroundMe,
   BOARDS,
   BuildSnapshot,
+  CLOUD_SAVE_MAX_BASE64,
+  CLOUD_SAVE_MAX_BYTES,
+  CloudSaveRead,
+  CloudSaveWrite,
   DISPLAY_NAME_PATTERN,
   HARDCORE_PREFIX,
   ReadBoard,
@@ -192,6 +196,48 @@ describe('players', () => {
     expect(
       RegisterHero.safeParse({ name: 'Ash', class: 'Necromancer' }).success,
     ).toBe(false);
+  });
+});
+
+describe('cloud saves', () => {
+  test('a write fills its defaults and takes only base64 data', () => {
+    expect(CloudSaveWrite.parse({ data: 'AAD/' })).toEqual({
+      data: 'AAD/',
+      description: '',
+      playSeconds: 0,
+    });
+    for (const data of ['AAA', 'AA AA', 'AA-_', '=AAA', 'AAAA=A'])
+      expect(CloudSaveWrite.safeParse({ data }).success).toBe(false);
+    expect(
+      CloudSaveWrite.safeParse({ data: 'AAAA', gameVersion: '0.13.1' }).success,
+    ).toBe(true);
+    for (const gameVersion of ['0.13', '0.13.1-preview', '1234.0.0'])
+      expect(
+        CloudSaveWrite.safeParse({ data: 'AAAA', gameVersion }).success,
+      ).toBe(false);
+    expect(
+      CloudSaveWrite.safeParse({ data: 'AAAA', description: 'x'.repeat(201) })
+        .success,
+    ).toBe(false);
+    expect(
+      CloudSaveWrite.safeParse({ data: 'AAAA', playSeconds: 1.5 }).success,
+    ).toBe(false);
+  });
+
+  test('the longest data decodes to exactly the largest save', () => {
+    expect(CLOUD_SAVE_MAX_BASE64).toBe(4_000_000);
+    expect((CLOUD_SAVE_MAX_BASE64 / 4) * 3).toBe(CLOUD_SAVE_MAX_BYTES);
+    const longest = 'A'.repeat(CLOUD_SAVE_MAX_BASE64);
+    expect(CloudSaveWrite.safeParse({ data: longest }).success).toBe(true);
+    expect(CloudSaveWrite.safeParse({ data: `${longest}AAAA` }).success).toBe(
+      false,
+    );
+  });
+
+  test('a read carries the data unless ?data=false', () => {
+    expect(CloudSaveRead.parse({}).data).toBe(true);
+    expect(CloudSaveRead.parse({ data: 'false' }).data).toBe(false);
+    expect(CloudSaveRead.safeParse({ data: 'maybe' }).success).toBe(false);
   });
 });
 

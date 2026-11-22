@@ -251,6 +251,15 @@ export const AUTH_ROUTES = {
  * route. A client shows its own words for each; an unknown code is shown as
  * is.
  */
+/**
+ * The largest cloud save the server keeps, in bytes of the decoded data: 3 MB, which is what the longest `data` a
+ * `CloudSaveWrite` takes (4,000,000 base64 characters) decodes to. The game's own saves are a few tens of kilobytes.
+ */
+export const CLOUD_SAVE_MAX_BYTES = 3_000_000;
+
+/** The longest `data` a `CloudSaveWrite` takes: the base64 of {@link CLOUD_SAVE_MAX_BYTES} bytes. */
+export const CLOUD_SAVE_MAX_BASE64 = 4_000_000;
+
 export const ERROR_CODES = [
   // Any route that needs a session.
   'UNAUTHENTICATED',
@@ -286,6 +295,8 @@ export const ERROR_CODES = [
   'BUILD_REVISION_TAKEN',
   'HARDCORE_MISMATCH',
   'SCORE_OUT_OF_RANGE',
+  // The cloud save (/api/saves/me): a guest gets GUEST_ACCOUNT.
+  'SAVE_TOO_LARGE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
