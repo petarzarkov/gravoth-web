@@ -3,7 +3,8 @@
  *
  * - Every script, style and asset is named by its content hash, so it can be
  *   cached forever; `index.html` is the one file always fetched fresh.
- * - `public/` (the screenshots, the privacy policy at /privacy/) is copied as is.
+ * - `public/` (the screenshots, the privacy policy at /privacy/, the terms of
+ *   service at /terms/) is copied as is.
  * - With `GRAVOTH_API_BASE` set (the Cloudflare Pages build, CI's `site` job:
  *   https://gravoth-api.petarzarkov.com), the site calls the API there and gets
  *   a `_headers` file for Pages: the content security policy (scripts and styles
@@ -62,8 +63,8 @@ if (apiBase !== '') {
     "base-uri 'self'",
     "object-src 'none'",
   ].join('; ');
-  // The privacy policy is one self-contained page with its own inline styles.
-  const privacy =
+  // The privacy policy and the terms are self-contained pages with their own inline styles.
+  const folderPage =
     "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'";
   await Bun.write(
     `${outdir}/_headers`,
@@ -80,7 +81,11 @@ if (apiBase !== '') {
 
 /privacy/*
   ! Content-Security-Policy
-  Content-Security-Policy: ${privacy}
+  Content-Security-Policy: ${folderPage}
+
+/terms/*
+  ! Content-Security-Policy
+  Content-Security-Policy: ${folderPage}
 `,
   );
 }

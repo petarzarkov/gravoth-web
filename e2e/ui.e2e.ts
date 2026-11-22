@@ -189,6 +189,17 @@ ok(
     ),
   privacy.status,
 );
+const terms = await fetch(`${base}/terms/`);
+const termsText = await terms.text();
+ok(
+  'the terms of service are a page of their own at /terms/',
+  terms.status === 200 &&
+    termsText.includes('Gravoth Terms of Service') &&
+    (terms.headers.get('content-security-policy') ?? '').includes(
+      "default-src 'none'",
+    ),
+  terms.status,
+);
 const home = await fetch(`${base}/`);
 ok(
   "the site's pages carry the strict policy, allowing calls to the API",
@@ -219,6 +230,12 @@ ok(
 // 1. Create an account through the form.
 await go('/sign-in');
 await js(`__t.click('Create account')`);
+ok(
+  'the sign-up form links the terms of service and the privacy policy',
+  await until(
+    `${has('By continuing you agree to the')} && !!document.querySelector('.mantine-Card-root a[href="/terms/"]') && !!document.querySelector('.mantine-Card-root a[href="/privacy/"]')`,
+  ),
+);
 await js(
   `__t.type('input[autocomplete=nickname]', 'Dara'); __t.type('input[type=email]', ${JSON.stringify(email)}); __t.type('input[type=password]', 'a long enough password')`,
 );

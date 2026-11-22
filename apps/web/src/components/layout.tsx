@@ -105,6 +105,9 @@ export const Layout = ({ children }: { children: ReactNode }) => {
             <Anchor size="sm" c="dimmed" href="/privacy/">
               Privacy policy
             </Anchor>
+            <Anchor size="sm" c="dimmed" href="/terms/">
+              Terms of service
+            </Anchor>
             <Anchor size="sm" c="dimmed" component={Link} to="/delete-account">
               Delete your account
             </Anchor>

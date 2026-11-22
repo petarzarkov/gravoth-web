@@ -206,6 +206,20 @@ export const SignInPage = () => {
             </Stack>
           </form>
 
+          {mode === 'forgot' ? null : (
+            <Text ta="center" mt="md" size="xs" c="dimmed">
+              By continuing you agree to the{' '}
+              <Anchor href="/terms/" inherit>
+                terms of service
+              </Anchor>{' '}
+              and the{' '}
+              <Anchor href="/privacy/" inherit>
+                privacy policy
+              </Anchor>
+              .
+            </Text>
+          )}
+
           <Text ta="center" mt="md" size="sm">
             {mode === 'forgot' ? (
               <Anchor
