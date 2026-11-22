@@ -1,15 +1,7 @@
 import { SessionGuard } from '@dunx/auth';
 import { Controller, Get, HttpStatusCode, Post, Public, UseGuards, type Input } from '@dunx/http';
-import { z } from 'zod';
+import { DeleteAccount, type SignInMethod } from '@gravoth/contracts';
 import { Accounts, type AccountView } from './accounts.service.js';
-import type { SignInMethod } from './sign-in-providers.js';
-
-const DeleteAccount = z
-  .object({
-    /** Required when the account has a password; a guest or Google-only account sends none. */
-    password: z.string().max(128).optional(),
-  })
-  .meta({ id: 'DeleteAccount', description: 'Delete the caller\'s account and everything kept for it' });
 
 const deleteAccount = { body: DeleteAccount, status: HttpStatusCode.OK } as const;
 

@@ -4,6 +4,8 @@ import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
 import { profile, type Profile } from '../database/schema.js';
 import { baseDisplayName, displayNameProblem, FALLBACK_NAME, withDigits } from './display-names.js';
+import type { ProfileView } from '@gravoth/contracts';
+export type { ProfileView };
 
 /** What the player may change on their own profile. */
 export interface ProfileChanges {
@@ -12,17 +14,6 @@ export interface ProfileChanges {
   readonly allowFriendRequests?: boolean | undefined;
   readonly showOnline?: boolean | undefined;
   readonly emailFriendRequests?: boolean | undefined;
-}
-
-/** The profile as its owner sees it. */
-export interface ProfileView {
-  readonly userId: string;
-  readonly displayName: string;
-  readonly nameChosen: boolean;
-  readonly publicProfile: boolean;
-  readonly allowFriendRequests: boolean;
-  readonly showOnline: boolean;
-  readonly emailFriendRequests: boolean;
 }
 
 export const toProfileView = (row: Profile): ProfileView => ({

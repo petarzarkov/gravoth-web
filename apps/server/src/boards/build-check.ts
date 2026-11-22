@@ -1,6 +1,6 @@
 import { ValidatorClient, type HeroSummary } from '../gravoth/validator.client.js';
 import type { Hero, Leaderboard } from '../database/schema.js';
-import type { BuildSnapshot } from '../heroes/build.schema.js';
+import type { BuildSnapshot } from '@gravoth/contracts';
 import type { CheckedNumbers } from '../heroes/builds.service.js';
 
 export interface BuildCheckInput {

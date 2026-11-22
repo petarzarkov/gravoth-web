@@ -3,7 +3,7 @@ import { provide } from '@dunx/core';
 import { EmailTransport, MemoryTransport } from '@dunx/infra/email';
 import { AppConfigService } from './config.js';
 import { ValidatorClient, type CardPage, type SaveReport } from './gravoth/validator.client.js';
-import type { BuildSnapshot } from './heroes/build.schema.js';
+import type { BuildSnapshot } from '@gravoth/contracts';
 import { startTestApp, type TestApp } from './testing/app.js';
 import { call, guest, signUp, type Player } from './testing/http.js';
 

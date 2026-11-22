@@ -9,27 +9,8 @@ import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Mailer } from '../mail/mailer.js';
 import { Profiles } from '../players/profiles.service.js';
 import { displayNames, requireAccount, type Caller } from './players.js';
-
-export interface FriendView {
-  readonly userId: string;
-  readonly displayName: string;
-  /** When the request was accepted. */
-  readonly since: string;
-}
-
-export interface RequestView {
-  readonly id: string;
-  /** The other player. */
-  readonly userId: string;
-  readonly displayName: string;
-  readonly direction: 'incoming' | 'outgoing';
-  readonly createdAt: string;
-}
-
-export type RequestOutcome =
-  | { readonly status: 'pending'; readonly request: RequestView }
-  /** They had already asked the caller, so asking back accepts theirs. */
-  | { readonly status: 'accepted'; readonly friend: FriendView };
+import type { FriendView, RequestOutcome, RequestView } from '@gravoth/contracts';
+export type { FriendView, RequestOutcome, RequestView };
 
 /** The row of a pair, whichever of the two asked. */
 const pairOf = (a: string, b: string) =>

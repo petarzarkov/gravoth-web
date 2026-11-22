@@ -7,12 +7,8 @@ import { block, friendship } from '../database/schema.js';
 import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Profiles } from '../players/profiles.service.js';
 import { displayNames, requireAccount } from './players.js';
-
-export interface BlockView {
-  readonly userId: string;
-  readonly displayName: string;
-  readonly blockedAt: string;
-}
+import type { BlockView } from '@gravoth/contracts';
+export type { BlockView };
 
 /**
  * Blocks, one way. Blocking ends any friendship or request between the two in the same transaction; the blocked player

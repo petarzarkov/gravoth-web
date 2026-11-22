@@ -4,43 +4,15 @@ import { and, eq } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { hero, heroBuild, profile, type Hero, type HeroBuild } from '../database/schema.js';
 import type * as schema from '../database/schema.js';
-import type { BuildSnapshot, BuildSummary, CardPage } from './build.schema.js';
+import type { BuildSnapshot, BuildSummary, CardPage } from '@gravoth/contracts';
 import { toHeroView, type HeroView } from './heroes.service.js';
+import type { BuildCard, BuildView } from '@gravoth/contracts';
+export type { BuildCard, BuildView };
 
 /** What the rules checker worked out for a build, laid over what the game sent. */
 export interface CheckedNumbers {
   readonly summary?: Partial<Pick<BuildSummary, 'dps' | 'clearDps' | 'ehp' | 'life'>> | undefined;
   readonly card?: CardPage[] | undefined;
-}
-
-/** A build as a board row or a build card shows it. */
-export interface BuildView {
-  readonly id: string;
-  readonly heroId: string;
-  readonly revision: number;
-  readonly gameVersion: string;
-  readonly level: number;
-  readonly ascendancy: string | null;
-  readonly dps: number;
-  readonly clearDps: number;
-  readonly ehp: number;
-  readonly life: number;
-  readonly energyShield: number;
-  readonly skills: HeroBuild['skills'];
-  readonly gear: HeroBuild['gear'];
-  readonly talents: HeroBuild['talents'];
-  readonly atlas: HeroBuild['atlas'];
-  readonly auras: HeroBuild['auras'];
-  readonly extras: HeroBuild['extras'];
-  readonly summary: HeroBuild['summary'];
-  readonly createdAt: string;
-}
-
-/** The build card: the build, the rules checker's own card pages, the hero, and its player when the profile is public. */
-export interface BuildCard extends BuildView {
-  readonly card: CardPage[] | null;
-  readonly hero: HeroView;
-  readonly player: { readonly displayName: string } | null;
 }
 
 export const toBuildView = (row: Omit<HeroBuild, 'card'>): BuildView => ({

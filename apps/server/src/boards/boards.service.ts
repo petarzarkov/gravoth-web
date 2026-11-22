@@ -3,77 +3,14 @@ import { CursorError, decodeCursor, encodeCursor, pageOf, type Page } from '@dun
 import { and, asc, desc, eq, getTableColumns, ne, sql, type SQL } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { friendship, hero, heroBuild, leaderboard, leaderboardEntry, profile, type HeroClass, type Leaderboard } from '../database/schema.js';
-import type { BuildSnapshot } from '../heroes/build.schema.js';
+import type { BuildSnapshot } from '@gravoth/contracts';
 import { Builds, toBuildView, type BuildView } from '../heroes/builds.service.js';
 import { Heroes } from '../heroes/heroes.service.js';
 import type { PageQuery } from '../http/page-query.js';
 import { BuildCheck } from './build-check.js';
-import { HARDCORE_PREFIX } from './catalog.js';
-
-export interface BoardView {
-  readonly key: string;
-  readonly title: string;
-  readonly hardcore: boolean;
-  readonly season: number;
-  /** `desc`: larger ranks higher. `asc`: smaller does. */
-  readonly sort: 'asc' | 'desc';
-  readonly format: 'number' | 'time_ms';
-  readonly minScore: number;
-  readonly maxScore: number;
-}
-
-/** One row of a board: its place, the score, who set it, and the whole build that set it. */
-export interface EntryView {
-  /** 1 for the best, in the view asked for (the whole board, or the caller and their friends). */
-  readonly rank: number;
-  readonly id: string;
-  readonly score: number;
-  readonly achievedAt: string;
-  readonly recordedAt: string;
-  readonly verdict: 'pending' | 'verified';
-  /** A player whose profile is not public shows as hidden to everyone but themselves. */
-  readonly player: { readonly userId: string | null; readonly displayName: string; readonly hidden: boolean };
-  readonly hero: { readonly id: string; readonly name: string; readonly class: HeroClass; readonly hardcore: boolean };
-  readonly build: BuildView;
-}
-
-export interface BoardPage {
-  readonly board: BoardView;
-  readonly entries: Page<EntryView>;
-}
-
-export interface Neighbourhood {
-  readonly board: BoardView;
-  /** The caller's best hero on the board, or null when none of theirs is on it. */
-  readonly entry: EntryView | null;
-  /** Up to `around` rows above it, it, and up to `around` below, in board order. */
-  readonly neighbours: readonly EntryView[];
-}
-
-export interface SubmitScore {
-  readonly heroId: string;
-  readonly score: number;
-  readonly achievedAt?: string | undefined;
-  readonly season: number;
-  readonly build: BuildSnapshot;
-  readonly save?: string | undefined;
-  readonly saveHeroId?: number | undefined;
-}
-
-export interface SubmitResult {
-  /** `new`: the hero's first score here. `improved`: it beat the hero's best. `kept`: the best stands. */
-  readonly result: 'new' | 'improved' | 'kept';
-  readonly board: BoardView;
-  readonly entry: {
-    readonly id: string;
-    readonly score: number;
-    readonly buildId: string;
-    readonly verdict: 'pending' | 'verified' | 'flagged';
-    readonly verdictNote: string | null;
-    /** Null while flagged (a flagged entry is not shown). */
-    readonly rank: number | null;
-  };
-}
+import { HARDCORE_PREFIX } from '@gravoth/contracts';
+import type { BoardPage, BoardView, EntryView, Neighbourhood, SubmitResult, SubmitScore } from '@gravoth/contracts';
+export type { BoardPage, BoardView, EntryView, Neighbourhood, SubmitResult, SubmitScore };
 
 /** Which rows a read covers. */
 interface Scope {

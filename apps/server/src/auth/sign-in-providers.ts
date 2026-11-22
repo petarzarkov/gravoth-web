@@ -1,11 +1,11 @@
+import type { SignInMethod, SocialProvider } from '@gravoth/contracts';
 import type { BetterAuthOptions } from 'better-auth';
 import { AppConfigService } from '../config.js';
 
 /** better-auth's per-provider settings map (`google`, `discord`, ...). */
 export type SocialProviders = NonNullable<BetterAuthOptions['socialProviders']>;
 
-/** A sign-in method the game can offer, as `GET /api/account/methods` lists it. */
-export type SignInMethod = 'guest' | 'email' | keyof SocialProviders;
+export type { SignInMethod };
 
 /**
  * The third-party sign-ins this server accepts, behind one provider-neutral door: no store or platform game service
@@ -59,6 +59,6 @@ export class SignInProviders {
 
   /** What the game's SIGN IN row may show, in the order it shows them. */
   methods(): readonly SignInMethod[] {
-    return ['guest', 'email', ...(Object.keys(this.social()) as (keyof SocialProviders)[])];
+    return ['guest', 'email', ...(Object.keys(this.social()) as SocialProvider[])];
   }
 }

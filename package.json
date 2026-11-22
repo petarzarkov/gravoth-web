@@ -1,0 +1,39 @@
+{
+  "name": "gravoth-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gravoth Online: the API (apps/server), the website (apps/web) and the contracts both import (packages/contracts). A Bun monorepo on dunx.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "bun scripts/install-hooks.ts",
+    "check": "bun run lint:check && bun run format:check && bun run typecheck && bun run test",
+    "dev": "bun run --filter @gravoth/server dev",
+    "dev:web": "bun run --filter @gravoth/web dev",
+    "build": "bun run --filter @gravoth/web build",
+    "start": "bun run --filter @gravoth/server start",
+    "typecheck": "tsc --noEmit -p packages/contracts && tsc --noEmit -p apps/server && tsc --noEmit -p apps/web",
+    "lint": "oxlint --type-aware --fix apps packages scripts",
+    "lint:check": "oxlint --type-aware --max-warnings 0 apps packages scripts",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "test": "bun run test:contracts && bun run test:web && bun run test:server",
+    "test:contracts": "cd packages/contracts && bun test",
+    "test:web": "cd apps/web && bun test",
+    "test:server": "cd apps/server && bun run test"
+  },
+  "devDependencies": {
+    "@stagelint/stagelint": "0.1.4",
+    "@types/bun": "1.4.4",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "bun": ">=1.4.3"
+  }
+}

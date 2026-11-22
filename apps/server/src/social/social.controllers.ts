@@ -1,29 +1,11 @@
 import { AuthContext, SessionGuard } from '@dunx/auth';
 import { Controller, Get, HttpStatusCode, Patch, Post, Throttle, UseGuards, type Input } from '@dunx/http';
 import type { Page } from '@dunx/infra/pagination';
-import { z } from 'zod';
-import { DISPLAY_NAME_PATTERN } from '../players/display-names.js';
+import { PageQuery, PlayerId, RequestId, ToPlayer, UpdateProfile } from '@gravoth/contracts';
 import { Profiles, toProfileView, type ProfileView } from '../players/profiles.service.js';
-import { PageQuery } from '../http/page-query.js';
 import { Blocks, type BlockView } from './blocks.service.js';
 import { Friends, type FriendView, type RequestOutcome, type RequestView } from './friends.service.js';
 import { callerOf } from './players.js';
-
-const DisplayName = z.string().regex(DISPLAY_NAME_PATTERN, '3 to 20 letters, digits, _ or -, starting with a letter or digit');
-
-const UpdateProfile = z
-  .object({
-    displayName: DisplayName.optional(),
-    publicProfile: z.boolean().optional(),
-    allowFriendRequests: z.boolean().optional(),
-    showOnline: z.boolean().optional(),
-    emailFriendRequests: z.boolean().optional(),
-  })
-  .meta({ id: 'UpdateProfile', description: "The caller's display name and privacy flags; what is left out stays as it is" });
-
-const ToPlayer = z.object({ displayName: DisplayName }).meta({ id: 'ToPlayer', description: 'A player, by display name (any case)' });
-const RequestId = z.object({ id: z.uuid() });
-const PlayerId = z.object({ userId: z.uuid() });
 
 const ok = HttpStatusCode.OK;
 const updateProfile = { body: UpdateProfile } as const;

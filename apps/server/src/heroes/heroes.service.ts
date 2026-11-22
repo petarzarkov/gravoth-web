@@ -3,15 +3,8 @@ import { and, asc, eq, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
 import { hero, type Hero, type HeroClass } from '../database/schema.js';
-
-export interface HeroView {
-  readonly id: string;
-  readonly name: string;
-  readonly class: HeroClass;
-  readonly hardcore: boolean;
-  readonly online: boolean;
-  readonly createdAt: string;
-}
+import type { HeroView, RegisterHero } from '@gravoth/contracts';
+export type { HeroView, RegisterHero };
 
 export const toHeroView = (row: Hero): HeroView => ({
   id: row.id,
@@ -21,12 +14,6 @@ export const toHeroView = (row: Hero): HeroView => ({
   online: row.online,
   createdAt: row.createdAt.toISOString(),
 });
-
-export interface RegisterHero {
-  readonly name: string;
-  readonly class: HeroClass;
-  readonly hardcore: boolean;
-}
 
 /**
  * The heroes a player has told the server about. Until online heroes (step 5), a hero is registered so its records can

@@ -2,20 +2,8 @@ import { Auth, AuthContext } from '@dunx/auth';
 import { HttpError, HttpStatusCode } from '@dunx/http';
 import { Mailer } from '../mail/mailer.js';
 import { SignInProviders, type SignInMethod } from './sign-in-providers.js';
-
-/** What the game's SIGN IN row shows about the caller. */
-export interface AccountView {
-  readonly id: string;
-  readonly name: string;
-  /** Null for a guest: their stored address is a placeholder nobody reads. */
-  readonly email: string | null;
-  readonly emailVerified: boolean;
-  /** A guest account: no way back in but this device's token, until it signs up. */
-  readonly guest: boolean;
-  /** How this account can sign in: `email` for a password, else the provider (`google`, `discord`). */
-  readonly signIn: readonly SignInMethod[];
-  readonly createdAt: string;
-}
+import type { AccountView } from '@gravoth/contracts';
+export type { AccountView };
 
 /** better-auth's provider id for a password. */
 const CREDENTIAL = 'credential';

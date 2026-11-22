@@ -7,7 +7,9 @@
  * and `-`, so `F_u_c_k` and `fvck` are not the way around it. Words that are also parts of ordinary words (`ass` in
  * `Assassin`, `rape` in `Grape`) are only refused as a whole word of the name.
  */
-export const DISPLAY_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{2,19}$/;
+import { DISPLAY_NAME_PATTERN } from '@gravoth/contracts';
+
+export { DISPLAY_NAME_PATTERN };
 
 /** The start of a made-up name when the sign-in's own gives nothing usable. */
 export const FALLBACK_NAME = 'Hero';

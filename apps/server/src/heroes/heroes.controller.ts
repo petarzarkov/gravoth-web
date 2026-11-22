@@ -1,18 +1,9 @@
 import { AuthContext, SessionGuard } from '@dunx/auth';
 import { Controller, Get, HttpStatusCode, Post, Public, UseGuards, type Input } from '@dunx/http';
+import { RegisterHero } from '@gravoth/contracts';
 import { z } from 'zod';
-import { HERO_CLASSES } from '../database/schema.js';
 import { Builds, type BuildCard } from './builds.service.js';
 import { Heroes, toHeroView, type HeroView } from './heroes.service.js';
-
-const RegisterHero = z
-  .object({
-    name: z.string().trim().min(1).max(24),
-    /** The game's class (`Barbarian` or `barbarian`). */
-    class: z.preprocess((value) => (typeof value === 'string' ? value.toLowerCase() : value), z.enum(HERO_CLASSES)),
-    hardcore: z.boolean().default(false),
-  })
-  .meta({ id: 'RegisterHero', description: 'A hero the server should know, by its name on this account' });
 
 const register = { body: RegisterHero, status: HttpStatusCode.OK } as const;
 const byId = { params: z.object({ id: z.uuid() }) } as const;

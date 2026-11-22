@@ -9,7 +9,7 @@
     "test": "bun scripts/test.ts",
     "db:generate": "drizzle-kit generate",
     "mail:preview": "dunx-email preview ./src/mail/templates",
-    "typecheck": "bun check"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dunx/auth": "^3.10.6",
@@ -18,6 +18,7 @@
     "@dunx/infra": "^3.10.6",
     "@dunx/openapi": "^3.10.6",
     "@dunx/transform": "^3.10.6",
+    "@gravoth/contracts": "workspace:*",
     "@react-email/render": "2.1.0",
     "better-auth": "1.6.25",
     "drizzle-orm": "0.45.2",
@@ -29,9 +30,10 @@
   },
   "devDependencies": {
     "@dunx/testing": "^3.10.6",
-    "@types/bun": ">=1.4.3",
+    "@types/bun": "1.4.4",
     "@types/react": "19.2.18",
-    "drizzle-kit": "0.31.11"
+    "drizzle-kit": "0.31.11",
+    "typescript": "7.0.2"
   },
   "engines": {
     "bun": ">=1.4.3"

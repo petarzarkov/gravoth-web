@@ -13,13 +13,12 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
-import type { Aura, BuildDocument, BuildSummary, CardPage, GearItem, SkillGem } from '../heroes/build.schema.js';
+import { HERO_CLASSES, type Aura, type BuildDocument, type BuildSummary, type CardPage, type GearItem, type HeroClass, type SkillGem } from '@gravoth/contracts';
 import { user } from './auth.schema.js';
 import { jsonb } from './columns.js';
 
 /** The game's four starting kits (`Gravoth.Core.Characters.ClassId`), lowercase. */
-export const HERO_CLASSES = ['barbarian', 'ranger', 'sorcerer', 'templar'] as const;
-export type HeroClass = (typeof HERO_CLASSES)[number];
+export { HERO_CLASSES, type HeroClass };
 
 /**
  * A hero the server knows, owned by one user. An **online** hero (step 5) lives on the server and starts fresh; an
