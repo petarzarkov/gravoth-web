@@ -25,7 +25,8 @@ export const DeleteAccountPage = () => {
           display name and privacy settings, your heroes and every build they
           posted, your records on the leaderboards, your friends, friend
           requests and blocks. A confirmation mail goes to a confirmed address.
-          Nothing is kept afterwards.
+          The nightly backups that still hold them are deleted as they turn 30
+          days old.
         </Text>
         <Text mb="lg">
           Your heroes on your phone are not affected: the game plays offline and

@@ -6,7 +6,7 @@
     <title>Gravoth Privacy Policy</title>
     <meta
       name="description"
-      content="Privacy policy for the Android game Gravoth."
+      content="Privacy policy for the Android game Gravoth and Gravoth Online."
     />
     <style>
       :root {
@@ -72,16 +72,25 @@
       <h1>Gravoth Privacy Policy</h1>
       <p class="meta">
         Effective 17 November 2026; updated 22 November 2026 for version 0.13,
-        which removes Google Play Games. Applies to the Android game Gravoth
-        (package <code>com.petarzarkov.gravoth</code>), made by its independent
-        developer, petarzarkov.
+        which removes Google Play Games, and for Gravoth Online, the optional
+        accounts, leaderboards and friends at gravoth.petarzarkov.com. Applies
+        to the Android game Gravoth (package
+        <code>com.petarzarkov.gravoth</code>) and to Gravoth Online, both made
+        by their independent developer, petarzarkov.
       </p>
 
       <h2>In short</h2>
       <ul>
         <li>
-          Gravoth is a single-player game that plays fully offline. It has no
-          accounts of its own.
+          Gravoth is a single-player game that plays fully offline. The game
+          itself has no accounts.
+        </li>
+        <li>
+          Gravoth Online, at gravoth.petarzarkov.com, is optional: an account
+          (or a guest) for the online leaderboards, whose records show each
+          hero's full build, and a friends list. It keeps your account, your
+          profile and the heroes and records you post on the developer's own
+          server. See "Gravoth Online".
         </li>
         <li>
           From version 0.13 the game no longer uses Google Play Games: it does
@@ -95,8 +104,9 @@
           "Google Play Games (versions up to 0.12, and the one last read)".
         </li>
         <li>
-          The game does not sell your personal data, and it does not send your
-          game data to the developer.
+          Nobody's personal data is sold. The game itself does not send your
+          game data to the developer; Gravoth Online keeps only what you give it
+          or post to it.
         </li>
         <li>
           There are no ads and no tracking in the game, and no analytics or
@@ -109,11 +119,11 @@
           details. See "Supporter purchases".
         </li>
         <li>
-          Apart from the one read of an earlier cloud save (see above) and what
-          Google Play handles when you buy a supporter tier (see below), the
-          only data that leaves your phone is the Unity engine's anonymous
-          hardware statistics (the device's model and specs), which go to Unity,
-          not to the developer. See "The game engine".
+          In the game, apart from the one read of an earlier cloud save (see
+          above) and what Google Play handles when you buy a supporter tier (see
+          below), the only data that leaves your phone is the Unity engine's
+          anonymous hardware statistics (the device's model and specs), which go
+          to Unity, not to the developer. See "The game engine".
         </li>
       </ul>
 
@@ -216,6 +226,133 @@
         </li>
       </ul>
 
+      <h2>Gravoth Online</h2>
+      <p>
+        Gravoth Online is optional: accounts, online leaderboards whose records
+        show each hero's full build, and a friends list. It runs on the
+        developer's own server (gravoth-api.petarzarkov.com, in the European
+        Union) and is used by the website gravoth.petarzarkov.com. A later
+        version of the game will use it too, and this policy will be updated
+        before that version is released. Nothing in the game needs it. You can
+        look at the leaderboards without an account; what follows applies once
+        you sign in or play as a guest.
+      </p>
+      <ul>
+        <li>
+          <strong>Your account:</strong> an email address, a name, and either a
+          password, which the server keeps only as a one-way hash (bcrypt), or a
+          sign-in with Google or Discord. A guest account has neither, only a
+          random id and a placeholder address. Signing up from a guest keeps its
+          heroes and display name and removes the guest.
+        </li>
+        <li>
+          <strong>Google and Discord sign-in:</strong> when you choose one, it
+          asks your permission and then gives the server your account id at that
+          service, your email address and whether the service has confirmed it,
+          your name and the web address of your profile picture (Google's
+          <code>openid</code>, <code>email</code> and
+          <code>profile</code> permissions; Discord's <code>identify</code> and
+          <code>email</code>). The server also keeps the sign-in tokens the
+          service returns. It uses none of this to read anything else from your
+          Google or Discord account or to act for you, and it never sees your
+          password there. Google and Discord handle the sign-in under their own
+          policies:
+          <a href="https://policies.google.com/privacy"
+            >Google's Privacy Policy</a
+          >
+          and
+          <a href="https://discord.com/privacy">Discord's Privacy Policy</a>.
+        </li>
+        <li>
+          <strong>Signing in:</strong> each sign-in keeps a session with the
+          device's IP address, its browser or app identity (the user agent) and
+          when it ends (after 90 days without use). On the website the session
+          is one cookie (HttpOnly and Secure), and a second one guards a Google
+          or Discord sign-in for the 5 minutes it takes. The site sets no other
+          cookies: no tracking and no advertising.
+        </li>
+        <li>
+          <strong>Your profile:</strong> a display name other players see (3 to
+          20 letters, digits, _ or -, checked against a word filter), and your
+          settings: whether your name shows on the leaderboards, whether others
+          may send you friend requests, whether friends may see that you are
+          online, and whether friend requests are mailed to you.
+        </li>
+        <li>
+          <strong>Heroes and records:</strong> when you post a record (such as
+          the deepest Bone Pit floor or a chart clear), the server keeps the
+          hero's name, class, level and whether it is hardcore; a snapshot of
+          its whole build at that time (skills and supports, gear with every
+          modifier, talents, atlas, auras, rites and cosmetics, and computed
+          figures such as damage per second and life); the score; and when it
+          was set. A record can come with the hero's save, so that the rules
+          checker on the same server (the game's own rules) can confirm it. The
+          save is read in memory and not kept; only the checker's figures and
+          its build card are. A record that fails the check is kept for review
+          and never shown.
+        </li>
+        <li>
+          <strong>Friends and blocks:</strong> the friend requests you send and
+          receive (by display name), your friends and the players you block.
+          Only you see these lists. Guests have no friends list.
+        </li>
+        <li>
+          <strong>What other players see:</strong> on the leaderboards, your
+          display name, each hero's name, class and full build, the score and
+          its date. If you hide your name (Account, privacy settings), the
+          leaderboards show "A hidden player" in its place, but the hero's name
+          and build still show. Friends see your display name.
+        </li>
+        <li>
+          <strong>Mail:</strong> the server sends mail through Resend, an email
+          delivery service: to confirm your address, to reset a password, to
+          confirm a deleted account and, if you allow it and your address is
+          confirmed, for a friend request. Resend receives the address and the
+          mail itself (your name and, for a friend request, both display names).
+        </li>
+        <li>
+          <strong>Security records:</strong> the server counts requests per IP
+          address to slow down abuse and forgets each count within an hour. Its
+          logs record each request (the address asked for, the time, the browser
+          or app identity and the result), never passwords, session tokens or
+          cookies. The logs have a fixed size and are overwritten as they fill.
+        </li>
+        <li>
+          <strong>Where it is kept:</strong> in the server's database.
+          Cloudflare carries all traffic to the server and hosts the website (it
+          sees visitors' IP addresses, as any network in front of a website
+          does), and stores a nightly copy of the database in Cloudflare R2 for
+          30 days, so the server can be restored after a failure. Cloudflare
+          handles this under
+          <a href="https://www.cloudflare.com/privacypolicy/"
+            >Cloudflare's Privacy Policy</a
+          >. No other company receives Gravoth Online data, and there are no ads
+          and no analytics.
+        </li>
+        <li>
+          <strong>Deleting your account:</strong> on the website, choose
+          Account, then Delete my account (see
+          <a href="/delete-account">Delete your account</a>), or write from the
+          account's address to
+          <a href="mailto:gravoth.arpg@gmail.com">gravoth.arpg@gmail.com</a>
+          (done within 30 days). It removes at once the account and its sign-ins
+          and sessions, your profile, heroes, builds and records, and your
+          friends, requests and blocks. The nightly copies that still hold them
+          are deleted as they turn 30 days old, and log lines naming the
+          account's id are overwritten as the logs fill. The heroes on your
+          phone are not affected.
+        </li>
+        <li>
+          <strong>Your rights:</strong> you can see and change your display name
+          and settings on the Account page, and delete the account at any time.
+          For a copy of your data, a correction, or any other request about it
+          (including your rights under the GDPR), write to
+          <a href="mailto:gravoth.arpg@gmail.com">gravoth.arpg@gmail.com</a>.
+          The server keeps this data to provide the service you signed up for,
+          and the security records to protect it (a legitimate interest).
+        </li>
+      </ul>
+
       <h2>What the game does not do</h2>
       <ul>
         <li>
@@ -225,9 +362,10 @@
         <li>It contains no advertising and does not use the advertising ID.</li>
         <li>
           Apart from the engine's hardware statistics, it contains no analytics,
-          crash-reporting or tracking services. It has no social features: from
-          version 0.13 the BOARDS list shows your own bests on your phone only,
-          and there is no chat or contact between players.
+          crash-reporting or tracking services. The game itself has no social
+          features: from version 0.13 the BOARDS list shows your own bests on
+          your phone only, and there is no chat or contact between players (the
+          online leaderboards and friends are Gravoth Online's, above).
         </li>
         <li>
           It sells nothing that changes the game. The in-game gambler sells
@@ -318,23 +456,26 @@
       <h2>Children</h2>
       <p>
         Gravoth is a dark-fantasy game with combat violence and is not directed
-        at children. The developer collects no personal data from anyone,
-        including children; Google Play Games is subject to Google's own rules
-        for children's accounts.
+        at children. The game collects no personal data from anyone, including
+        children; Google Play Games is subject to Google's own rules for
+        children's accounts. Gravoth Online accounts are for players aged 16 and
+        over; if the developer learns that an account belongs to a younger
+        child, it is deleted.
       </p>
 
       <h2>Changes</h2>
       <p>
-        If the game ever starts collecting or sending any data (for example an
-        optional online feature), this policy will be updated before that
-        version is released, and the change will be described in the update
-        notes.
+        If the game or Gravoth Online starts collecting or sending any other
+        data (for example when a version of the game adds online features), this
+        policy will be updated before that version is released, and the change
+        will be described in the update notes.
       </p>
 
       <h2>Contact</h2>
       <p>
-        Questions about this policy: use the developer contact email shown on
-        Gravoth's Google Play page.
+        Questions about this policy, or a request about your data:
+        <a href="mailto:gravoth.arpg@gmail.com">gravoth.arpg@gmail.com</a>
+        (also shown on Gravoth's Google Play page).
       </p>
       <hr />
       <p class="meta">Gravoth &middot; com.petarzarkov.gravoth</p>
