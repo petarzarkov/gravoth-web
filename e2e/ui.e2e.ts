@@ -1,5 +1,6 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
-// the local stack. Screenshots of the account, friends, board, build and delete pages land in e2e/.tmp/ui.
+// the local stack. Screenshots of the account (its cloud save too), friends, board, build and delete pages land in
+// e2e/.tmp/ui.
 // The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
 const base = 'http://localhost:3001';
 const apiBase = 'http://localhost:3000';
@@ -183,6 +184,28 @@ const fullShot = async (name: string) => {
   await Bun.write(`${out}/${name}.png`, Buffer.from(r.data, 'base64'));
 };
 const has = (text: string) => `__t.text().includes(${JSON.stringify(text)})`;
+/** One element of the page, with a margin round it, at the current width (e2e/.tmp/ui). */
+const elementShot = async (name: string, selector: string) => {
+  const element = `document.querySelector(${JSON.stringify(selector)})`;
+  await js(`${element}.scrollIntoView({ block: 'center' })`);
+  await Bun.sleep(400);
+  const box = await js(
+    `(() => { const r = ${element}.getBoundingClientRect(); return { x: r.left + scrollX, y: r.top + scrollY, width: r.width, height: r.height }; })()`,
+  );
+  const margin = 16;
+  const r = await send('Page.captureScreenshot', {
+    format: 'png',
+    captureBeyondViewport: true,
+    clip: {
+      x: Math.max(0, box.x - margin),
+      y: Math.max(0, box.y - margin),
+      width: box.width + 2 * margin,
+      height: box.height + 2 * margin,
+      scale: 1,
+    },
+  });
+  await Bun.write(`${out}/${name}.png`, Buffer.from(r.data, 'base64'));
+};
 
 const email = `dara-${run}@example.test`;
 const darName = `Dara${run}`;
@@ -379,6 +402,70 @@ ok(
   prof,
 );
 await shot('account');
+
+// 3b. The cloud save: none at first; the game keeps one (through the API, as the game would), the page shows it, and
+// deleting it from the page removes it.
+ok(
+  'the account page says the game keeps a cloud save once signed in there',
+  await until(
+    `!!document.querySelector('.cloud-save-panel') && ${has('No cloud save yet.')} && ${has('CLOUD SAVE')}`,
+  ),
+  await js(`document.querySelector('.cloud-save-panel')?.innerText`),
+);
+const game = await api('POST', '/api/auth/sign-in/email', {
+  email,
+  password: 'a long enough password',
+});
+const bytes = new Uint8Array(12_345).map((_, i) => (i * 31) % 256);
+const written = await api(
+  'PUT',
+  '/api/saves/me',
+  {
+    data: Buffer.from(bytes).toString('base64'),
+    description: 'Dara, level 41 (2 characters)',
+    playSeconds: 148_020,
+    gameVersion: '0.13.1',
+  },
+  game.token!,
+);
+ok(
+  'the game keeps a cloud save for the account',
+  written.status === 200 && written.body.size === 12_345,
+  written.body,
+);
+await go('/account');
+ok(
+  'the account page shows the cloud save: description, play time, size, version, when',
+  await until(
+    `(() => { const t = document.querySelector('.cloud-save-panel')?.innerText ?? ''; return ['Dara, level 41 (2 characters)', '41:07', '12.3 KB', '0.13.1', 'Updated just now', 'Delete cloud save'].every((s) => t.includes(s)); })()`,
+  ),
+  await js(`document.querySelector('.cloud-save-panel')?.innerText`),
+);
+await elementShot('cloud-save', '.cloud-save-panel');
+await phone();
+await go('/account');
+await until(`${has('41:07')}`);
+await elementShot('cloud-save-phone', '.cloud-save-panel');
+await desktop();
+await go('/account');
+await until(`${has('Delete cloud save')}`);
+await js(`__t.click('Delete cloud save')`);
+ok(
+  'deleting the cloud save asks first',
+  await until(`${has('Delete the cloud copy?')} && ${has('Keep it')}`),
+);
+await js(`__t.click('Yes, delete it')`);
+ok(
+  'and then the page shows none',
+  await until(`${has('No cloud save yet.')} && !${has('41:07')}`),
+  await js(`document.querySelector('.cloud-save-panel')?.innerText`),
+);
+const after = await api('GET', '/api/saves/me', undefined, game.token!);
+ok(
+  'the copy is gone from the server',
+  after.status === 200 && after.body.exists === false,
+  after.body,
+);
 
 // 4. Ask Eli to be friends; Eli accepts (through the API, as the game would).
 await go('/friends');

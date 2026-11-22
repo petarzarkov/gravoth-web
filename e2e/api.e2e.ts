@@ -1,6 +1,7 @@
 // `bun run e2e` (e2e/run.sh): end to end over the local production stack (compose.prod.yml + e2e/compose.e2e.yml): the game's calls (bearer tokens),
 // mails read back from the API's log, the rules checker on a real save, friends, privacy, deletion, degraded services,
-// and a backup restored into a scratch database. Prints one line per check; exits 1 if any failed.
+// and a backup restored into a scratch database, the cloud saves e2e/saves.e2e.ts kept among them. Prints one line per
+// check; exits 1 if any failed.
 const base = 'http://localhost:3000';
 const save = await Bun.file(`${import.meta.dir}/.tmp/save.txt`).text();
 const run = `${Date.now().toString(36)}`;
@@ -67,6 +68,22 @@ const sh = async (cmd: string[]) => {
   ]);
   return { code: await p.exited, out, err };
 };
+/** One value from the live database (or another on the same Postgres). */
+const psql = async (query: string, db = 'gravoth') =>
+  (
+    await sh([
+      'docker',
+      'exec',
+      'gravoth-postgres',
+      'psql',
+      '-U',
+      'gravoth',
+      '-d',
+      db,
+      '-tAc',
+      query,
+    ])
+  ).out.trim();
 /** The newest logged mail with this subject since `since`, and the links in it. */
 const mail = async (subject: RegExp, since: string) => {
   for (let i = 0; i < 20; i++) {
@@ -707,6 +724,11 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
       .emailVerified === true,
     cm?.links,
   );
+  const cySave = await call('PUT', '/api/saves/me', {
+    token: cy.token,
+    body: { data: 'AAD/gAAA', description: 'Cyril' },
+  });
+  ok('Cy keeps a cloud save', cySave.status === 200, cySave.body);
   const since = now();
   const wrong = await call('POST', '/api/account/delete', {
     token: cy.token,
@@ -745,6 +767,12 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     'the deleted account cannot sign in',
     signIn.status === 401,
     signIn.status,
+  );
+  ok(
+    "Cy's cloud save went with the account",
+    (await psql(
+      `select count(*) from cloud_saves where user_id = '${cy.id}'`,
+    )) === '0',
   );
 }
 
@@ -817,22 +845,7 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     restore.err.slice(0, 300),
   );
   const count = async (db: string, table: string) =>
-    Number(
-      (
-        await sh([
-          'docker',
-          'exec',
-          'gravoth-postgres',
-          'psql',
-          '-U',
-          'gravoth',
-          '-d',
-          db,
-          '-tAc',
-          `select count(*) from ${table}`,
-        ])
-      ).out.trim(),
-    );
+    Number(await psql(`select count(*) from ${table}`, db));
   for (const table of [
     'users',
     'profiles',
@@ -841,6 +854,7 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
     'leaderboard_entries',
     'friendships',
     'blocks',
+    'cloud_saves',
   ]) {
     const [live, drill] = [
       await count('gravoth', table),
@@ -852,6 +866,15 @@ for (const who of ['Ana', 'Bo', 'Cy']) {
       { live, drill },
     );
   }
+  const saves = await psql(
+    `select count(*) || ' ' || count(*) filter (where octet_length(data) = size and encode(sha256(data), 'hex') = sha256) from cloud_saves`,
+    'gravoth_drill',
+  );
+  ok(
+    'the restored cloud saves are the same bytes, by size and hash',
+    /^([1-9][0-9]*) \1$/.test(saves),
+    saves,
+  );
   const trigger = await sh([
     'docker',
     'exec',

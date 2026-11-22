@@ -4,10 +4,12 @@
 # 1. Stands up compose.prod.yml (the image, Postgres, Redis, the rules checker built from the game's repository) with
 #    e2e/compose.e2e.yml: throwaway secrets, an S3 mock in place of R2, mails logged at debug, http://localhost:3000.
 # 2. Writes a real save with the game's own Core (e2e/savegen, in the .NET SDK image) for the rules checker to read.
-# 3. Runs e2e/api.e2e.ts (the game's calls: guests and their upgrade, mail links, password reset, verified, pending and
-#    flagged records, friends, blocks, privacy, the checker and Redis down, deletion, a backup restored into a scratch
-#    database) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by e2e/pages.ts
-#    on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls gravoth-api in production).
+# 3. Runs e2e/saves.e2e.ts (the cloud save: written, read back to the byte, replaced, refused, deleted, never a
+#    guest's), e2e/api.e2e.ts (the game's calls: guests and their upgrade, mail links, password reset, verified, pending
+#    and flagged records, friends, blocks, privacy, the checker and Redis down, deletion, a backup restored into a scratch
+#    database, the cloud saves among it) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages
+#    and served by e2e/pages.ts on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls
+#    gravoth-api in production).
 # 4. Takes it all down again, volumes included, unless KEEP=1.
 #
 #   GAME_REPO=../bloodline KEEP=1 bun run e2e
@@ -62,6 +64,8 @@ echo "== the stack"
 curl -fsS http://localhost:3000/api/health >/dev/null
 
 status=0
+echo "== the cloud save, as the game keeps it"
+bun e2e/saves.e2e.ts || status=1
 echo "== the API, as the game calls it"
 bun e2e/api.e2e.ts || status=1
 echo "== the website as Cloudflare Pages serves it, in headless Chrome"
