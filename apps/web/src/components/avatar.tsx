@@ -31,7 +31,6 @@ export const PlayerAvatar = ({
       src={src}
       alt={label ?? ''}
       size={size}
-      radius="xl"
       {...(label === undefined ? { 'aria-hidden': true } : {})}
       imageProps={
         photo === null

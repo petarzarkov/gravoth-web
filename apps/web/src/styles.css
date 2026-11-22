@@ -56,6 +56,18 @@ body {
   color: var(--gold);
 }
 
+/* A phone's bar holds the brand, two links and the player's picture. */
+@media (max-width: 440px) {
+  .brand {
+    gap: 8px;
+  }
+
+  .brand-name {
+    font-size: 17px;
+    letter-spacing: 0.12em;
+  }
+}
+
 .panel-title {
   letter-spacing: 0.16em;
   text-transform: uppercase;

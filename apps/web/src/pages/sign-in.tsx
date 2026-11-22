@@ -230,7 +230,9 @@ export const SignInPage = () => {
                 {problem}
               </Stack>
               <Text ta="center" mt="md" size="sm" c="dimmed">
-                New to Gravoth Online? Any of these makes your account.
+                {providers.length === 0
+                  ? 'New to Gravoth Online? Continue with email to make your account.'
+                  : 'New to Gravoth Online? Any of these makes your account.'}
               </Text>
               <Terms />
             </>

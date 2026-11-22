@@ -18,6 +18,7 @@ import { ApiError, api } from '../api.js';
 import { messageFor, titleOf } from '../format.js';
 import { PlayerAvatar, portraitSrc } from './avatar.js';
 import { Panel } from './bits.js';
+import { DiscordTile, GoogleMark } from './brand-marks.js';
 
 const problem = (caught: unknown): string =>
   caught instanceof ApiError
@@ -83,6 +84,13 @@ export const PicturePicker = ({
               variant="default"
               size="xs"
               w="fit-content"
+              leftSection={
+                source === 'Google' ? (
+                  <GoogleMark size={14} />
+                ) : source === 'Discord' ? (
+                  <DiscordTile size={16} />
+                ) : undefined
+              }
               loading={busy === 'provider'}
               disabled={busy !== null}
               onClick={() => void pick('provider')}
