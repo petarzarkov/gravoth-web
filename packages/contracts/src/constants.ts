@@ -260,6 +260,19 @@ export const CLOUD_SAVE_MAX_BYTES = 3_000_000;
 /** The longest `data` a `CloudSaveWrite` takes: the base64 of {@link CLOUD_SAVE_MAX_BYTES} bytes. */
 export const CLOUD_SAVE_MAX_BASE64 = 4_000_000;
 
+/** Decision 227: how long the realm's one-device lease lasts, renewed by every upload and every lease call. */
+export const REALM_LEASE_SECONDS = 300;
+
+/** Why the game uploads its realm: a checkpoint (an area change, a town visit, a floor done), the 2-minute interval, a pause or quit, a transfer, the first. */
+export const REALM_REASONS = [
+  'checkpoint',
+  'interval',
+  'pause',
+  'transfer',
+  'create',
+] as const;
+export type RealmReason = (typeof REALM_REASONS)[number];
+
 /** Decision 226: the most heroes `POST /api/heroes/active` lists (a save holds six; room for later). */
 export const MAX_ACTIVE_HEROES = 64;
 
@@ -300,8 +313,14 @@ export const ERROR_CODES = [
   'SCORE_OUT_OF_RANGE',
   // The cloud save (/api/saves/me): a guest gets GUEST_ACCOUNT.
   'SAVE_TOO_LARGE',
-  // A hero's build (POST /api/heroes/:id/builds) for an online hero, whose builds come from its realm only.
+  // An online hero's builds and records come from its realm only: its hero build and score routes answer HERO_ONLINE.
   'HERO_ONLINE',
+  // The online realm (/api/realm, decision 227): a guest gets GUEST_ACCOUNT, a realm over 3 MB SAVE_TOO_LARGE.
+  'REALM_LEASED',
+  'LEASE_LOST',
+  'REVISION_MISMATCH',
+  'ALREADY_TRANSFERRED',
+  'CHECKER_UNAVAILABLE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

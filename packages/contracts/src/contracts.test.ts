@@ -16,7 +16,12 @@ import {
   HARDCORE_PREFIX,
   MAX_ACTIVE_HEROES,
   PostHeroBuild,
+  REALM_LEASE_SECONDS,
+  REALM_REASONS,
   ReadBoard,
+  RealmLease,
+  RealmRelease,
+  RealmWrite,
   RegisterHero,
   UpdateProfile,
   avatarBorderOf,
@@ -271,6 +276,48 @@ describe('cloud saves', () => {
     expect(CloudSaveRead.parse({}).data).toBe(true);
     expect(CloudSaveRead.parse({ data: 'false' }).data).toBe(false);
     expect(CloudSaveRead.safeParse({ data: 'maybe' }).success).toBe(false);
+  });
+});
+
+describe('the online realm', () => {
+  const write = {
+    deviceId: 'phone-1',
+    baseRevision: 3,
+    data: 'AAD/',
+    reason: 'checkpoint' as const,
+  };
+
+  test('an upload names its device, revision, data and reason; transfers default to none', () => {
+    expect(RealmWrite.parse(write)).toEqual({ ...write, transferred: [] });
+    expect(
+      RealmWrite.parse({ ...write, reason: 'transfer', transferred: [2, 3] })
+        .transferred,
+    ).toEqual([2, 3]);
+    expect(REALM_REASONS).toEqual([
+      'checkpoint',
+      'interval',
+      'pause',
+      'transfer',
+      'create',
+    ]);
+    for (const bad of [
+      { ...write, reason: 'teleport' },
+      { ...write, baseRevision: -1 },
+      { ...write, data: 'AA AA' },
+      { ...write, deviceId: '' },
+      { ...write, deviceId: 'x'.repeat(129) },
+      { ...write, transferred: [-1] },
+    ])
+      expect(RealmWrite.safeParse(bad).success).toBe(false);
+  });
+
+  test('a lease is not forced unless asked, and lasts five minutes', () => {
+    expect(RealmLease.parse({ deviceId: 'phone-1' })).toEqual({
+      deviceId: 'phone-1',
+      force: false,
+    });
+    expect(RealmRelease.safeParse({}).success).toBe(false);
+    expect(REALM_LEASE_SECONDS).toBe(300);
   });
 });
 

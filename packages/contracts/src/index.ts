@@ -7,5 +7,6 @@ export * from './heroes.js';
 export * from './meta.js';
 export * from './pagination.js';
 export * from './players.js';
+export * from './realm.js';
 export * from './saves.js';
 export * from './social.js';
