@@ -64,6 +64,13 @@
       "when": 1795357397598,
       "tag": "0008_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795413653122,
+      "tag": "0009_friend_suggestions",
+      "breakpoints": true
     }
   ]
 }

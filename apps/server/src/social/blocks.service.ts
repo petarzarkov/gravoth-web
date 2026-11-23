@@ -7,6 +7,7 @@ import { block, friendship } from '../database/schema.js';
 import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Profiles } from '../players/profiles.service.js';
 import { displayNames, requireAccount } from './players.js';
+import { SuggestionCache } from './suggestions.service.js';
 import type { BlockView } from '@gravoth/contracts';
 export type { BlockView };
 
@@ -19,6 +20,7 @@ export class Blocks {
     private readonly db: Db,
     private readonly context: AuthContext,
     private readonly profiles: Profiles,
+    private readonly suggestions: SuggestionCache,
   ) {}
 
   async block(displayName: string): Promise<BlockView> {
@@ -59,6 +61,8 @@ export class Blocks {
       return existing;
     });
     if (row === undefined) throw new Error('block not stored');
+    // Neither suggests the other while the block stands, and a friendship it ended no longer links their friends.
+    await this.suggestions.drop(me.id, target.userId);
     return {
       userId: target.userId,
       displayName: target.displayName,
@@ -74,6 +78,7 @@ export class Blocks {
       .returning({ blockedId: block.blockedId });
     if (gone.length === 0)
       throw new HttpError(HttpStatusCode.NOT_FOUND, 'BLOCK_NOT_FOUND');
+    await this.suggestions.drop(me.id, userId);
   }
 
   /** Whom the caller blocked, newest first. */

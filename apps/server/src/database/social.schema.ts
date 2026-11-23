@@ -154,5 +154,39 @@ export const block = pgTable(
   ],
 );
 
+/**
+ * Decision 229: a player the caller hid from their friend suggestions, until `SUGGESTION_LIMITS.DISMISS_DAYS` after
+ * `dismissed_at` (hiding again starts the days over). The daily clean-up deletes the rows past it; either player's
+ * account takes the row with it.
+ */
+export const suggestionDismissal = pgTable(
+  'suggestion_dismissals',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    dismissedId: uuid('dismissed_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    dismissedAt: timestamp('dismissed_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({
+      name: 'suggestion_dismissals_pkey',
+      columns: [t.userId, t.dismissedId],
+    }),
+    check(
+      'suggestion_dismissals_not_self',
+      sql`${t.userId} <> ${t.dismissedId}`,
+    ),
+    // The dismissed player's foreign key.
+    index('suggestion_dismissals_dismissed_idx').on(t.dismissedId),
+    // The daily clean-up.
+    index('suggestion_dismissals_at_idx').on(t.dismissedAt),
+  ],
+);
+
 export type Profile = typeof profile.$inferSelect;
 export type Friendship = typeof friendship.$inferSelect;

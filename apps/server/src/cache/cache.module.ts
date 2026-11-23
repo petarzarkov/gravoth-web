@@ -1,5 +1,6 @@
 import { Module } from '@dunx/core';
 import {
+  Cache,
   CacheMetrics,
   CacheModule as CacheLayer,
   MemoryCacheStore,
@@ -11,7 +12,7 @@ import { CacheL2, CacheL2Module } from './cache-l2.js';
 
 /**
  * The Redis connection (the rate limit's counter) and a two-tier `Cache` in front of
- * it, for the boards and hero pages of step 4. No routes of its own.
+ * it (a caller's friend suggestions, decision 229). No routes of its own.
  */
 @Module({
   imports: [
@@ -41,6 +42,6 @@ import { CacheL2, CacheL2Module } from './cache-l2.js';
       { metrics: true },
     ),
   ],
-  exports: [CacheL2, CacheMetrics, RedisConnection, RedisMetrics],
+  exports: [Cache, CacheL2, CacheMetrics, RedisConnection, RedisMetrics],
 })
 export class CacheModule {}

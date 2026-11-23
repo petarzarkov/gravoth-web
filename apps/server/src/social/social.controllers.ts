@@ -16,6 +16,7 @@ import {
   RequestId,
   ToPlayer,
   UpdateProfile,
+  type SuggestionList,
 } from '@gravoth/contracts';
 import { Profiles, type ProfileView } from '../players/profiles.service.js';
 import { Blocks, type BlockView } from './blocks.service.js';
@@ -26,6 +27,7 @@ import {
   type RequestView,
 } from './friends.service.js';
 import { callerOf } from './players.js';
+import { Suggestions } from './suggestions.service.js';
 
 const ok = HttpStatusCode.OK;
 const updateProfile = { body: UpdateProfile } as const;
@@ -34,6 +36,10 @@ const sendRequest = { body: ToPlayer, status: ok } as const;
 const onRequest = { params: RequestId, status: ok } as const;
 const onPlayer = { params: PlayerId, status: ok } as const;
 const blockPlayer = { body: ToPlayer, status: ok } as const;
+const dismissSuggestion = {
+  params: PlayerId,
+  status: HttpStatusCode.NO_CONTENT,
+} as const;
 
 /** The caller's own profile: the display name others see, and the privacy flags. */
 @UseGuards(SessionGuard)
@@ -59,13 +65,16 @@ export class ProfileController {
 
 /**
  * Friends (an account, not a guest): send a request to a display name, accept, decline or cancel one, remove a friend,
- * and list friends and requests both ways. Every action is a POST, which every client (Unity's among them) sends with
- * a body intact.
+ * list friends and requests both ways, and the suggestions (decision 229). Every action is a POST, which every client
+ * (Unity's among them) sends with a body intact.
  */
 @UseGuards(SessionGuard)
 @Controller('friends')
 export class FriendsController {
-  constructor(private readonly friends: Friends) {}
+  constructor(
+    private readonly friends: Friends,
+    private readonly suggestions: Suggestions,
+  ) {}
 
   @Get('/', listPage)
   list({ query }: Input<typeof listPage>): Promise<Page<FriendView>> {
@@ -117,6 +126,24 @@ export class FriendsController {
   async remove({ params }: Input<typeof onPlayer>): Promise<{ removed: true }> {
     await this.friends.remove(params.userId);
     return { removed: true };
+  }
+
+  /**
+   * Decision 229: at most 20 players the caller may want to know, the best first, each with its reasons and the line
+   * to show (suggestions.service.ts). 60 an hour per address; a list is cached for five minutes, dropped at once by a
+   * request, an answer, a removal, a block or a dismissal.
+   */
+  @Throttle({ limit: 60, windowSeconds: 3600 })
+  @Get('/suggestions')
+  suggested(): Promise<SuggestionList> {
+    return this.suggestions.list();
+  }
+
+  /** 204: the player is left out of the caller's suggestions for 30 days. 404 `PLAYER_NOT_FOUND`; 120 an hour. */
+  @Throttle({ limit: 120, windowSeconds: 3600 })
+  @Post('/suggestions/:userId/dismiss', dismissSuggestion)
+  async dismiss({ params }: Input<typeof dismissSuggestion>): Promise<void> {
+    await this.suggestions.dismiss(params.userId);
   }
 }
 

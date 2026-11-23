@@ -21,6 +21,7 @@ import {
   type Caller,
   type PlayerCard,
 } from './players.js';
+import { SuggestionCache } from './suggestions.service.js';
 import type {
   FriendView,
   RequestOutcome,
@@ -47,6 +48,7 @@ export class Friends {
     private readonly context: AuthContext,
     private readonly profiles: Profiles,
     private readonly mail: Mailer,
+    private readonly suggestions: SuggestionCache,
   ) {}
 
   async request(displayName: string): Promise<RequestOutcome> {
@@ -102,6 +104,8 @@ export class Friends {
       return this.answerExisting(me, raced);
     }
     if (row === undefined) throw new Error('friend request not stored');
+    // Neither suggests the other while the request stands.
+    await this.suggestions.drop(me.id, target.userId);
 
     if (targetUser.emailVerified && target.emailFriendRequests) {
       const from = (await this.profiles.ensure(me.id)).displayName;
@@ -131,6 +135,8 @@ export class Friends {
       .returning();
     if (row === undefined)
       throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
+    // Each one's friends are now the other's friends of friends.
+    await this.suggestions.drop(row.requesterId, row.addresseeId);
     return this.friendView(
       row,
       me.id,
@@ -161,6 +167,7 @@ export class Friends {
       .returning({ id: friendship.id });
     if (gone.length === 0)
       throw new HttpError(HttpStatusCode.NOT_FOUND, 'FRIEND_NOT_FOUND');
+    await this.suggestions.drop(me.id, friendId);
   }
 
   /** The caller's friends, newest friendship first. */
@@ -254,9 +261,14 @@ export class Friends {
     const gone = await this.db
       .delete(friendship)
       .where(and(where, eq(friendship.status, 'pending')))
-      .returning({ id: friendship.id });
-    if (gone.length === 0)
+      .returning({
+        requesterId: friendship.requesterId,
+        addresseeId: friendship.addresseeId,
+      });
+    const [row] = gone;
+    if (row === undefined)
       throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
+    await this.suggestions.drop(row.requesterId, row.addresseeId);
   }
 
   private other(row: Friendship, me: string): string {
