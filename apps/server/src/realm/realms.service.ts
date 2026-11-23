@@ -8,7 +8,7 @@ import {
   type RealmWrite,
   type RealmWritten,
 } from '@gravoth/contracts';
-import { and, asc, eq, gt, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { hero, realm, realmTransfer } from '../database/schema.js';
 import { ValidatorClient } from '../gravoth/validator.client.js';
@@ -41,7 +41,9 @@ export const gameVersionOf = (header: string | null): string | null => {
  *   `REVISION_MISMATCH` with the current revision (an older copy, a restored backup, another device's work).
  * - **Transfers:** an upload moving offline heroes online lists their ids in the realm; the rules checker reads them
  *   first (in the request: the answer needs it) and each one's fingerprint is kept, so the same hero moves once
- *   (409 `ALREADY_TRANSFERRED` with the ids moved before, for this account or another).
+ *   (409 `ALREADY_TRANSFERRED` with the ids moved before and `sameAccount`, true when they all moved into this account:
+ *   a move retried after its answer was lost, so the game deletes the phone's copy). Checked before the revision, since
+ *   that retry still names the revision before the move.
  * - **The checks** run after the reply (`RealmSync`): the heroes, their builds and the boards follow the realm.
  */
 export class Realms {
@@ -135,15 +137,9 @@ export class Realms {
         .limit(1);
       if (current === undefined || current.leaseDevice !== input.deviceId)
         throw new HttpError(HttpStatusCode.CONFLICT, 'LEASE_LOST');
-      if (current.revision !== input.baseRevision)
-        throw new DetailedHttpError(
-          HttpStatusCode.CONFLICT,
-          'REVISION_MISMATCH',
-          {
-            revision: current.revision,
-          },
-        );
 
+      // The transfers before the revision: a move retried after its answer was lost still names the revision before
+      // it, and the game needs to hear that its hero landed (`sameAccount`), not only that the realm moved on.
       if (moved.length > 0) {
         const kept = await tx
           .insert(realmTransfer)
@@ -158,13 +154,37 @@ export class Realms {
           .returning({ fingerprint: realmTransfer.fingerprint });
         const fresh = new Set(kept.map((row) => row.fingerprint));
         const before = moved.filter((m) => !fresh.has(m.fingerprint));
-        if (before.length > 0)
+        if (before.length > 0) {
+          const owners = await tx
+            .select({ userId: realmTransfer.userId })
+            .from(realmTransfer)
+            .where(
+              inArray(
+                realmTransfer.fingerprint,
+                before.map((m) => m.fingerprint),
+              ),
+            );
           throw new DetailedHttpError(
             HttpStatusCode.CONFLICT,
             'ALREADY_TRANSFERRED',
-            { characterIds: before.map((m) => m.characterId) },
+            {
+              characterIds: before.map((m) => m.characterId),
+              sameAccount:
+                owners.length > 0 &&
+                owners.every((owner) => owner.userId === userId),
+            },
           );
+        }
       }
+
+      if (current.revision !== input.baseRevision)
+        throw new DetailedHttpError(
+          HttpStatusCode.CONFLICT,
+          'REVISION_MISMATCH',
+          {
+            revision: current.revision,
+          },
+        );
 
       const [stored] = await tx
         .update(realm)

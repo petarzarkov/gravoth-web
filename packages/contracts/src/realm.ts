@@ -45,7 +45,10 @@ export const RealmWrite = z
       .max(CLOUD_SAVE_MAX_BASE64)
       .regex(/^[A-Za-z0-9+/]+=*$/),
     reason: z.enum(REALM_REASONS),
-    /** The realm's character ids of offline heroes moved online by this upload (once each: 409 `ALREADY_TRANSFERRED`). */
+    /**
+     * The realm's character ids of offline heroes moved online by this upload (once each: 409 `ALREADY_TRANSFERRED`
+     * `{ characterIds, sameAccount }`, `RealmConflict`).
+     */
     transferred: z.array(z.number().int().min(0)).max(64).default([]),
   })
   .meta({
@@ -114,4 +117,10 @@ export interface RealmConflict {
   readonly revision?: number;
   /** `ALREADY_TRANSFERRED`: the heroes moved online before. */
   readonly characterIds?: readonly number[];
+  /**
+   * `ALREADY_TRANSFERRED`: true when every one of them moved into the caller's own account, as a MOVE ONLINE retried
+   * after its answer was lost finds (the move landed: the phone's copy can go); false when one moved into another
+   * account (a restored copy). Checked before the revision, so the retry hears it even at the revision before the move.
+   */
+  readonly sameAccount?: boolean;
 }

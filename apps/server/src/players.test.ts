@@ -361,6 +361,65 @@ describe('the offline heroes still on the phone', () => {
     expect(await names()).toEqual([]);
   });
 
+  it("are held by the phone that last posted a hero's build (decision 229)", async () => {
+    const wyn = await signUp(base, 'Wynne', 'wynne@players.test');
+    const reg = async (name: string) =>
+      (
+        await post<{ hero: { id: string } }>('/api/heroes', wyn, {
+          name,
+          class: 'barbarian',
+        })
+      ).body.hero.id;
+    const build = (heroId: string, deviceId?: string) =>
+      post<HeroBuildPosted & { error?: string }>(
+        `/api/heroes/${heroId}/builds`,
+        wyn,
+        {
+          build: buildAt(0, 10),
+          ...(deviceId === undefined ? {} : { deviceId }),
+        },
+      );
+    const active = async (heroIds: string[], deviceId?: string) =>
+      (
+        await post<{ retired: number }>('/api/heroes/active', wyn, {
+          heroIds,
+          ...(deviceId === undefined ? {} : { deviceId }),
+        })
+      ).body.retired;
+    const names = async () =>
+      (await pageOf(undefined, wyn.id)).body.heroes
+        .map((h) => h.hero.name)
+        .sort();
+    const a = await reg('OnPhoneA');
+    const b = await reg('OnPhoneB');
+    expect((await build(a, 'phone-a')).status).toBe(200);
+    expect((await build(b, 'phone-b')).status).toBe(200);
+    expect(
+      (
+        await post(`/api/heroes/${a}/builds`, wyn, {
+          build: buildAt(1, 11),
+          deviceId: ' ',
+        })
+      ).status,
+    ).toBe(400);
+
+    // Each phone lists only its own heroes; neither retires the other's.
+    expect(await active([a], 'phone-a')).toBe(0);
+    expect(await active([b], 'phone-b')).toBe(0);
+    expect(await active([], 'phone-a')).toBe(1);
+    expect(await names()).toEqual(['OnPhoneB']);
+    // Phone A posts B's build (the save moved there): A holds it now, and B's list no longer reaches it.
+    expect((await build(b, 'phone-a')).body.created).toBe(false);
+    expect(await active([], 'phone-b')).toBe(0);
+    expect(await names()).toEqual(['OnPhoneB']);
+    // A build posted without a device (an older game) brings a hero back and leaves its phone as it was.
+    expect((await build(a)).status).toBe(200);
+    expect(await names()).toEqual(['OnPhoneA', 'OnPhoneB']);
+    expect(await active([], 'phone-b')).toBe(0);
+    expect(await active([b], 'phone-a')).toBe(1);
+    expect(await names()).toEqual(['OnPhoneB']);
+  });
+
   it('bring a retired hero back when its build is posted', async () => {
     await post('/api/heroes/active', ana, {
       heroIds: [ids['Kriso'], ids['Lyra'], ids['Vey']],

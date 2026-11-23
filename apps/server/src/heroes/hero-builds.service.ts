@@ -39,7 +39,8 @@ export class HeroBuilds {
 
   /**
    * The hero's build: stored, unless it is the hero's latest build already (answered with `created: false`). Posting
-   * a hero's build brings a retired hero back (it is on the phone again).
+   * a hero's build brings a retired hero back (it is on the phone again), and (decision 229) with `deviceId` that phone
+   * now holds it.
    */
   async post(
     userId: string,
@@ -49,10 +50,16 @@ export class HeroBuilds {
     const owner = await this.heroes.own(userId, heroId);
     if (owner.online)
       throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_ONLINE');
-    if (owner.retiredAt !== null)
+    const claim =
+      body.deviceId !== undefined && owner.deviceId !== body.deviceId;
+    if (owner.retiredAt !== null || claim)
       await this.db
         .update(hero)
-        .set({ retiredAt: null, updatedAt: new Date() })
+        .set({
+          retiredAt: null,
+          ...(claim ? { deviceId: body.deviceId } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(hero.id, owner.id));
     // Decision 230: the build's title and main path (a game since it sends them) are the hero's.
     const extras = body.build.extras as Record<string, unknown>;
@@ -75,8 +82,9 @@ export class HeroBuilds {
   /**
    * The offline heroes the phone still has: they come back if retired, and (decision 229) with `deviceId` the phone
    * claims them. The caller's other offline heroes are retired (their builds and records stay), but only the ones this
-   * phone holds or no phone has claimed: another phone's heroes are that phone's to retire. Without `deviceId` (a game
-   * before decision 229) only the unclaimed ones. Answers how many this call retired.
+   * phone holds (it last registered, listed or posted a build of them) or no phone has claimed: another phone's heroes
+   * are that phone's to retire. Without `deviceId` (a game before decision 229) only the unclaimed ones. Answers how
+   * many this call retired.
    */
   async active(
     userId: string,

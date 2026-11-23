@@ -10,17 +10,17 @@ import type {
 } from '@gravoth/contracts';
 import { SQL } from 'bun';
 import { AppConfigService } from './config.js';
-import {
-  ValidatorClient,
-  type CardPage,
-  type HeroCheck,
-  type HeroesReport,
-  type RecordCheck,
-  type SaveReport,
-} from './gravoth/validator.client.js';
+import { ValidatorClient, type CardPage } from './gravoth/validator.client.js';
 import { RealmSync } from './realm/realm-sync.js';
 import { startTestApp, type TestApp } from './testing/app.js';
 import { call, guest, signUp, type Player } from './testing/http.js';
+import {
+  checker,
+  heroOf,
+  realmOf,
+  record,
+  StandInValidator,
+} from './testing/realm-checker.js';
 
 /**
  * The online realm (decision 227) over HTTP, as the game calls it: the one-device lease (taken, renewed, refused,
@@ -28,117 +28,8 @@ import { call, guest, signUp, type Player } from './testing/http.js';
  * follows each accepted upload: the rules checker's read landed on the heroes (online, flagged), their builds and the
  * boards, which show online heroes only.
  *
- * The rules checker is a stand-in that reads a "save" written as JSON by the test: the heroes `/saves/heroes` answers
- * and the level each one's snapshot has (the real one reads the game's save with its Core; e2e/ drives that).
+ * The rules checker is testing/realm-checker.ts's stand-in, reading a "save" the test writes as JSON.
  */
-let snapshotsAsked = 0;
-let checkerDown = false;
-class StandInValidator extends ValidatorClient {
-  override async up(): Promise<boolean> {
-    return true;
-  }
-  override async check(save: string): Promise<SaveReport> {
-    return JSON.parse(save) as SaveReport;
-  }
-  override async heroes(save: string): Promise<HeroesReport> {
-    if (checkerDown) throw new Error('connection refused');
-    if (save === 'garbage')
-      return {
-        ok: false,
-        needsNewerBuild: false,
-        needs: 0,
-        warnings: ['unreadable'],
-        saveId: null,
-        heroes: [],
-      };
-    return {
-      ok: true,
-      needsNewerBuild: false,
-      needs: 0,
-      warnings: [],
-      saveId: 'a1666a2c2290d9aa',
-      heroes: (JSON.parse(save) as { heroes: HeroCheck[] }).heroes,
-    };
-  }
-  override async snapshot(
-    save: string,
-    heroId: number,
-    gameVersion: string,
-  ): Promise<unknown> {
-    snapshotsAsked += 1;
-    const found = (JSON.parse(save) as { heroes: HeroCheck[] }).heroes.find(
-      (h) => h.characterId === heroId,
-    );
-    if (found === undefined) return null;
-    return {
-      revision: 0,
-      gameVersion,
-      level: found.level,
-      skills: [{ id: 'cleave', level: 10, slot: 0, supports: [] }],
-      gear: [],
-      talents: { allocated: [1, 2] },
-      extras: { border: 'pit_30' },
-      summary: { dps: 10, clearDps: 5, ehp: 100, life: 50 },
-    };
-  }
-  override async card(_save: string, heroId: number): Promise<CardPage[]> {
-    return [
-      {
-        title: 'Build',
-        sections: [
-          { title: 'Hero', rows: [{ label: 'id', value: `${heroId}` }] },
-        ],
-      },
-    ];
-  }
-}
-
-const record = (
-  board: string,
-  score: number,
-  characterId: number,
-  more: Partial<RecordCheck> = {},
-): RecordCheck => ({
-  board,
-  score,
-  characterId,
-  witness: 'unchecked',
-  plausible: true,
-  ranked: true,
-  ...more,
-});
-
-const heroOf = (
-  characterId: number,
-  name: string,
-  level: number,
-  more: Partial<HeroCheck> = {},
-): HeroCheck => ({
-  characterId,
-  name,
-  class: 'barbarian',
-  level,
-  hardcore: false,
-  plausible: true,
-  reasons: [],
-  records: [],
-  fingerprint: `${characterId}${name}`
-    .split('')
-    .map((ch) => ch.charCodeAt(0).toString(16))
-    .join('')
-    .padEnd(64, '0')
-    .slice(0, 64),
-  dps: 1_234,
-  clearDps: 900,
-  ehp: 10_000,
-  life: 3_000,
-  highestChartTier: 0,
-  ...more,
-});
-
-/** A realm's bytes: the stand-in's JSON, base64. */
-const realmOf = (...heroes: HeroCheck[]): string =>
-  Buffer.from(JSON.stringify({ heroes })).toString('base64');
 
 let started: TestApp;
 let base = '';
@@ -162,6 +53,7 @@ const put = (
       error?: string;
       revision?: number;
       characterIds?: number[];
+      sameAccount?: boolean;
       leaseUntil?: string;
     }
   >(base, 'PUT', '/api/realm', { token: who.token, body, headers });
@@ -358,7 +250,7 @@ describe('an upload', () => {
   });
 
   it('makes a new build only when the snapshot changed, and keeps a better record only', async () => {
-    const asked = snapshotsAsked;
+    const asked = checker.snapshotsAsked;
     const same = await upload(
       ana,
       'phone',
@@ -370,7 +262,7 @@ describe('an upload', () => {
       { reason: 'interval' },
     );
     expect(same.body.revision).toBe(2);
-    expect(snapshotsAsked).toBe(asked + 2);
+    expect(checker.snapshotsAsked).toBe(asked + 2);
     const [builds] = await sql`SELECT count(*)::int AS n FROM hero_builds`;
     expect(builds.n).toBe(2);
 
@@ -573,6 +465,7 @@ describe('moving offline heroes online', () => {
     expect(again.body).toMatchObject({
       error: 'ALREADY_TRANSFERRED',
       characterIds: [4],
+      sameAccount: true,
     });
     expect((await read(ana)).body.revision).toBe(11);
 
@@ -587,6 +480,89 @@ describe('moving offline heroes online', () => {
     expect(elsewhere.body).toMatchObject({
       error: 'ALREADY_TRANSFERRED',
       characterIds: [1],
+      sameAccount: false,
+    });
+  });
+
+  it('tells a move retried after its answer was lost that it landed, even at the revision before it', async () => {
+    const cy = await signUp(base, 'Cyra', 'cy@realm.test');
+    await lease(cy, 'cy-phone');
+    const ember = heroOf(1, 'Ember', 40, { fingerprint: 'b'.repeat(64) });
+    expect((await upload(cy, 'cy-phone', 0, realmOf(ember))).status).toBe(200);
+    const tern = heroOf(2, 'Tern', 22, { fingerprint: 'e'.repeat(64) });
+    const realm = realmOf(ember, tern);
+    const moved = await upload(cy, 'cy-phone', 1, realm, {
+      reason: 'transfer',
+      transferred: [2],
+    });
+    expect([moved.status, moved.body.revision]).toEqual([200, 2]);
+
+    // The same upload again, as the game sends it when the 200 never reached it: base 1, the realm now at 2.
+    const retried = await put(cy, {
+      deviceId: 'cy-phone',
+      baseRevision: 1,
+      data: realm,
+      reason: 'transfer',
+      transferred: [2],
+    });
+    expect(retried.status).toBe(409);
+    expect(retried.body).toMatchObject({
+      error: 'ALREADY_TRANSFERRED',
+      characterIds: [2],
+      sameAccount: true,
+    });
+    expect((await read(cy)).body.revision).toBe(2);
+
+    // Without a transfer the old base is still a revision mismatch, and a fresh hero at the old base moves nothing.
+    expect(
+      (
+        await put(cy, {
+          deviceId: 'cy-phone',
+          baseRevision: 1,
+          data: realm,
+          reason: 'checkpoint',
+        })
+      ).body,
+    ).toMatchObject({ error: 'REVISION_MISMATCH', revision: 2 });
+    const late = heroOf(3, 'Late', 9, { fingerprint: 'd'.repeat(64) });
+    const stale = await put(cy, {
+      deviceId: 'cy-phone',
+      baseRevision: 1,
+      data: realmOf(ember, tern, late),
+      reason: 'transfer',
+      transferred: [3],
+    });
+    expect(stale.body).toMatchObject({
+      error: 'REVISION_MISMATCH',
+      revision: 2,
+    });
+    expect(
+      await sql`SELECT 1 FROM realm_transfers WHERE fingerprint = ${'d'.repeat(64)}`,
+    ).toHaveLength(0);
+
+    // A move of two heroes, one of them moved into another account before, is not this account's alone.
+    const dee = await signUp(base, 'Deena', 'dee@realm.test');
+    await lease(dee, 'dee-phone');
+    const mott = heroOf(1, 'Mott', 20, { fingerprint: 'c'.repeat(64) });
+    expect(
+      (
+        await upload(dee, 'dee-phone', 0, realmOf(mott), {
+          reason: 'transfer',
+          transferred: [1],
+        })
+      ).status,
+    ).toBe(200);
+    const mixed = await put(cy, {
+      deviceId: 'cy-phone',
+      baseRevision: 2,
+      data: realmOf(ember, tern, { ...mott, characterId: 4 }),
+      reason: 'transfer',
+      transferred: [2, 4],
+    });
+    expect(mixed.body).toMatchObject({
+      error: 'ALREADY_TRANSFERRED',
+      characterIds: [2, 4],
+      sameAccount: false,
     });
   });
 
@@ -599,7 +575,7 @@ describe('moving offline heroes online', () => {
       transferred: [7],
     });
     expect(missing.status).toBe(400);
-    checkerDown = true;
+    checker.down = true;
     const down = await put(bo, {
       deviceId: 'bo-phone',
       baseRevision: 0,
@@ -607,7 +583,7 @@ describe('moving offline heroes online', () => {
       reason: 'transfer',
       transferred: [1],
     });
-    checkerDown = false;
+    checker.down = false;
     expect([down.status, down.body.error]).toEqual([
       503,
       'CHECKER_UNAVAILABLE',
@@ -616,14 +592,14 @@ describe('moving offline heroes online', () => {
   });
 
   it('leaves a realm unchecked while the checker is down, and checks it at the next upload', async () => {
-    checkerDown = true;
+    checker.down = true;
     const first = await upload(
       bo,
       'bo-phone',
       0,
       realmOf(heroOf(1, 'Mott', 20)),
     );
-    checkerDown = false;
+    checker.down = false;
     expect(first.status).toBe(200);
     expect((await read(bo)).body).toMatchObject({
       revision: 1,

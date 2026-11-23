@@ -58,7 +58,7 @@ export class RealmController {
   }
 
   /**
-   * 409 `LEASE_LOST`, `REVISION_MISMATCH` `{ revision }` or `ALREADY_TRANSFERRED` `{ characterIds }`; 413
+   * 409 `LEASE_LOST`, `ALREADY_TRANSFERRED` `{ characterIds, sameAccount }` or `REVISION_MISMATCH` `{ revision }`; 413
    * `SAVE_TOO_LARGE` over 3 MB; 503 `CHECKER_UNAVAILABLE` when a transfer cannot be read. The checks run after the reply.
    */
   @Throttle({ limit: 900, windowSeconds: 3600 })

@@ -79,6 +79,8 @@ export const PostHeroBuild = z
     build: BuildSnapshot,
     save: z.string().min(1).max(2_000_000).optional(),
     saveHeroId: z.number().int().min(0).optional(),
+    /** Decision 229: the phone reporting the hero (the game's install id), which then holds it for `active`. */
+    deviceId: DeviceId.optional(),
   })
   .meta({
     id: 'PostHeroBuild',
@@ -99,8 +101,9 @@ export interface HeroBuildPosted {
  * online hero is its realm's: only the realm retires it (decision 227).
  *
  * Decision 229: with `deviceId` the listed heroes are that phone's, and only that phone's other heroes (and heroes no
- * phone has claimed yet) are retired, so two phones with different saves no longer retire each other's. Without it (an
- * older game) only the heroes no phone has claimed are retired.
+ * phone has claimed yet) are retired, so two phones with different saves no longer retire each other's. A hero belongs
+ * to the phone that last registered it, listed it here or posted its build. Without it (an older game) only the heroes
+ * no phone has claimed are retired.
  */
 export const ActiveHeroes = z
   .object({
