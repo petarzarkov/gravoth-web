@@ -2,8 +2,8 @@
  * Friends' online status (v0.14.4): each signed-in player's last activity is a Redis key that lives
  * `PRESENCE_TTL_SECONDS`, refreshed by their authenticated requests (`MarkPresence`, after `SessionGuard`). A player is
  * online to their friends while the key lives and their profile's `showOnline` is on. Redis is never in a request's
- * way: a mark is not awaited, and with Redis down every player reads as offline and every request still answers; when
- * Redis is back, presence's own connection (`PresenceRedis`) connects again.
+ * way: a mark is not awaited, and with Redis down every player reads as offline and every request still answers; the
+ * app's connection reconnects when Redis is back (cache/app-redis.ts).
  */
 import { AuthContext } from '@dunx/auth';
 import { Logger } from '@dunx/core';
@@ -12,8 +12,8 @@ import { PRESENCE_TTL_SECONDS } from '@gravoth/contracts';
 import type { BunRequest } from 'bun';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Db } from '../database/db.js';
+import { AppRedis } from '../cache/app-redis.js';
 import { profile } from '../database/schema.js';
-import { PresenceRedis } from './presence-redis.js';
 
 /** At most one mark a player per this, per process: the key outlives it four times over. */
 export const PRESENCE_REFRESH_MS = 30_000;
@@ -42,14 +42,15 @@ export abstract class PresenceStore {
 }
 
 /**
- * A key per player in Redis (`SET ... EX`, read with one `MGET`, over presence's own connection, `PresenceRedis`): a
+ * A key per player in Redis (`SET ... EX`, read with one `MGET`), over the app's one connection (cache/app-redis.ts),
+ * which reconnects itself, waits 500 ms at most for an answer and fails a command at once while Redis is down: a
  * failed mark is lost, a failed read finds no one.
  */
 export class RedisPresenceStore extends PresenceStore {
   private warned = 0;
 
   constructor(
-    private readonly redis: PresenceRedis,
+    private readonly redis: AppRedis,
     private readonly logger: Logger,
   ) {
     super();
@@ -57,7 +58,7 @@ export class RedisPresenceStore extends PresenceStore {
 
   async mark(userId: string, seconds: number): Promise<void> {
     try {
-      await this.redis.set(presenceKey(userId), seconds);
+      await this.redis.set(presenceKey(userId), '1', { ex: seconds });
     } catch (error) {
       this.warn('presence not marked', error);
     }
@@ -66,7 +67,7 @@ export class RedisPresenceStore extends PresenceStore {
   async live(userIds: readonly string[]): Promise<ReadonlySet<string>> {
     if (userIds.length === 0) return new Set();
     try {
-      const values = await this.redis.mget(userIds.map(presenceKey));
+      const values = await this.redis.mget(...userIds.map(presenceKey));
       return new Set(userIds.filter((_, i) => values[i] != null));
     } catch (error) {
       this.warn('presence not read', error);

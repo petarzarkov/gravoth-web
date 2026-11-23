@@ -6,17 +6,17 @@ import {
   MemoryCacheStore,
   TieredCacheStore,
 } from '@dunx/infra/cache';
-import { RedisConnection, RedisMetrics } from '@dunx/infra/redis';
-import { appRedis } from './app-redis.js';
+import { AppRedisModule } from './app-redis.js';
 import { CacheL2, CacheL2Module } from './cache-l2.js';
 
 /**
- * The Redis connection (the rate limit's counter) and a two-tier `Cache` in front of
- * it (a caller's friend suggestions, decision 229). No routes of its own.
+ * The Redis connection (`AppRedis`: the cache, the rate limit's counter and
+ * presence; it reconnects itself) and a two-tier `Cache` in front of it (a
+ * caller's friend suggestions, decision 229). No routes of its own.
  */
 @Module({
   imports: [
-    appRedis,
+    AppRedisModule,
     // In this scope too: exporting `CacheL2` needs it visible from here.
     CacheL2Module,
     /**
@@ -42,6 +42,6 @@ import { CacheL2, CacheL2Module } from './cache-l2.js';
       { metrics: true },
     ),
   ],
-  exports: [Cache, CacheL2, CacheMetrics, RedisConnection, RedisMetrics],
+  exports: [Cache, CacheL2, CacheMetrics, AppRedisModule],
 })
 export class CacheModule {}

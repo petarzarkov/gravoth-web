@@ -6,7 +6,7 @@ import {
   type FriendView,
   type RequestOutcome,
 } from '@gravoth/contracts';
-import type { PresenceRedis } from './presence/presence-redis.js';
+import type { AppRedis } from './cache/app-redis.js';
 import {
   PRESENCE_REFRESH_MS,
   PresenceStore,
@@ -209,15 +209,16 @@ describe('the store over Redis', () => {
   const working = {
     set: async (...args: unknown[]) => {
       sets.push(args);
+      return 'OK';
     },
-    mget: async (keys: readonly string[]) =>
+    mget: async (...keys: string[]) =>
       keys.map((key) => (key.endsWith(':b') ? '1' : null)),
-  } as unknown as PresenceRedis;
+  } as unknown as AppRedis;
 
   it('sets a key per player with the time to live, and reads them with one MGET', async () => {
     const redis = new RedisPresenceStore(working, logger);
     await redis.mark('a', PRESENCE_TTL_SECONDS);
-    expect(sets).toEqual([[presenceKey('a'), 120]]);
+    expect(sets).toEqual([[presenceKey('a'), '1', { ex: 120 }]]);
     expect([...(await redis.live(['a', 'b', 'c']))]).toEqual(['b']);
     expect((await redis.live([])).size).toBe(0);
   });
@@ -231,7 +232,7 @@ describe('the store over Redis', () => {
         throw new Error('connection refused');
       },
     ]) {
-      const broken = { set: fail, mget: fail } as unknown as PresenceRedis;
+      const broken = { set: fail, mget: fail } as unknown as AppRedis;
       const redis = new RedisPresenceStore(broken, logger);
       expect(await redis.mark('a', 120)).toBeUndefined();
       expect((await redis.live(['a'])).size).toBe(0);
