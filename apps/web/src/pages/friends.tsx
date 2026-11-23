@@ -8,9 +8,11 @@ import {
   Button,
   Grid,
   Group,
+  Indicator,
   Stack,
   Text,
   TextInput,
+  VisuallyHidden,
 } from '@mantine/core';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import type { AvatarView, SuggestionView } from '@gravoth/contracts';
@@ -112,6 +114,7 @@ const ByName = ({
 /**
  * One player's row: the picture and name (to their player page, given `userId`), when, then the actions at the far
  * end. `stacked` puts the line under the name, for a longer one (a suggestion's) that a phone's row has no room beside.
+ * `online` (a friend, v0.14.4) puts a green dot on the picture.
  */
 const Person = ({
   name,
@@ -119,6 +122,7 @@ const Person = ({
   when,
   userId,
   stacked,
+  online,
   children,
 }: {
   name: string;
@@ -126,6 +130,7 @@ const Person = ({
   when: string;
   userId?: string;
   stacked?: boolean;
+  online?: boolean;
   children: ReactNode;
 }) => {
   const who =
@@ -144,9 +149,26 @@ const Person = ({
         {name}
       </Anchor>
     );
+  const picture =
+    avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />;
   return (
     <Group gap="sm" py={6} className="person-row" wrap="nowrap">
-      {avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />}
+      {online === true && picture !== null ? (
+        <Indicator
+          color="green"
+          size={11}
+          offset={5}
+          position="bottom-end"
+          withBorder
+          className="online"
+          title="Online"
+        >
+          {picture}
+          <VisuallyHidden>Online</VisuallyHidden>
+        </Indicator>
+      ) : (
+        picture
+      )}
       {stacked === true ? (
         <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
           {who}
@@ -335,6 +357,7 @@ export const FriendsPage = () => {
                         avatar={friend.avatar}
                         userId={friend.userId}
                         when={`since ${formatDate(friend.since)}`}
+                        online={friend.online}
                       >
                         <Button
                           size="xs"

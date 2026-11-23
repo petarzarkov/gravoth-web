@@ -384,9 +384,9 @@ ok(
   await js(`document.querySelector('.page-sub')?.textContent`),
 );
 ok(
-  'the account page hides "Show when online" until friends can see who plays',
+  'the account page offers "Show when online" (v0.14.4: friends see a green dot), on by default',
   (await js(
-    `!${has('Show when online')} && document.querySelectorAll('.toggles input[type=checkbox]').length === 3`,
+    `${has('Show when online')} && document.querySelectorAll('.toggles input[type=checkbox]').length === 4 && document.querySelectorAll('.toggles input[type=checkbox]')[2].checked`,
   )) === true,
   await js(
     `[...document.querySelectorAll('.toggles label')].map(l => l.textContent)`,
@@ -557,6 +557,12 @@ ok(
   "a friend's name opens their player page",
   await until(
     `!!document.querySelector('.friend-list a.person[href="/players/${eliId}"]')`,
+  ),
+);
+ok(
+  'Eli, active a moment ago (the accept), shows the green online dot (v0.14.4)',
+  await until(
+    `[...document.querySelectorAll('.friend-list .person-row')].some(li => li.textContent.includes(${JSON.stringify(eliName)}) && !!li.querySelector('.online .player-avatar'))`,
   ),
 );
 await shot('friends');

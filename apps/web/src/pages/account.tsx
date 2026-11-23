@@ -75,8 +75,6 @@ const ProfileForm = ({
     void save({ displayName: name });
   };
 
-  // `showOnline` stays in the profile and its API, and comes back here once friends can see who is playing (decision
-  // 224): offered before that, it would promise something nothing shows.
   const toggles: readonly [
     keyof UpdateProfile & keyof ProfileView,
     string,
@@ -91,6 +89,11 @@ const ProfileForm = ({
       'allowFriendRequests',
       'Friend requests',
       'Let players ask to be your friend, and see you among their suggestions.',
+    ],
+    [
+      'showOnline',
+      'Show when online',
+      'Friends see a green dot by your name while you play or use this site.',
     ],
     [
       'emailFriendRequests',
