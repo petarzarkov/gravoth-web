@@ -85,12 +85,12 @@ const ProfileForm = ({
     [
       'publicProfile',
       'Public profile',
-      'Off: your name shows as hidden on the boards.',
+      'Off: your name shows as hidden on the boards, and you are never suggested as a friend.',
     ],
     [
       'allowFriendRequests',
       'Friend requests',
-      'Let players ask to be your friend.',
+      'Let players ask to be your friend, and see you among their suggestions.',
     ],
     [
       'emailFriendRequests',

@@ -29,6 +29,7 @@ import type {
   SessionView,
   SignInMethods,
   SocialProvider,
+  SuggestionList,
   UpdateProfile,
 } from '@gravoth/contracts';
 
@@ -198,6 +199,11 @@ export const api = {
     post<{ cancelled: true }>(`/api/friends/requests/${id}/cancel`),
   unfriend: (userId: string) =>
     post<{ removed: true }>(`/api/friends/${userId}/remove`),
+  /** Decision 229: at most 20 players to ask, the best first, each with the line to show. */
+  suggestions: () => get<SuggestionList>('/api/friends/suggestions'),
+  /** Leaves the player out of the suggestions for 30 days (204, no body). */
+  dismissSuggestion: (userId: string) =>
+    post<null>(`/api/friends/suggestions/${userId}/dismiss`),
   blocks: () => get<Page<BlockView>>('/api/blocks', { take: 100 }),
   block: (displayName: string) =>
     post<BlockView>('/api/blocks', { displayName }),

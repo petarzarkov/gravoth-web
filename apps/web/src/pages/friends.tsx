@@ -1,4 +1,7 @@
-import { DISPLAY_NAME_PATTERN } from '@gravoth/contracts/constants';
+import {
+  DISPLAY_NAME_PATTERN,
+  SUGGESTION_LIMITS,
+} from '@gravoth/contracts/constants';
 import {
   Alert,
   Anchor,
@@ -10,7 +13,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import type { AvatarView } from '@gravoth/contracts';
+import type { AvatarView, SuggestionView } from '@gravoth/contracts';
 import { ApiError, api } from '../api.js';
 import { PlayerAvatar } from '../components/avatar.js';
 import { Empty, Loaded, Panel } from '../components/bits.js';
@@ -24,6 +27,23 @@ const problem = (caught: unknown): string =>
   caught instanceof ApiError
     ? messageFor(caught.code)
     : "Can't reach the server.";
+
+interface Message {
+  readonly error: boolean;
+  readonly text: string;
+}
+
+/** What an action answered: a line in red for an error, else plain. */
+const Outcome = ({ message }: { message: Message | null }) =>
+  message === null ? null : (
+    <Alert
+      {...(message.error ? { color: 'red' } : {})}
+      variant="light"
+      role={message.error ? 'alert' : 'status'}
+    >
+      {message.text}
+    </Alert>
+  );
 
 /** A name box with one action: ask to be friends, or block. */
 const ByName = ({
@@ -39,10 +59,7 @@ const ByName = ({
 }) => {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{
-    error: boolean;
-    text: string;
-  } | null>(null);
+  const [message, setMessage] = useState<Message | null>(null);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -87,15 +104,7 @@ const ByName = ({
           </Button>
         </Group>
       </form>
-      {message === null ? null : (
-        <Alert
-          {...(message.error ? { color: 'red' } : {})}
-          variant="light"
-          role={message.error ? 'alert' : 'status'}
-        >
-          {message.text}
-        </Alert>
-      )}
+      <Outcome message={message} />
     </Stack>
   );
 };
@@ -149,7 +158,10 @@ export const FriendsPage = () => {
   const [incoming] = useLoad(`incoming:${key}`, () => api.incoming());
   const [outgoing] = useLoad(`outgoing:${key}`, () => api.outgoing());
   const [blocks] = useLoad(`blocks:${key}`, () => api.blocks());
+  const [suggested] = useLoad(`suggested:${key}`, () => api.suggestions());
   const [error, setError] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<Message | null>(null);
+  const [asking, setAsking] = useState<string | null>(null);
   const refresh = () => setRound((value) => value + 1);
 
   useEffect(() => {
@@ -176,6 +188,23 @@ export const FriendsPage = () => {
       refresh();
     } catch (caught) {
       setError(problem(caught));
+    }
+  };
+
+  /** Add or Hide on a suggestion, its answer shown in the panel. */
+  const onSuggestion = async (
+    item: SuggestionView,
+    work: () => Promise<string>,
+  ) => {
+    setSuggestion(null);
+    setAsking(item.userId);
+    try {
+      setSuggestion({ error: false, text: await work() });
+      refresh();
+    } catch (caught) {
+      setSuggestion({ error: true, text: problem(caught) });
+    } finally {
+      setAsking(null);
     }
   };
 
@@ -312,6 +341,64 @@ export const FriendsPage = () => {
                 )
               }
             </Loaded>
+          </Panel>
+          <Panel title="Suggested" className="suggested">
+            <Stack gap="sm">
+              <Outcome message={suggestion} />
+              <Loaded load={suggested}>
+                {({ items }) =>
+                  items.length === 0 ? (
+                    <Empty>
+                      No suggestions right now. Players who share friends with
+                      you, play near you on the boards or chat with you in
+                      Global show up here.
+                    </Empty>
+                  ) : (
+                    <Stack gap={0} className="suggestion-list">
+                      {items.map((item) => (
+                        <Person
+                          key={item.userId}
+                          name={item.displayName}
+                          avatar={item.avatar}
+                          userId={item.userId}
+                          when={item.note}
+                        >
+                          <Button
+                            size="xs"
+                            disabled={asking === item.userId}
+                            onClick={() =>
+                              void onSuggestion(item, async () => {
+                                const outcome = await api.askFriend(
+                                  item.displayName,
+                                );
+                                return outcome.status === 'accepted'
+                                  ? `${outcome.friend.displayName} had asked you too: you're friends now.`
+                                  : `Request sent to ${outcome.request.displayName}.`;
+                              })
+                            }
+                          >
+                            Add
+                          </Button>
+                          <Button
+                            size="xs"
+                            variant="default"
+                            disabled={asking === item.userId}
+                            onClick={() =>
+                              void onSuggestion(item, async () => {
+                                await api.dismissSuggestion(item.userId);
+                                return `${item.displayName} won't be suggested for ${SUGGESTION_LIMITS.DISMISS_DAYS} days.`;
+                              })
+                            }
+                          >
+                            Hide
+                          </Button>
+                        </Person>
+                      ))}
+                    </Stack>
+                  )
+                }
+              </Loaded>
+            </Stack>
           </Panel>
           <Panel title="Blocked">
             <ByName
