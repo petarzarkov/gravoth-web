@@ -71,11 +71,11 @@
     <main>
       <h1>Gravoth Privacy Policy</h1>
       <p class="meta">
-        Effective 17 November 2026; updated 22 November 2026 for version 0.13,
+        Effective 17 November 2026; updated 23 November 2026 for version 0.13,
         which removes Google Play Games, and for Gravoth Online, the optional
-        accounts, leaderboards, player pages, friends, chat, cloud save and
-        online heroes at gravoth.petarzarkov.com. Applies to the Android game
-        Gravoth (package
+        accounts, leaderboards, player pages, friends and friend suggestions,
+        chat, cloud save and online heroes at gravoth.petarzarkov.com. Applies
+        to the Android game Gravoth (package
         <code>com.petarzarkov.gravoth</code>) and to Gravoth Online, both made
         by their independent developer, petarzarkov.
       </p>
@@ -369,6 +369,25 @@
           Only you see these lists. Guests have no friends list.
         </li>
         <li>
+          <strong>Friend suggestions:</strong> the friends page, in the game and
+          on the website, suggests up to 20 players you may want to add. The
+          server works them out from what it already keeps: friends of your
+          friends (and how many you share), players within five places of your
+          best on a leaderboard, players who wrote in the global chat within 30
+          minutes of one of your messages there in the last 7 days, and, to fill
+          the list, players who used the game or the website signed in during
+          the last 7 days. Each suggestion shows the player's display name,
+          picture and why they are suggested (such as "2 mutual friends"), and
+          the list is kept in the server's cache for up to 5 minutes. Hidden
+          profiles, players who take no friend requests, guests, your friends,
+          anyone you have a friend request with, and blocked players (either
+          way) are never suggested; you are suggested to others the same way
+          unless you hide your name or turn friend requests off (Account,
+          privacy settings). When you hide a suggestion, the server keeps whom
+          you hid and when for 30 days, so they are not suggested again, and
+          then deletes it. Only you see it.
+        </li>
+        <li>
           <strong>Chat:</strong> in the game, an account (not a guest) can write
           in one global channel that every account reads, and directly to its
           friends. Before your first message you accept the chat rules (in the
@@ -414,7 +433,8 @@
           then sees their IP address (the website sends no referrer with it). In
           chat, other accounts see your display name, your picture and your
           global messages; your direct messages only the friend they were sent
-          to.
+          to. A friend suggestion shows your display name and picture to the
+          player it is made for, with its reason (see "Friend suggestions").
         </li>
         <li>
           <strong>Mail:</strong> the server sends mail through Resend, an email
@@ -452,13 +472,14 @@
           (done within 30 days). It removes at once the account and its sign-ins
           and sessions, your profile, heroes, builds and records, your cloud
           save, your online heroes' save with the fingerprints of the heroes you
-          moved online, your friends, requests and blocks, and your chat: your
-          messages and the messages sent to you, your read marks, the reports
-          you made and the reports of your messages with their copies, and any
-          mute. The nightly copies that still hold them are deleted as they turn
-          30 days old, and log lines naming the account's id are overwritten as
-          the logs fill. The heroes on your phone are not affected; online
-          heroes live on the server and go with the account.
+          moved online, your friends, requests and blocks, the suggestions you
+          hid and any record of others hiding you, and your chat: your messages
+          and the messages sent to you, your read marks, the reports you made
+          and the reports of your messages with their copies, and any mute. The
+          nightly copies that still hold them are deleted as they turn 30 days
+          old, and log lines naming the account's id are overwritten as the logs
+          fill. The heroes on your phone are not affected; online heroes live on
+          the server and go with the account.
         </li>
         <li>
           <strong>Your rights:</strong> you can see and change your display name
