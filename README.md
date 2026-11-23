@@ -84,8 +84,9 @@ Redis down, account deletion, a backup restored into a scratch database;
 `e2e/realm.e2e.ts`: hero builds, player pages, the realm's lease, revisions and
 one-time transfers (a move retried after a lost answer among them), two phones'
 offline heroes, the checker down; `e2e/presence.e2e.ts`: friends' online status
-in the list and the conversations, its switch, Redis stopped) and the website in
-headless Chrome
+in the list and the conversations, its switch, Redis stopped; `e2e/redis.e2e.ts`:
+Redis restarted under the running app, the rate limit and the cache back without
+a restart) and the website in headless Chrome
 (`e2e/ui.e2e.ts`, the player page, the friends page's suggestions and the chat
 moderation page too). No OAuth client is needed: Google and Discord are simply
 not offered. It needs Docker, Chrome and port 3000 free.

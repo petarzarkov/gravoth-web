@@ -265,14 +265,39 @@ online" switch, the game its own). `presence/`:
 - **The read:** one `MGET` for the players asked, then their profiles'
   `show_online`. A conversation's peer shows online only while a friend: a
   conversation with a friend no longer never does.
-- **Redis down:** a failed write is lost and a failed read finds no one, so everyone
-  reads offline and every request still answers (a warning at most once a minute).
-  Presence has its own connection (`presence/presence-redis.ts`), which connects
-  again when a command finds it down, at most once every 5 seconds (an attempt and
-  a read wait 500 ms at most; between attempts a command fails at once):
-  `Bun.RedisClient` with no retries, as the cache's connection is, never reconnects
-  once its connection drops. `PresenceStore` is an abstract class:
+- **Redis down:** a failed write is lost and a failed read finds no one (a read
+  waits 500 ms at most), so everyone reads offline and every request still answers
+  (a warning at most once a minute); when Redis is back the app's connection has
+  reconnected by itself (below). `PresenceStore` is an abstract class:
   `RedisPresenceStore` in the app, a clocked stand-in in `presence.test.ts`.
+
+## Redis
+
+One connection (`cache/app-redis.ts`, `AppRedis`) serves the cache (friend
+suggestions), the rate limit and presence; the WebSocket relay has its own. Redis
+is never in a request's way and the app boots without it:
+
+- **Reconnecting:** a command that finds the connection down connects it first;
+  after a failed attempt the next waits 250 ms, doubling to 5 s (reset once
+  connected), and the commands between fail at once. An attempt takes at most
+  500 ms and a command waits at most 500 ms for its answer. Every failure but Redis
+  refusing the command is a `RedisError` with `ERR_REDIS_CONNECTION_CLOSED`. Until
+  v0.14.4 the connection was dunx's `RedisModule` over a client with no retries
+  (`maxRetries: 0`), which never reconnected: a Redis restart left the cache and
+  the rate limit's Redis store dead until the app restarted, and the rate limit, which lets
+  everything through when its store fails, stopped limiting. Bun's own
+  reconnecting is no help either: it gives up once the server's name stops
+  resolving (a stopped container on Docker's network).
+- **The cache** answers misses and drops writes while Redis is down (dunx's
+  `DegradingCacheStore`) and uses it again at the next command that answers.
+- **The rate limit** counts in Redis whenever it answers and in the process's
+  memory for each count it does not (`throttle/fallback-throttle-store.ts`), so it
+  keeps limiting (per process) while Redis is down and counts in Redis again, shared
+  by every replica, once it is back. A count is one script (`INCR`, and the
+  window's `EXPIRE` on the first), so a connection lost between the two never
+  leaves a counter that never expires.
+- `e2e/redis.e2e.ts` stops and starts Redis under the running stack and checks
+  both.
 
 ## Friend suggestions (decision 229)
 

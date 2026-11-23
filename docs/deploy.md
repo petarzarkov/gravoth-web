@@ -62,7 +62,7 @@ and a Pages outage can fall back on.
 | ------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `app`         | `gravoth-api`       | `APP_IMAGE` (default `ghcr.io/petarzarkov/gravoth-web:main`): the API on :3000 (and its copy of the site). Migrations at boot |
 | `postgres`    | `gravoth-postgres`  | The database, on the private network only. Its password is set once, when the volume is first made                            |
-| `redis`       | `gravoth-redis`     | The cache, the rate limit and the WebSocket relay; the app degrades without it                                                |
+| `redis`       | `gravoth-redis`     | The cache, the rate limit, presence and the WebSocket relay; the app degrades without it and recovers when it is back         |
 | `validator`   | `gravoth-validator` | `VALIDATOR_IMAGE` (default `ghcr.io/petarzarkov/gravoth-validator:latest`): the rules checker                                 |
 | `cloudflared` | `gravoth-tunnel`    | The tunnel (profile `tunnel`): `gravoth-api.petarzarkov.com` → `http://app:3000`. No port is open on the Pi                   |
 
