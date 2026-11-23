@@ -1,8 +1,10 @@
 /**
  * Decision 228's filter, run on every chat message before it is stored: links to anywhere but the website are refused
- * (`LINKS_NOT_ALLOWED`), and profane words are masked with one `*` per letter by the `bad-words` package's list
- * (decision 229, `players/profanity.ts`, the list display names and hero names use too). Control and invisible
- * characters go first, so a zero-width space does not hide a word.
+ * (`LINKS_NOT_ALLOWED`, a dodged dot read as a dot: `evil . com`, `evil dot com`, `evil(.)com`), and profane words are
+ * masked with one `*` per letter by the `bad-words` package's list (decision 229, `players/profanity.ts`, the list
+ * display names and hero names use too): whole words only, so `Scunthorpe` and `classic` pass, and a word spelled out
+ * letter by letter (`f u c k`, `f.u.c.k`) counts as the word. Control and invisible characters go first, so a
+ * zero-width space does not hide a word.
  */
 import { CHAT_LIMITS, CHAT_LINK_HOST } from '@gravoth/contracts';
 import { maskProfanity } from '../players/profanity.js';
@@ -234,10 +236,13 @@ const PSEUDO_SCHEME =
 const WWW = /(?:^|[^a-z0-9-])www\./;
 
 /**
- * A dot written to dodge the check: spaces on both sides (`evil . com`) or in brackets (`evil(.)com`, `evil [.] com`).
- * Prose keeps its dots: a sentence's has a space after it only (`done. Club tonight`).
+ * A dot written to dodge the check: spaces on both sides (`evil . com`, `www . x . net`) or before it only (`evil .com`),
+ * in brackets (`evil(.)com`, `evil [.] com`, `evil{.}com`), the word (`evil dot com`, `evil(dot)com`, `evil [dot] com`)
+ * or an ideographic full stop (`evil。com`). Prose keeps its dots: a sentence's has a space after it only (`done. Club
+ * tonight`).
  */
-const SPACED_DOT = /\s+\.\s+|\s*[[(]\s*\.\s*[\])]\s*/g;
+const DODGED_DOT =
+  /\s*[[({<]\s*(?:\.|dot)\s*[\])}>]\s*|\s+(?:\.|dot)\s+|\s+\.(?=[a-z0-9])|[\u3002\uff61]/g;
 
 const foreignIn = (lower: string): boolean => {
   if (PSEUDO_SCHEME.test(lower)) return true;
@@ -273,7 +278,7 @@ const foreignIn = (lower: string): boolean => {
 /** Whether the text holds a link to anywhere but the website, its dodged dots read as dots. */
 export const hasForeignLink = (text: string): boolean => {
   const lower = text.toLowerCase();
-  const tight = lower.replace(SPACED_DOT, '.');
+  const tight = lower.replace(DODGED_DOT, '.');
   return foreignIn(lower) || (tight !== lower && foreignIn(tight));
 };
 
