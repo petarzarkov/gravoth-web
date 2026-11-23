@@ -1,5 +1,5 @@
 import { HttpError, HttpStatusCode } from '@dunx/http';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
 import { hero, type Hero } from '../database/schema.js';
@@ -53,11 +53,12 @@ export class Heroes {
     }
   }
 
+  /** The caller's heroes still in play: an offline hero retired (moved online, or gone from the phone) is left out. */
   async mine(userId: string): Promise<Hero[]> {
     return this.db
       .select()
       .from(hero)
-      .where(eq(hero.userId, userId))
+      .where(and(eq(hero.userId, userId), isNull(hero.retiredAt)))
       .orderBy(asc(hero.createdAt), asc(hero.id));
   }
 
