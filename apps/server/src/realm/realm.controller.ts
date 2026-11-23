@@ -22,6 +22,7 @@ import {
 import { saveBody } from '../saves/saves.controller.js';
 import { requireAccount } from '../social/players.js';
 import { Realms, gameVersionOf } from './realms.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const ok = HttpStatusCode.OK;
 const lease = { body: RealmLease, status: ok } as const;
@@ -32,7 +33,7 @@ const release = { body: RealmRelease, status: ok } as const;
  * The online realm (decision 227): the account's online heroes in one save, one device at a time. Every route needs an
  * account that can sign in again (403 `GUEST_ACCOUNT` for a guest).
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('realm')
 export class RealmController {
   constructor(

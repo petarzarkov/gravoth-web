@@ -35,6 +35,7 @@ import { ChatModeration } from './chat-moderation.js';
 import { ChatReports } from './chat-reports.js';
 import { ChatSends } from './chat-sends.js';
 import { Chat } from './chat.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const ok = HttpStatusCode.OK;
 const readGlobal = { query: ChatQuery } as const;
@@ -57,7 +58,7 @@ const SENDS_PER_ADDRESS = { limit: 300, windowSeconds: 60 } as const;
  * answers 403 `CHAT_RULES`, `CHAT_MUTED` (`until`, `reason`) or `NOT_FRIENDS`, 422 `LINKS_NOT_ALLOWED` or
  * `MESSAGE_NOT_ALLOWED`, 429 `TOO_MANY_REQUESTS` (`Retry-After`), 409 `CHAT_REPEAT`.
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('chat')
 export class ChatController {
   constructor(
@@ -140,7 +141,7 @@ const listMessages = { query: AdminChatQuery } as const;
 const hide = { params: MessageId, status: ok } as const;
 
 /** Moderation for the website's admin page (`/admin/chat`): the `admin` role only, 403 for anyone else. */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Roles('admin')
 @Controller('admin/chat')
 export class AdminChatController {

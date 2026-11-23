@@ -291,6 +291,12 @@ export const CLOUD_SAVE_MAX_BASE64 = 4_000_000;
 /** Decision 227: how long the realm's one-device lease lasts, renewed by every upload and every lease call. */
 export const REALM_LEASE_SECONDS = 300;
 
+/**
+ * v0.14.4: a player shows as online to their friends this long after their last signed-in request (any call the game
+ * or the website makes with a session), while their profile's `showOnline` is on.
+ */
+export const PRESENCE_TTL_SECONDS = 120;
+
 /** Why the game uploads its realm: a checkpoint (an area change, a town visit, a floor done), the 2-minute interval, a pause or quit, a transfer, the first. */
 export const REALM_REASONS = [
   'checkpoint',

@@ -23,6 +23,7 @@ import {
   type Neighbourhood,
   type SubmitResult,
 } from './boards.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const listBoards = { query: ListBoards } as const;
 const readBoard = { params: BoardKey, query: ReadBoard } as const;
@@ -38,7 +39,7 @@ const submit = {
  * around it, a friends-only view and a hardcore filter, and posting a score with its build. The game's own keys work
  * as they are (`hc_pit_floor` is the hardcore twin of `pit_floor`). Reading is public, for the website.
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('leaderboards')
 export class BoardsController {
   constructor(

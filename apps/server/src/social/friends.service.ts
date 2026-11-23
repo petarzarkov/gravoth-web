@@ -14,6 +14,7 @@ import { mapPage, type PageQuery } from '../http/page-query.js';
 import { Mailer } from '../mail/mailer.js';
 import { avatarView } from '../players/avatars.js';
 import { Profiles } from '../players/profiles.service.js';
+import { Presence } from '../presence/presence.js';
 import {
   NO_CARD,
   playerCards,
@@ -49,6 +50,7 @@ export class Friends {
     private readonly profiles: Profiles,
     private readonly mail: Mailer,
     private readonly suggestions: SuggestionCache,
+    private readonly presence: Presence,
   ) {}
 
   async request(displayName: string): Promise<RequestOutcome> {
@@ -137,11 +139,15 @@ export class Friends {
       throw new HttpError(HttpStatusCode.NOT_FOUND, 'REQUEST_NOT_FOUND');
     // Each one's friends are now the other's friends of friends.
     await this.suggestions.drop(row.requesterId, row.addresseeId);
+    const [cards, online] = await Promise.all([
+      playerCards(this.db, [row.requesterId]),
+      this.presence.online([row.requesterId]),
+    ]);
     return this.friendView(
       row,
       me.id,
-      (await playerCards(this.db, [row.requesterId])).get(row.requesterId) ??
-        NO_CARD,
+      cards.get(row.requesterId) ?? NO_CARD,
+      online,
     );
   }
 
@@ -170,7 +176,7 @@ export class Friends {
     await this.suggestions.drop(me.id, friendId);
   }
 
-  /** The caller's friends, newest friendship first. */
+  /** The caller's friends, newest friendship first, each with whether they are online (presence.ts). */
   async list(page: PageQuery): Promise<Page<FriendView>> {
     const me = requireAccount(this.context);
     const rows = await paginate<typeof friendship, Friendship>({
@@ -187,15 +193,17 @@ export class Friends {
       orderBy: 'respondedAt',
     });
     return mapPage(rows, async (data) => {
-      const cards = await playerCards(
-        this.db,
-        data.map((row) => this.other(row, me.id)),
-      );
+      const friends = data.map((row) => this.other(row, me.id));
+      const [cards, online] = await Promise.all([
+        playerCards(this.db, friends),
+        this.presence.online(friends),
+      ]);
       return data.map((row) =>
         this.friendView(
           row,
           me.id,
           cards.get(this.other(row, me.id)) ?? NO_CARD,
+          online,
         ),
       );
     });
@@ -279,12 +287,15 @@ export class Friends {
     row: Friendship,
     me: string,
     card: PlayerCard,
+    online: ReadonlySet<string>,
   ): FriendView {
+    const friend = this.other(row, me);
     return {
-      userId: this.other(row, me),
+      userId: friend,
       displayName: card.displayName,
       avatar: card.avatar,
       since: (row.respondedAt ?? row.createdAt).toISOString(),
+      online: online.has(friend),
     };
   }
 

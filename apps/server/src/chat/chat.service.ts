@@ -26,9 +26,11 @@ import {
   chatMessage,
   chatMute,
   chatRead,
+  friendship,
   profile,
   user,
 } from '../database/schema.js';
+import { Presence } from '../presence/presence.js';
 import { requireAccount } from '../social/players.js';
 import {
   chatPlayers,
@@ -58,6 +60,7 @@ export class Chat {
   constructor(
     private readonly db: Db,
     private readonly context: AuthContext,
+    private readonly presence: Presence,
   ) {}
 
   /** The global channel, or the conversation with `peer`. */
@@ -95,7 +98,10 @@ export class Chat {
     };
   }
 
-  /** The players the caller has a conversation with (friends, or friends once), the newest conversation first. */
+  /**
+   * The players the caller has a conversation with (friends, or friends once), the newest conversation first; a friend
+   * shows whether they are online (presence.ts), a friend no longer never does.
+   */
   async conversations(): Promise<readonly ConversationView[]> {
     const me = requireAccount(this.context).id;
     const peer = sql<string>`CASE WHEN ${m.senderId} = ${me}::uuid THEN ${m.recipientId} ELSE ${m.senderId} END`;
@@ -132,12 +138,11 @@ export class Chat {
         ? []
         : await this.db.select().from(m).where(inArray(m.id, lastIds));
     const byId = new Map(last.map((row) => [row.id, row]));
-    const [players, unread] = await Promise.all([
-      chatPlayers(
-        this.db,
-        rows.map((row) => row.peer),
-      ),
+    const peers = rows.map((row) => row.peer);
+    const [players, unread, online] = await Promise.all([
+      chatPlayers(this.db, peers),
       this.unreadBy(me),
+      this.onlineFriends(me, peers),
     ]);
     return rows.map((row) => {
       const message =
@@ -146,8 +151,38 @@ export class Chat {
         peer: playerOf(players, row.peer),
         last: message === undefined ? null : messageView(message, me, players),
         unread: unread.get(row.peer) ?? 0,
+        online: online.has(row.peer),
       };
     });
+  }
+
+  /** Which of `peers` are the caller's friends and online. */
+  private async onlineFriends(
+    me: string,
+    peers: readonly string[],
+  ): Promise<ReadonlySet<string>> {
+    if (peers.length === 0) return new Set();
+    const friends = await this.db
+      .select({
+        peer: sql<string>`CASE WHEN ${friendship.requesterId} = ${me}::uuid THEN ${friendship.addresseeId} ELSE ${friendship.requesterId} END`,
+      })
+      .from(friendship)
+      .where(
+        and(
+          eq(friendship.status, 'accepted'),
+          or(
+            and(
+              eq(friendship.requesterId, me),
+              inArray(friendship.addresseeId, [...peers]),
+            ),
+            and(
+              eq(friendship.addresseeId, me),
+              inArray(friendship.requesterId, [...peers]),
+            ),
+          ),
+        ),
+      );
+    return this.presence.online(friends.map((row) => row.peer));
   }
 
   /** The badge: unread direct messages, all together and per player. */

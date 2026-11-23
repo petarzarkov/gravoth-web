@@ -28,6 +28,7 @@ import {
 } from './friends.service.js';
 import { callerOf } from './players.js';
 import { Suggestions } from './suggestions.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const ok = HttpStatusCode.OK;
 const updateProfile = { body: UpdateProfile } as const;
@@ -42,7 +43,7 @@ const dismissSuggestion = {
 } as const;
 
 /** The caller's own profile: the display name others see, and the privacy flags. */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('profile')
 export class ProfileController {
   constructor(
@@ -68,7 +69,7 @@ export class ProfileController {
  * list friends and requests both ways, and the suggestions (decision 229). Every action is a POST, which every client
  * (Unity's among them) sends with a body intact.
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('friends')
 export class FriendsController {
   constructor(
@@ -148,7 +149,7 @@ export class FriendsController {
 }
 
 /** Blocks: whom the caller blocked, block by display name, unblock. */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('blocks')
 export class BlocksController {
   constructor(private readonly blocks: Blocks) {}

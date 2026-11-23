@@ -12,6 +12,7 @@ export const UpdateProfile = z
     displayName: DisplayName.optional(),
     publicProfile: z.boolean().optional(),
     allowFriendRequests: z.boolean().optional(),
+    /** Friends see whether the player is online (`FriendView.online`, `ConversationView.online`). */
     showOnline: z.boolean().optional(),
     emailFriendRequests: z.boolean().optional(),
     /** `provider`: the sign-in's own photo (409 `NO_PROVIDER_PHOTO` without one); else a portrait's id. */
@@ -57,6 +58,11 @@ export interface FriendView {
   readonly avatar: AvatarView;
   /** When the request was accepted. */
   readonly since: string;
+  /**
+   * v0.14.4: the friend made a signed-in request in the last two minutes (`PRESENCE_TTL_SECONDS`) and shows it
+   * (`showOnline`, on by default). False whenever the server cannot tell (Redis down).
+   */
+  readonly online: boolean;
 }
 
 export type RequestDirection = 'incoming' | 'outgoing';

@@ -25,6 +25,7 @@ import { Builds, toBuildView, type BuildCard } from './builds.service.js';
 import { HeroBuilds } from './hero-builds.service.js';
 import { Heroes, toHeroView, type HeroView } from './heroes.service.js';
 import { PlayerPages, type PlayerPage } from './player-pages.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const register = { body: RegisterHero, status: HttpStatusCode.OK } as const;
 const byId = { params: z.object({ id: z.uuid() }) } as const;
@@ -38,7 +39,7 @@ const player = { params: PlayerId } as const;
 const nameCheck = { query: HeroNameCheck } as const;
 
 /** The caller's heroes: register one (idempotent by name) so its records can go on the boards, and list them. */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('heroes')
 export class HeroesController {
   constructor(

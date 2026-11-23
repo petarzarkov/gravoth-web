@@ -10,6 +10,7 @@ import {
 } from '@dunx/http';
 import { DeleteAccount, type SignInMethod } from '@gravoth/contracts';
 import { Accounts, type AccountView } from './accounts.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 const deleteAccount = {
   body: DeleteAccount,
@@ -22,7 +23,7 @@ const deleteAccount = {
  * `sign-in/social` (an OAuth provider), `request-password-reset`, `sign-out`. The
  * game sends the token from `set-auth-token` as `Authorization: Bearer <token>`.
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('account')
 export class AccountController {
   constructor(private readonly accounts: Accounts) {}

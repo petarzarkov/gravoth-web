@@ -1,6 +1,7 @@
 import { Module } from '@dunx/core';
 import { AccountsModule } from '../auth/auth.module.js';
 import { DatabaseModule } from '../database/database.module.js';
+import { PresenceModule } from '../presence/presence.module.js';
 import { ChatModeration } from './chat-moderation.js';
 import { ChatReports } from './chat-reports.js';
 import { ChatRetention } from './chat-retention.js';
@@ -14,7 +15,7 @@ import { Chat } from './chat.service.js';
  * (its `@Cron` armed by the schedule module).
  */
 @Module({
-  imports: [AccountsModule, DatabaseModule],
+  imports: [AccountsModule, DatabaseModule, PresenceModule],
   controllers: [ChatController, AdminChatController],
   providers: [Chat, ChatSends, ChatReports, ChatModeration, ChatRetention],
 })

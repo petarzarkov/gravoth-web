@@ -4,6 +4,7 @@ import { CacheModule } from '../cache/cache.module.js';
 import { DatabaseModule } from '../database/database.module.js';
 import { MailModule } from '../mail/mail.module.js';
 import { PlayersModule } from '../players/players.module.js';
+import { PresenceModule } from '../presence/presence.module.js';
 import { Blocks } from './blocks.service.js';
 import { Friends } from './friends.service.js';
 import { SuggestionCleanup } from './suggestion-cleanup.js';
@@ -26,6 +27,7 @@ import {
     DatabaseModule,
     MailModule,
     PlayersModule,
+    PresenceModule,
   ],
   controllers: [ProfileController, FriendsController, BlocksController],
   providers: [Friends, Blocks, Suggestions, SuggestionCache, SuggestionCleanup],

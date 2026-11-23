@@ -113,6 +113,8 @@ export interface ConversationView {
   /** Null when moderation removed every message of it. */
   readonly last: ChatMessageView | null;
   readonly unread: number;
+  /** v0.14.4: the peer is a friend and online, as `FriendView.online` (never for a friend no longer). */
+  readonly online: boolean;
 }
 
 /** `GET /api/chat/direct`: the newest conversation first. */

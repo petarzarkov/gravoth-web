@@ -16,6 +16,8 @@ import { Mailer } from '../mail/mailer.js';
 import { GuestUpgrade } from '../players/guest-upgrade.js';
 import { PlayersModule } from '../players/players.module.js';
 import { Profiles } from '../players/profiles.service.js';
+import { MarkPresence } from '../presence/presence.js';
+import { PresenceModule } from '../presence/presence.module.js';
 import { AccountController } from './account.controller.js';
 import { AccountPagesController } from './account-pages.controller.js';
 import { AccountServicesModule } from './account-services.module.js';
@@ -50,6 +52,7 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
     MailModule,
     PlayersModule,
     AccountServicesModule,
+    PresenceModule,
     AuthModule.forRootAsync(
       {
         imports: [
@@ -259,9 +262,10 @@ export const GUEST_EMAIL_DOMAIN = 'guest.gravoth.invalid';
     AccountPagesController,
     GameSignInController,
   ],
-  providers: [Accounts, GameSignIn],
+  providers: [Accounts, GameSignIn, MarkPresence],
   // `Auth` is exported because `OpenApiModule` wraps the root and can only inject
-  // what the root exports (main.ts); the rest for the features that need the caller.
-  exports: [Auth, AuthContext, SessionGuard, Accounts],
+  // what the root exports (main.ts); the rest for the features that need the caller
+  // (`MarkPresence` goes after `SessionGuard`: the caller's request marks them online).
+  exports: [Auth, AuthContext, SessionGuard, MarkPresence, Accounts],
 })
 export class AccountsModule {}

@@ -18,6 +18,7 @@ import {
 } from '@gravoth/contracts';
 import { requireAccount } from '../social/players.js';
 import { CloudSaves, type CloudSaveView } from './cloud-saves.service.js';
+import { MarkPresence } from '../presence/presence.js';
 
 /**
  * The largest body a `CloudSaveWrite` can be, with room to spare: the longest data, a description of 200 characters
@@ -60,7 +61,7 @@ const write = { body: CloudSaveWrite, bodyParser: saveBody } as const;
  * phone's by its own rule; the website shows it (`?data=false`) and deletes it. Never a guest's: 403 `GUEST_ACCOUNT`,
  * since a guest has no way back in to read it.
  */
-@UseGuards(SessionGuard)
+@UseGuards(SessionGuard, MarkPresence)
 @Controller('saves')
 export class SavesController {
   constructor(
