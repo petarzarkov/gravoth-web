@@ -103,7 +103,11 @@ the builds service the score route uses: one immutable row a revision, `created`
 false when it is the hero's latest already; the rules checker's card from the save
 sent or the account's cloud save), and the offline heroes still on the phone
 (`POST /api/heroes/active`: the others get `retired_at`, their builds and records
-kept). `GET /api/players/:userId` is a player page: every hero not retired, each with
+kept). Decision 229: a hero belongs to the phone that registered or listed it last
+(`heroes.device_id`, the game's install id sent as `deviceId` with both calls), and
+a phone's `active` retires only its own heroes and the ones no phone has claimed,
+so two phones with different saves no longer retire each other's; a call without
+`deviceId` (an older game) retires only the unclaimed ones. `GET /api/players/:userId` is a player page: every hero not retired, each with
 its newest build (a board row's `BuildView`) and its shown records ranked as their
 boards rank them (`heroes/player-pages.service.ts`, a window over `boards/shown.ts`'s
 rule), the newest build's level first. Anyone may read one, a guest's too; a hidden

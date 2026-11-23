@@ -40,6 +40,7 @@ export class Heroes {
           name: input.name,
           class: input.class,
           hardcore: input.hardcore,
+          deviceId: input.deviceId ?? null,
         })
         .returning();
       if (row === undefined) throw new Error('hero not stored');
@@ -101,13 +102,20 @@ export class Heroes {
     return row;
   }
 
+  /** The registered hero as the phone says it is: its hardcore flag, and (decision 229) the phone that holds it. */
   private async reconcile(existing: Hero, input: RegisterHero): Promise<Hero> {
     if (existing.class !== input.class)
       throw new HttpError(HttpStatusCode.CONFLICT, 'HERO_NAME_TAKEN');
-    if (existing.hardcore === input.hardcore) return existing;
+    const claim =
+      input.deviceId !== undefined && existing.deviceId !== input.deviceId;
+    if (existing.hardcore === input.hardcore && !claim) return existing;
     const [row] = await this.db
       .update(hero)
-      .set({ hardcore: input.hardcore, updatedAt: new Date() })
+      .set({
+        hardcore: input.hardcore,
+        ...(claim ? { deviceId: input.deviceId } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(hero.id, existing.id))
       .returning();
     return row ?? existing;

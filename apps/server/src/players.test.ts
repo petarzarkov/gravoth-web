@@ -277,6 +277,53 @@ describe('the offline heroes still on the phone', () => {
     ).toEqual(['Mott']);
   });
 
+  it("let two phones with different saves keep each other's heroes (decision 229)", async () => {
+    const dara = await signUp(base, 'Dara', 'dara@players.test');
+    const reg = async (name: string, deviceId?: string) =>
+      (
+        await post<{ hero: { id: string } }>('/api/heroes', dara, {
+          name,
+          class: 'barbarian',
+          ...(deviceId === undefined ? {} : { deviceId }),
+        })
+      ).body.hero.id;
+    const a1 = await reg('PhoneA_one', 'phone-a');
+    const b1 = await reg('PhoneB_one', 'phone-b');
+    await reg('Unclaimed');
+    const names = async () =>
+      (await pageOf(undefined, dara.id)).body.heroes
+        .map((h) => h.hero.name)
+        .sort();
+    const active = async (heroIds: string[], deviceId?: string) =>
+      (
+        await post<{ retired: number }>('/api/heroes/active', dara, {
+          heroIds,
+          ...(deviceId === undefined ? {} : { deviceId }),
+        })
+      ).body.retired;
+
+    // Phone A lists its own: phone B's hero stays, the hero no phone claimed goes.
+    expect(await active([a1], 'phone-a')).toBe(1);
+    expect(await names()).toEqual(['PhoneA_one', 'PhoneB_one']);
+    // Phone B lists its own: phone A's stays.
+    expect(await active([b1], 'phone-b')).toBe(0);
+    expect(await names()).toEqual(['PhoneA_one', 'PhoneB_one']);
+    // An older game sends no device: it retires only unclaimed heroes, never a phone's.
+    expect(await active([])).toBe(0);
+    expect(await names()).toEqual(['PhoneA_one', 'PhoneB_one']);
+    // A hero gone from phone A goes; a hero listed by phone A (moved there) becomes phone A's.
+    expect(await active([b1], 'phone-a')).toBe(1);
+    expect(await names()).toEqual(['PhoneB_one']);
+    expect(await active([], 'phone-b')).toBe(0);
+    expect(await names()).toEqual(['PhoneB_one']);
+    // Registering again from another phone claims it there.
+    await reg('PhoneB_one', 'phone-c');
+    expect(await active([], 'phone-a')).toBe(0);
+    expect(await names()).toEqual(['PhoneB_one']);
+    expect(await active([], 'phone-c')).toBe(1);
+    expect(await names()).toEqual([]);
+  });
+
   it('bring a retired hero back when its build is posted', async () => {
     await post('/api/heroes/active', ana, {
       heroIds: [ids['Kriso'], ids['Lyra'], ids['Vey']],

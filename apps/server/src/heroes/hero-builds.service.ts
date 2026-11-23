@@ -1,6 +1,15 @@
 import { Logger } from '@dunx/core';
 import { HttpError, HttpStatusCode } from '@dunx/http';
-import { and, eq, inArray, isNotNull, isNull, notInArray } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  notInArray,
+  or,
+} from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { cloudSave, hero } from '../database/schema.js';
 import { ValidatorClient } from '../gravoth/validator.client.js';
@@ -51,32 +60,55 @@ export class HeroBuilds {
   }
 
   /**
-   * The offline heroes the phone still has: the caller's other offline heroes are retired (their builds and records
-   * stay), the listed ones come back. Answers how many this call retired.
+   * The offline heroes the phone still has: they come back if retired, and (decision 229) with `deviceId` the phone
+   * claims them. The caller's other offline heroes are retired (their builds and records stay), but only the ones this
+   * phone holds or no phone has claimed: another phone's heroes are that phone's to retire. Without `deviceId` (a game
+   * before decision 229) only the unclaimed ones. Answers how many this call retired.
    */
-  async active(userId: string, heroIds: readonly string[]): Promise<number> {
+  async active(
+    userId: string,
+    heroIds: readonly string[],
+    deviceId?: string,
+  ): Promise<number> {
     const listed = [...new Set(heroIds)];
     const now = new Date();
     return this.db.transaction(async (tx) => {
       const offline = and(eq(hero.userId, userId), eq(hero.online, false));
+      const ours =
+        deviceId === undefined
+          ? isNull(hero.deviceId)
+          : or(isNull(hero.deviceId), eq(hero.deviceId, deviceId));
       const retired = await tx
         .update(hero)
         .set({ retiredAt: now, updatedAt: now })
         .where(
           and(
             offline,
+            ours,
             isNull(hero.retiredAt),
             listed.length === 0 ? undefined : notInArray(hero.id, listed),
           ),
         )
         .returning({ id: hero.id });
-      if (listed.length > 0)
+      if (listed.length > 0) {
         await tx
           .update(hero)
           .set({ retiredAt: null, updatedAt: now })
           .where(
             and(offline, isNotNull(hero.retiredAt), inArray(hero.id, listed)),
           );
+        if (deviceId !== undefined)
+          await tx
+            .update(hero)
+            .set({ deviceId, updatedAt: now })
+            .where(
+              and(
+                offline,
+                inArray(hero.id, listed),
+                or(isNull(hero.deviceId), ne(hero.deviceId, deviceId)),
+              ),
+            );
+      }
       return retired.length;
     });
   }

@@ -40,6 +40,9 @@ export { HERO_CLASSES, type HeroClass };
  * `retired_at` (decision 226): the hero is gone from the phone (deleted, or moved), so its player page leaves it out;
  * its builds and board records stay. `POST /api/heroes/active` sets and clears it.
  *
+ * `device_id` (decision 229): the phone that last registered or listed an offline hero (the game's install id), so a
+ * phone's `active` retires only its own heroes and the unclaimed ones; null until a phone that sends its id claims it.
+ *
  * `(id, user_id)` is unique so a board entry can name both and the database holds them together: an entry's player is
  * always its hero's owner, and a guest's heroes moving to the account it becomes carry their entries along.
  */
@@ -62,6 +65,8 @@ export const hero = pgTable(
     flagged: boolean('flagged').notNull().default(false),
     flagNote: text('flag_note'),
     retiredAt: timestamp('retired_at', { withTimezone: true }),
+    /** Decision 229: the phone holding an offline hero; null for an online hero and a hero no phone has claimed. */
+    deviceId: text('device_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

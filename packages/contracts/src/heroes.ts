@@ -5,6 +5,7 @@ import {
   type HeroClass,
 } from './constants.js';
 import { BuildSnapshot, type BuildView } from './build.js';
+import { DeviceId } from './realm.js';
 
 /** `POST /api/heroes`: a hero the server should know, by its name on this account. */
 export const RegisterHero = z
@@ -16,6 +17,8 @@ export const RegisterHero = z
       z.enum(HERO_CLASSES),
     ),
     hardcore: z.boolean().default(false),
+    /** Decision 229: the phone that holds the hero (the game's install id), so another phone's `active` never retires it. */
+    deviceId: DeviceId.optional(),
   })
   .meta({
     id: 'RegisterHero',
@@ -73,9 +76,16 @@ export interface HeroBuildPosted {
  * `POST /api/heroes/active` (decision 226): the offline heroes still on the phone. The caller's other offline heroes
  * are retired (gone from the player page; their board records and builds stay), and the listed ones come back. An
  * online hero is its realm's: only the realm retires it (decision 227).
+ *
+ * Decision 229: with `deviceId` the listed heroes are that phone's, and only that phone's other heroes (and heroes no
+ * phone has claimed yet) are retired, so two phones with different saves no longer retire each other's. Without it (an
+ * older game) only the heroes no phone has claimed are retired.
  */
 export const ActiveHeroes = z
-  .object({ heroIds: z.array(z.uuid()).max(MAX_ACTIVE_HEROES) })
+  .object({
+    heroIds: z.array(z.uuid()).max(MAX_ACTIVE_HEROES),
+    deviceId: DeviceId.optional(),
+  })
   .meta({
     id: 'ActiveHeroes',
     description:

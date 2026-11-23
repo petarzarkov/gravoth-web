@@ -74,6 +74,7 @@ export class HeroesController {
       retired: await this.heroBuilds.active(
         this.context.require().user.id,
         body.heroIds,
+        body.deviceId,
       ),
     };
   }

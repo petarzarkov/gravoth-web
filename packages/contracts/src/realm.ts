@@ -13,8 +13,8 @@ import {
  * Every route needs an account that can sign in again: a guest gets 403 `GUEST_ACCOUNT`.
  */
 
-/** The device's own id for the lease (the game's install id); any text, at most 128 characters. */
-const DeviceId = z.string().trim().min(1).max(128);
+/** The device's own id for the lease (the game's install id); any text, at most 128 characters. Decision 229: also an offline hero's phone. */
+export const DeviceId = z.string().trim().min(1).max(128);
 
 /** `POST /api/realm/lease`: take the lease, or renew it. `force` takes it from another device (whose next upload gets 409 `LEASE_LOST`). */
 export const RealmLease = z
