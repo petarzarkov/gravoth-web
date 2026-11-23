@@ -564,11 +564,12 @@ await shot('friends');
 // 5. A board with the filters.
 await go('/boards/pit_floor');
 await js(
-  `(() => { const s = document.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'templar'); s.dispatchEvent(new Event('change', { bubbles: true })); })()`,
+  `(() => { const s = document.querySelector('select'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'void'); s.dispatchEvent(new Event('change', { bubbles: true })); })()`,
 );
+// Decision 230: the boards filter by the main talent path (the old class was every hero's barbarian).
 ok(
-  'the class filter goes into the address',
-  await until(`location.search.includes('class=templar')`),
+  'the path filter goes into the address',
+  await until(`location.search.includes('path=void')`),
 );
 await js(`__t.click('Friends', '.filters label')`);
 ok(
