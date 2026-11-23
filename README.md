@@ -8,12 +8,12 @@ privacy policy, the boards with every record's build, sign-in, friends). A Bun m
 format, hooks and conventions) with the server moved in from the game's
 repository.
 
-| Path                 | What it is                                                                                                                                                                                                                                                            |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends and blocks; heroes, their builds and player pages; the boards; the game's cloud save; the online realm; chat and its moderation), Postgres, Resend mail, R2 backups |
-| `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account, friends and, for the admin role, chat moderation. Deployed to Cloudflare Pages by CI; the API serves a copy too                |
-| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                                                                                            |
-| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                                                                              |
+| Path                 | What it is                                                                                                                                                                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends, friend suggestions and blocks; heroes, their builds and player pages; the boards; the game's cloud save; the online realm; chat and its moderation), Postgres, Resend mail, R2 backups |
+| `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account, friends with their suggestions and, for the admin role, chat moderation. Deployed to Cloudflare Pages by CI; the API serves a copy too             |
+| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, classes and error codes. `@gravoth/contracts/constants` carries no zod                                                                                                                |
+| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                                                                                                  |
 
 The game itself (Unity, `Gravoth.Core`, the rules checker in
 `dotnet/Gravoth.Validator`) lives in its own repository. The product plan and
@@ -74,14 +74,18 @@ online realms with witnessed board records), then drives the API the way the
 game does (`e2e/saves.e2e.ts`: the cloud save written, read back to the byte,
 replaced and deleted; `e2e/chat.e2e.ts`: two players chatting, the filter, the
 flood limit, a report reaching the moderation routes once the script in the app's
-container gives the admin role, a mute; `e2e/api.e2e.ts`: guests and their upgrade, the confirmation and
-reset mails' links, verified, pending and flagged records kept off the boards,
+container gives the admin role, a mute; `e2e/suggestions.e2e.ts`: friend
+suggestions from friends of friends, a neighbour on the pit floor and a chat
+partner, their order, a dismissal, a hidden profile and a block;
+`e2e/api.e2e.ts`: guests and their upgrade, the confirmation and reset mails'
+links, verified, pending and flagged records kept off the boards,
 online realms feeding them, friends, blocks, privacy, the rules checker and
 Redis down, account deletion, a backup restored into a scratch database;
 `e2e/realm.e2e.ts`: hero builds, player pages, the realm's lease, revisions and
 one-time transfers, the checker down) and the website in headless Chrome
-(`e2e/ui.e2e.ts`, the player page and the chat moderation page too). No OAuth client is needed: Google and Discord are simply not
-offered. It needs Docker, Chrome and port 3000 free.
+(`e2e/ui.e2e.ts`, the player page, the friends page's suggestions and the chat
+moderation page too). No OAuth client is needed: Google and Discord are simply
+not offered. It needs Docker, Chrome and port 3000 free.
 
 ## Deploying
 

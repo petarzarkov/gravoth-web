@@ -2,7 +2,7 @@
 
 The product plan (what each step gives players, the decisions behind it) is in
 the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
-(decisions 171, 216, 218, 219, 225, 226, 227 and 228). This page is the code's side.
+(decisions 171, 216, 218, 219, 225, 226, 227, 228 and 229). This page is the code's side.
 
 ```
  the game (Unity, Android)          the website (apps/web, Cloudflare Pages)
@@ -47,6 +47,7 @@ together. The tables (`apps/server/src/database/`):
 | `sessions`, `verifications` | sessions (the bearer token) and mail-link codes                                                                                                            |
 | `profiles`                  | the display name (unique in any case, format-checked, word-filtered), the picture (a portrait or the sign-in's photo), the flags                           |
 | `friendships`, `blocks`     | one row per pair whichever asked (`pending` or `accepted`), never oneself; blocks one way                                                                  |
+| `suggestion_dismissals`     | a player the caller hid from their friend suggestions, and when (30 days, again starts them over), never oneself, gone with either player                  |
 | `heroes`                    | a hero the server knows: name (once per player among the offline ones), class, hardcore, `retired_at`; an online one's realm id, level and `flagged`       |
 | `hero_builds`               | an immutable snapshot of a hero's whole build at a revision (a trigger refuses any update); the sorted numbers lifted to columns                           |
 | `leaderboards`              | a board: the game's key, title, order, format, score range, hardcore, season; written from code at boot                                                    |
@@ -205,6 +206,45 @@ holds them, closed reports 180 days after they closed, mutes once they end.
 Everything of a player (their messages and the ones to them, read marks,
 reports by them or about their messages, a mute) goes with the account through
 the foreign keys.
+
+## Friend suggestions (decision 229)
+
+`GET /api/friends/suggestions` answers up to 20 players an account (never a
+guest: 403 `GUEST_ACCOUNT`) may want to add, the best first, each with its
+reasons and the one line clients show as it is (`note`: the two strongest
+reasons, "2 mutual friends · Near you on Deepest Bone Pit floor", so a new
+source needs no client change). `social/suggestions.service.ts` finds them in
+one query, from four sources:
+
+- friends of the caller's friends (`mutual`, with how many of them they share);
+- on each board the caller has a shown record on (`boards/shown.ts`, so online
+  heroes only while `BOARDS_ONLINE_ONLY` is on), the players within five places
+  of the caller's best, ranked as the boards rank (`board`, with the board's key
+  as `/api/leaderboards/:key` takes it, `hc_` for a hardcore twin, its title and
+  both places; the closest board per player);
+- the authors of global messages within 30 minutes of one of the caller's own in
+  the last 7 days, hidden ones left out (`chat`);
+- to fill what the others leave, players whose session was used in the last 7
+  days (`active`: the use the guest clean-up reads, which the game marks at
+  every launch).
+
+Never the caller, a friend or anyone with a request either way, a block either
+way, a hidden profile, a profile closed to requests, a guest, a banned account,
+or a player the caller dismissed in the last 30 days. The order is how many of
+the first three sources found the player, then mutual friends, the board
+distance, the latest shared chat, the latest use, the name. A caller's list is
+cached for five minutes in the cache module (`SuggestionCache`): a request, an
+answer, a removal or a block drops both players' lists and a dismissal the
+caller's, and a cached list is checked against the rules again when read, so a
+profile hidden since leaves it at once. 60 reads an hour per address.
+
+`POST /api/friends/suggestions/:userId/dismiss` answers 204 and leaves that
+player out for 30 days (`suggestion_dismissals`; again starts the days over; 404
+`PLAYER_NOT_FOUND` for no such account, a guest or the caller; 120 an hour).
+`social/suggestion-cleanup.ts` deletes the dismissals past 30 days daily at
+04:50 UTC, after the chat retention, and either player's account takes its rows
+with it. The website's friends page shows the list in its Suggested panel, with
+Add (the request by name) and Hide.
 
 ## The website, and its copy on the API
 
