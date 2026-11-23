@@ -77,30 +77,28 @@ describe('the filter', () => {
     return outcome.ok ? outcome.body : outcome.code;
   };
 
-  it('masks obscenities letter for letter, look-alikes and spacing tricks too', () => {
+  it('masks the bad-words list letter for letter, whole words in any case (decision 229)', () => {
     expect(stored('what the fuck')).toBe('what the ****');
-    expect(stored('sh!t happens')).toBe('**** happens');
-    expect(stored('fvck, a$$ and F_U_C_K')).toBe('****, *** and *******');
-    expect(stored('f.u.c.k off')).toBe('******* off');
-    expect(stored('fuuuuck')).toBe('*******');
-    expect(stored('ass.')).toBe('***.');
+    expect(stored('SHIT happens!')).toBe('**** happens!');
+    expect(stored('you retard')).toBe('you ******');
+    expect(stored('Fuck_you')).toBe('****_you');
     expect(stored('f​uck')).toBe('****');
   });
 
-  it('lets ordinary words through that hold a short one', () => {
+  it("lets ordinary words through, those that hold a listed one and the world's own", () => {
     for (const text of [
       'Assassin build is great',
       'I love grape juice',
       'cocktail of class and analysis',
-      'Bastard sword at lvl.70, v0.13.0',
+      'Scunthorpe United, my therapist',
+      'the God of the Pit, one hell of a fight, damn',
+      'Long sword at lvl.70, v0.13.0',
       'e.g. Mr.Smith said ok.so',
     ])
       expect(stored(text)).toBe(text);
   });
 
-  it('refuses slurs and hate, whole or inside a word', () => {
-    for (const text of ['you nazi', 'n1gg3r', 'rape', 'go retards'])
-      expect(stored(text)).toBe('MESSAGE_NOT_ALLOWED');
+  it('refuses an empty message', () => {
     expect(stored('​​')).toBe('MESSAGE_NOT_ALLOWED');
   });
 
@@ -129,20 +127,6 @@ describe('the filter', () => {
       expect(stored(text)).toBe(text);
   });
 
-  it('keeps one line of text', () => {
-    expect(stored('  a\nb\tc  ')).toBe('a b c');
-  });
-
-  it('reads spaced-out letters as one word', () => {
-    expect(stored('f u c k off')).toBe('* * * * off');
-    expect(stored('s . h . i . t')).toBe('* . * . * . *');
-    expect(stored('F  U  C  K!')).toBe('*  *  *  *!');
-    for (const text of ['n i g g e r', 'r a p e'])
-      expect(stored(text)).toBe('MESSAGE_NOT_ALLOWED');
-    for (const text of ['press a b c to win', 'I am a big fan', 'u r a legend'])
-      expect(stored(text)).toBe(text);
-  });
-
   it('reads a dodged dot as a dot in a link', () => {
     for (const text of ['evil . com', 'go to evil(.)com', 'evil [ . ] gg/abc'])
       expect(stored(text)).toBe('LINKS_NOT_ALLOWED');
@@ -154,16 +138,8 @@ describe('the filter', () => {
       expect(stored(text)).toBe(text);
   });
 
-  it('lets through the ordinary words that hold a listed one', () => {
-    for (const text of [
-      'Scunthorpe United',
-      'my therapist said so',
-      'stop sniggering at every niggle',
-      'fire retardant gear',
-    ])
-      expect(stored(text)).toBe(text);
-    expect(stored('therapistfuck')).toBe('*************');
-    expect(stored('scunthorpe cunt')).toBe('scunthorpe ****');
+  it('keeps one line of text', () => {
+    expect(stored('  a\nb\tc  ')).toBe('a b c');
   });
 });
 
@@ -235,11 +211,6 @@ describe('the global channel', () => {
     expect(first.from.avatar.kind).toBe('portrait');
     expect(Date.parse(first.at)).toBeGreaterThan(Date.now() - 60_000);
 
-    const slur = await say(ana, 'you nazi');
-    expect([slur.status, slur.body.error]).toEqual([
-      422,
-      'MESSAGE_NOT_ALLOWED',
-    ]);
     const link = await say(ana, 'free gold at evil.com');
     expect([link.status, link.body.error]).toEqual([422, 'LINKS_NOT_ALLOWED']);
     const site = await say(

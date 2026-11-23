@@ -11,13 +11,16 @@ import {
 } from '@dunx/http';
 import {
   ActiveHeroes,
+  HeroNameCheck,
   PlayerId,
   PostHeroBuild,
   RegisterHero,
   type HeroBuildPosted,
   type HeroesRetired,
+  type HeroNameVerdict,
 } from '@gravoth/contracts';
 import { z } from 'zod';
+import { isProfaneName } from '../players/profanity.js';
 import { Builds, toBuildView, type BuildCard } from './builds.service.js';
 import { HeroBuilds } from './hero-builds.service.js';
 import { Heroes, toHeroView, type HeroView } from './heroes.service.js';
@@ -32,6 +35,7 @@ const postBuild = {
 } as const;
 const active = { body: ActiveHeroes, status: HttpStatusCode.OK } as const;
 const player = { params: PlayerId } as const;
+const nameCheck = { query: HeroNameCheck } as const;
 
 /** The caller's heroes: register one (idempotent by name) so its records can go on the boards, and list them. */
 @UseGuards(SessionGuard)
@@ -42,6 +46,14 @@ export class HeroesController {
     private readonly heroBuilds: HeroBuilds,
     private readonly context: AuthContext,
   ) {}
+
+  /** Decision 229: whether a hero's name is allowed (the `bad-words` list); the game asks when a hero is named. */
+  @Public()
+  @Throttle({ limit: 120, windowSeconds: 3600 })
+  @Get('/name-check', nameCheck)
+  nameCheck({ query }: Input<typeof nameCheck>): HeroNameVerdict {
+    return { allowed: !isProfaneName(query.name) };
+  }
 
   @Get('/')
   async mine(): Promise<{ heroes: HeroView[] }> {

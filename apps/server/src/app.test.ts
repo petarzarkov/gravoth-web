@@ -140,6 +140,7 @@ describe('the scaffold examples are gone', () => {
       '/api/health',
       '/api/heroes',
       '/api/heroes/active',
+      '/api/heroes/name-check',
       '/api/heroes/{id}/builds',
       '/api/leaderboards',
       '/api/leaderboards/{key}',

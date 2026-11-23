@@ -179,19 +179,19 @@ account that can sign in again (a guest gets 403 `GUEST_ACCOUNT`):
   address, which a carrier's players share, so it is only a looser outer limit),
   and not the text of the sender's last message in that channel within 30
   seconds (409 `CHAT_REPEAT`).
-- The filter (`chat/chat-filter.ts`) reads the display names' lists by kind
-  (`players/display-names.ts`): hate refused (422 `MESSAGE_NOT_ALLOWED`),
-  obscenities masked with one `*` per character, the staff words left to names;
-  the same look-alike folding, whole-word matching for the short words (so
-  `Assassin` and `grape` pass), dots and repeated letters seen through,
-  spaced-out letters read as one word (`f u c k`, three or more one-letter
-  words in a row), the ordinary words that hold a listed one taken out first
-  (`SAFE_STEMS`: Scunthorpe, therapist, snigger, niggle, retardant; names too),
-  and control and invisible characters dropped. Links go to `CHAT_LINK_HOST`
-  (gravoth.petarzarkov.com) only: a scheme, `www.`, an address or a bare domain
-  with a known top-level domain is 422 `LINKS_NOT_ALLOWED`, a dodged dot
-  (`evil . com`, `evil(.)com`) read as a dot; a sentence's dot (a space after
-  it only) stays text.
+- The filter (`chat/chat-filter.ts`, decision 229): profane words are masked
+  with one `*` per letter by the `bad-words` package's list
+  (`players/profanity.ts`, the same list display names and hero names use; whole
+  words in any case, so `Scunthorpe` and `Assassin` pass; `god`, `hell` and
+  `damn` excluded as the game's own words), and control and invisible characters
+  are dropped first. Links go to `CHAT_LINK_HOST` (gravoth.petarzarkov.com)
+  only: a scheme, `www.`, an address or a bare domain with a known top-level
+  domain is 422 `LINKS_NOT_ALLOWED`, a dodged dot (`evil . com`, `evil(.)com`)
+  read as a dot; a sentence's dot (a space after it only) stays text.
+- Hero names (decision 229): `GET /api/heroes/name-check?name=` answers whether a
+  name is allowed (no session needed; the game asks when a hero is named), and a
+  hero's name is stored with its profane words masked, whether a phone registers
+  it or the realm's read brings it.
 - A player the caller blocked has their messages hidden from the caller
   everywhere (global, conversations, unread); blocking ends the friendship, so
   direct messages stop both ways.

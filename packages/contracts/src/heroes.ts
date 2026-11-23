@@ -27,6 +27,22 @@ export const RegisterHero = z
 
 export type RegisterHero = z.infer<typeof RegisterHero>;
 
+/**
+ * `GET /api/heroes/name-check?name=` (decision 229, the developer: "use the bad-words npm package for chat and hero
+ * naming"): whether a hero's name is allowed, asked by the game when a hero is named. A name with a profane word on the
+ * `bad-words` list (whole, or a part between `_`, `-` and digits) is not. Anyone may ask (the game may be signed out).
+ */
+export const HeroNameCheck = z
+  .object({ name: z.string().trim().min(1).max(24) })
+  .meta({ id: 'HeroNameCheck', description: "A hero's name to check" });
+
+export type HeroNameCheck = z.infer<typeof HeroNameCheck>;
+
+/** `GET /api/heroes/name-check`. */
+export interface HeroNameVerdict {
+  readonly allowed: boolean;
+}
+
 export interface HeroView {
   readonly id: string;
   readonly name: string;

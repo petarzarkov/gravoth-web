@@ -21,6 +21,7 @@ import {
   type HeroCheck,
 } from '../gravoth/validator.client.js';
 import { Builds, buildHash } from '../heroes/builds.service.js';
+import { maskName } from '../players/profanity.js';
 
 const isHeroClass = (value: string): value is HeroClass =>
   (HERO_CLASSES as readonly string[]).includes(value);
@@ -191,7 +192,8 @@ export class RealmSync {
     heroClass: HeroClass,
     now: Date,
   ): Promise<Hero> {
-    const name = checked.name.trim().slice(0, 24).trim() || 'Hero';
+    // Decision 229: the boards and player pages show a hero's name with its profane words masked.
+    const name = maskName(checked.name.trim().slice(0, 24).trim() || 'Hero');
     const state = {
       name,
       class: heroClass,

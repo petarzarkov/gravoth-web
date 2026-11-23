@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { isUniqueViolation } from '../database/errors.js';
 import { hero, type Hero } from '../database/schema.js';
+import { maskName } from '../players/profanity.js';
 import type { HeroView, RegisterHero } from '@gravoth/contracts';
 export type { HeroView, RegisterHero };
 
@@ -27,8 +28,10 @@ export class Heroes {
 
   async register(
     userId: string,
-    input: RegisterHero,
+    registering: RegisterHero,
   ): Promise<{ hero: Hero; created: boolean }> {
+    // Decision 229: a name made before the game asked (or on a phone that never could) is kept with its profane words masked.
+    const input = { ...registering, name: maskName(registering.name) };
     const existing = await this.byName(userId, input.name);
     if (existing !== undefined)
       return { hero: await this.reconcile(existing, input), created: false };

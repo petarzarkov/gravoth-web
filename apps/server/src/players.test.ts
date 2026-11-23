@@ -234,6 +234,43 @@ describe("a hero's build", () => {
   });
 });
 
+describe('hero names (decision 229, the bad-words list)', () => {
+  it('are checked for the game without a session, whole words and the parts of a name', async () => {
+    const check = async (name: string) =>
+      (
+        await get<{ allowed: boolean }>(
+          `/api/heroes/name-check?name=${encodeURIComponent(name)}`,
+        )
+      ).body.allowed;
+    expect(await check('Ember')).toBe(true);
+    expect(await check('Scunthorpe')).toBe(true);
+    expect(await check('Fuck_face')).toBe(false);
+    expect(await check('shit2')).toBe(false);
+    expect((await get('/api/heroes/name-check?name=')).status).toBe(400);
+  });
+
+  it('are kept with their profane words masked when a phone registers one', async () => {
+    const eira = await signUp(base, 'Eira', 'eira@players.test');
+    const reply = await post<{ hero: { name: string } }>('/api/heroes', eira, {
+      name: 'Shit_Slayer',
+      class: 'barbarian',
+    });
+    expect([reply.status, reply.body.hero.name]).toEqual([200, '****_Slayer']);
+    const again = await post<{ hero: { name: string }; created: boolean }>(
+      '/api/heroes',
+      eira,
+      {
+        name: 'Shit_Slayer',
+        class: 'barbarian',
+      },
+    );
+    expect([again.body.hero.name, again.body.created]).toEqual([
+      '****_Slayer',
+      false,
+    ]);
+  });
+});
+
 describe('the offline heroes still on the phone', () => {
   it('retire the others, and bring a listed one back', async () => {
     const reply = await post<{ retired: number }>('/api/heroes/active', ana, {
