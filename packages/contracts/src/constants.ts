@@ -316,6 +316,20 @@ export type ReportReason = (typeof REPORT_REASONS)[number];
 export const REPORT_ACTIONS = ['dismiss', 'hide', 'mute'] as const;
 export type ReportAction = (typeof REPORT_ACTIONS)[number];
 
+/** Decision 229: friend suggestions (`GET /api/friends/suggestions`; the shapes are social.ts's). */
+export const SUGGESTION_LIMITS = {
+  /** The most suggestions a list holds. */
+  MAX: 20,
+  /** Days a dismissed player stays out of the caller's suggestions. */
+  DISMISS_DAYS: 30,
+  /** Places above and below the caller's best on a board that count as near. */
+  BOARD_PLACES: 5,
+  /** Minutes either side of one of the caller's global messages that count as chatting together. */
+  CHAT_MINUTES: 30,
+  /** Days back the chat and the recently active players reach. */
+  RECENT_DAYS: 7,
+} as const;
+
 export const ERROR_CODES = [
   // Any route that needs a session.
   'UNAUTHENTICATED',

@@ -82,3 +82,36 @@ export interface BlockView {
   readonly displayName: string;
   readonly blockedAt: string;
 }
+
+/**
+ * Why a player is suggested (decision 229): `mutual`, friends with `count` of the caller's friends; `board`, within
+ * five places of the caller's best on that board (`boardId` is its key as `/api/leaderboards/:key` takes it, `hc_` for
+ * the hardcore twin; the closest board only); `chat`, wrote in Global within 30 minutes of one of the caller's messages
+ * in the last 7 days; `active`, played in the last 7 days (only to fill a list the others leave short).
+ */
+export type SuggestionReason =
+  | { readonly kind: 'mutual'; readonly count: number }
+  | {
+      readonly kind: 'board';
+      readonly boardId: string;
+      readonly boardTitle: string;
+      readonly yourRank: number;
+      readonly theirRank: number;
+    }
+  | { readonly kind: 'chat' }
+  | { readonly kind: 'active' };
+
+export interface SuggestionView {
+  readonly userId: string;
+  readonly displayName: string;
+  readonly avatar: AvatarView;
+  /** Strongest first. */
+  readonly reasons: readonly SuggestionReason[];
+  /** One display line the server writes from the reasons, e.g. "2 mutual friends · Near you on Bone Pit". Clients show it as is, so a new source needs no client update. */
+  readonly note: string;
+}
+
+/** `GET /api/friends/suggestions`: at most 20, the best first. */
+export interface SuggestionList {
+  readonly items: readonly SuggestionView[];
+}

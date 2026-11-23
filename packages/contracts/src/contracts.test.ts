@@ -30,6 +30,8 @@ import {
   REALM_LEASE_SECONDS,
   REALM_REASONS,
   ReadBoard,
+  PlayerId,
+  SUGGESTION_LIMITS,
   RealmLease,
   RealmRelease,
   RealmWrite,
@@ -409,6 +411,31 @@ describe('chat', () => {
       'REPORT_NOT_FOUND',
       'MUTE_NOT_FOUND',
     ])
+      expect(ERROR_CODES as readonly string[]).toContain(code);
+  });
+});
+
+describe('friend suggestions', () => {
+  test('a list holds 20 at most; a dismissal lasts 30 days; near is five places, chat 30 minutes, recent a week', () => {
+    expect(SUGGESTION_LIMITS).toEqual({
+      MAX: 20,
+      DISMISS_DAYS: 30,
+      BOARD_PLACES: 5,
+      CHAT_MINUTES: 30,
+      RECENT_DAYS: 7,
+    });
+  });
+
+  test('a dismissal names the player by id, and nothing else', () => {
+    expect(
+      PlayerId.safeParse({ userId: '00000000-0000-4000-8000-000000000001' })
+        .success,
+    ).toBe(true);
+    expect(PlayerId.safeParse({ userId: 'Bodhi' }).success).toBe(false);
+  });
+
+  test('need no error code of their own', () => {
+    for (const code of ['GUEST_ACCOUNT', 'PLAYER_NOT_FOUND'])
       expect(ERROR_CODES as readonly string[]).toContain(code);
   });
 });
