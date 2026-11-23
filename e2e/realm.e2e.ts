@@ -1,9 +1,10 @@
 // `bun run e2e` (e2e/run.sh): decisions 226 and 227 end to end over the local production stack, as the game calls them, with
 // the rules checker built from the game's repository reading saves the game's Core wrote (e2e/savegen): every hero's build
 // and the player pages (public, or for friends only when hidden), and the online realm: the one-device lease (refused,
-// lost, forced, released), revisions, the one-time transfer (refused a second time, to this account or another), the
-// boards showing an online hero's record read from its realm and never an offline hero's submission, and the checker
-// down. Its own players, so it stands alone. Prints one line per check; exits 1 if any failed.
+// lost, forced, released), revisions, the one-time transfer (refused a second time, to this account or another, and a
+// move retried after a lost answer told it landed), two phones' offline heroes (decision 229), the boards showing an
+// online hero's record read from its realm and never an offline hero's submission, and the checker down. Its own players,
+// so it stands alone. Prints one line per check; exits 1 if any failed.
 const base = 'http://localhost:3000';
 const save = await Bun.file(`${import.meta.dir}/.tmp/save.txt`).text();
 const run = Date.now().toString(36);
@@ -319,11 +320,27 @@ const raeRealm = await realmFile('realm-ana', {
     transferred: [3],
   });
   ok(
-    'the same hero moved again is refused',
+    'the same hero moved again is refused, as moved into this account',
     twice.status === 409 &&
       twice.body.error === 'ALREADY_TRANSFERRED' &&
-      JSON.stringify(twice.body.characterIds) === '[3]',
+      JSON.stringify(twice.body.characterIds) === '[3]' &&
+      twice.body.sameAccount === true,
     twice.body,
+  );
+  const retried = await upload(rae!.token, {
+    deviceId: 'phone',
+    baseRevision: 2,
+    data: withDrifter,
+    reason: 'transfer',
+    transferred: [3],
+  });
+  ok(
+    'the move retried after a lost answer (its own base revision) hears that it landed',
+    retried.status === 409 &&
+      retried.body.error === 'ALREADY_TRANSFERRED' &&
+      JSON.stringify(retried.body.characterIds) === '[3]' &&
+      retried.body.sameAccount === true,
+    retried.body,
   );
   await lease(sol!.token, 'phone');
   const elsewhere = await upload(sol!.token, {
@@ -340,7 +357,8 @@ const raeRealm = await realmFile('realm-ana', {
     'the same hero cannot move into another account (a restored backup)',
     elsewhere.status === 409 &&
       elsewhere.body.error === 'ALREADY_TRANSFERRED' &&
-      JSON.stringify(elsewhere.body.characterIds) === '[2]',
+      JSON.stringify(elsewhere.body.characterIds) === '[2]' &&
+      elsewhere.body.sameAccount === false,
     elsewhere.body,
   );
   const sols = await upload(sol!.token, {
@@ -415,6 +433,56 @@ const raeRealm = await realmFile('realm-ana', {
       toRae.body.player.hidden === true &&
       toRae.body.heroes[0]?.hero.name === `Bodhi${sfx}`,
     [toTam.status, toAll.status, toRae.body],
+  );
+}
+
+// ---- 3b. Two phones with different offline saves (decision 229): each phone's list retires only its own heroes; a hero
+// belongs to the phone that last registered it, listed it or posted its build.
+{
+  const hero = async (name: string, deviceId?: string) =>
+    (
+      await call('POST', '/api/heroes', {
+        token: tam!.token,
+        body: {
+          name,
+          class: 'barbarian',
+          ...(deviceId === undefined ? {} : { deviceId }),
+        },
+      })
+    ).body.hero?.id as string;
+  const onA = await hero(`OnA${sfx}`, 'tam-phone-a');
+  const onB = await hero(`OnB${sfx}`);
+  const posted = await call('POST', `/api/heroes/${onB}/builds`, {
+    token: tam!.token,
+    body: { build: build(20, 1), deviceId: 'tam-phone-b' },
+  });
+  const active = (heroIds: string[], deviceId: string) =>
+    call('POST', '/api/heroes/active', {
+      token: tam!.token,
+      body: { heroIds, deviceId },
+    });
+  const names = async () =>
+    (await call('GET', `/api/players/${tam!.id}`)).body.heroes
+      ?.map((h: any) => h.hero.name)
+      .sort();
+  const fromA = await active([onA], 'tam-phone-a');
+  const fromB = await active([onB], 'tam-phone-b');
+  const both = await names();
+  ok(
+    "two phones' lists keep each other's heroes (a build claims its hero for its phone)",
+    posted.status === 200 &&
+      fromA.body.retired === 0 &&
+      fromB.body.retired === 0 &&
+      JSON.stringify(both) === JSON.stringify([`OnA${sfx}`, `OnB${sfx}`]),
+    [posted.body, fromA.body, fromB.body, both],
+  );
+  const gone = await active([], 'tam-phone-b');
+  const left = await names();
+  ok(
+    "a phone's list without its hero retires that one, never the other phone's",
+    gone.body.retired === 1 &&
+      JSON.stringify(left) === JSON.stringify([`OnA${sfx}`]),
+    [gone.body, left],
   );
 }
 

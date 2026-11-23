@@ -24,7 +24,7 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's C# client mirrors the same shapes by hand; the OpenAPI document at
   `/api/openapi.json` is the reference for it.
 - **`apps/server`** is the API. Each feature is a dunx module (`auth`,
-  `players`, `social`, `heroes`, `boards`, `saves`, `realm`, `chat`, `mail`, `backup`) over one Postgres
+  `players`, `social`, `presence`, `heroes`, `boards`, `saves`, `realm`, `chat`, `mail`, `backup`) over one Postgres
   pool (drizzle over `Bun.SQL`). better-auth serves sign-in under `/api/auth`:
   the game sends `Authorization: Bearer`, the website a first-party cookie.
   `web/` serves the website's build.
@@ -32,7 +32,8 @@ the game's repository: `docs/online-plan.md` and `docs/poc-decisions.md`
   game's palette, always dark) on Bun's bundler, and a small history router
   (`router.tsx`). Pages: the boards
   (`/`, `/boards/:key`), a build card (`/builds/:id`), a player page
-  (`/players/:userId`), sign-in, the account (with the cloud save), friends, and chat moderation
+  (`/players/:userId`), sign-in, the account (with the cloud save and the "Show when online" switch), friends (a green
+  dot on an online friend), and chat moderation
   for the `admin` role (`/admin/chat`). Every request goes through `api.ts`, typed by the contracts.
 
 ## The database
@@ -103,11 +104,14 @@ the builds service the score route uses: one immutable row a revision, `created`
 false when it is the hero's latest already; the rules checker's card from the save
 sent or the account's cloud save), and the offline heroes still on the phone
 (`POST /api/heroes/active`: the others get `retired_at`, their builds and records
-kept). Decision 229: a hero belongs to the phone that registered or listed it last
-(`heroes.device_id`, the game's install id sent as `deviceId` with both calls), and
-a phone's `active` retires only its own heroes and the ones no phone has claimed,
-so two phones with different saves no longer retire each other's; a call without
-`deviceId` (an older game) retires only the unclaimed ones. `GET /api/players/:userId` is a player page: every hero not retired, each with
+kept). Decision 229: a hero belongs to the phone that last registered it, listed it
+or posted its build (`heroes.device_id`, migration `0010_hero_device`: the game's
+install id, the realm lease's `DeviceId`, sent as the optional `deviceId` of `POST
+/api/heroes`, `POST /api/heroes/active` and `POST /api/heroes/:id/builds`), and a
+phone's `active` retires only its own heroes and the ones no phone has claimed, so
+two phones with different saves no longer retire each other's; a call without
+`deviceId` (an older game) retires only the unclaimed ones, which are all an older
+game's heroes, and never a newer phone's. `GET /api/players/:userId` is a player page: every hero not retired, each with
 its newest build (a board row's `BuildView`) and its shown records ranked as their
 boards rank them (`heroes/player-pages.service.ts`, a window over `boards/shown.ts`'s
 rule), the newest build's level first. Anyone may read one, a guest's too; a hidden
@@ -137,7 +141,13 @@ at a time (`realm/realms.service.ts`):
   (`transferred`: the realm ids of offline heroes moved online) is read by the checker
   in the request, and each hero's fingerprint goes into `realm_transfers` in the same
   transaction: one seen before, on any account, is 409 `ALREADY_TRANSFERRED`
-  `{ characterIds }`, and a checker that cannot read it 503 `CHECKER_UNAVAILABLE`.
+  `{ characterIds, sameAccount }`, and a checker that cannot read it 503
+  `CHECKER_UNAVAILABLE`. `sameAccount` is true when every one of them moved into the
+  caller's own account: a MOVE ONLINE whose 200 was lost and is sent again, so the
+  game knows the move landed and deletes the phone's copy (false: another account's,
+  a restored copy). The transfers are checked after the lease and before the
+  revision, since that retry still names the revision before the move; an upload
+  without transfers at an old revision is still `REVISION_MISMATCH`.
   The game's version comes from its `x-gravoth-client` header. The conflicts' extra
   fields ride on `http/detailed-error.ts`'s `DetailedHttpError`.
 - `GET /api/realm` answers the save, its revision, the revision the checker last read
@@ -189,13 +199,26 @@ account that can sign in again (a guest gets 403 `GUEST_ACCOUNT`):
   seconds (409 `CHAT_REPEAT`).
 - The filter (`chat/chat-filter.ts`, decision 229): profane words are masked
   with one `*` per letter by the `bad-words` package's list
-  (`players/profanity.ts`, the same list display names and hero names use; whole
-  words in any case, so `Scunthorpe` and `Assassin` pass; `god`, `hell` and
-  `damn` excluded as the game's own words), and control and invisible characters
-  are dropped first. Links go to `CHAT_LINK_HOST` (gravoth.petarzarkov.com)
-  only: a scheme, `www.`, an address or a bare domain with a known top-level
-  domain is 422 `LINKS_NOT_ALLOWED`, a dodged dot (`evil . com`, `evil(.)com`)
-  read as a dot; a sentence's dot (a space after it only) stays text.
+  (`players/profanity.ts`, the same list display names and hero names use; `god`,
+  `hell` and `damn` excluded as the game's own words), and control and invisible
+  characters are dropped first. A word (letters and digits, so the list's `sh1t`
+  counts) is masked only when it is one of the list's entries whole, in any case,
+  or a run of letters inside it is (`shit2`, the `Fuck` of `Fuck_you`): a word
+  that merely holds one passes (the Scunthorpe problem: `Scunthorpe`, `assassin`,
+  `classic`, `grape`, `therapist`, `Cockburn`). A word spelled out in single
+  letters (one to three of space, `.`, `-`, `_`, `*`, `+`, `~`, `|`, `/`, `\`
+  between them: `f u c k`, `f.u.c.k`, `f-u-c-k`) counts as the word when the whole
+  run spells it, or four letters or more at the run's start or end with at most
+  three letters beside them (`u r a b i t c h`); its letters are masked and its
+  separators kept (`*.*.*.*`), and a spelled-out word that only holds one
+  (`C L A S S I C`, `S C U N T H O R P E`) passes. Names use the same checks (a
+  spelled-out display name like `f_u_c_k` is refused). Links go to
+  `CHAT_LINK_HOST` (gravoth.petarzarkov.com) only: a scheme, `www.`, an address
+  or a bare domain with a known top-level domain is 422 `LINKS_NOT_ALLOWED`, a
+  dodged dot read as a dot (spaces round it or before it: `evil . com`, `evil
+.com`, `www . x . net`; in brackets: `evil(.)com`, `evil{.}com`; the word:
+  `evil dot com`, `evil [dot] com`; an ideographic full stop); a sentence's dot
+  (a space after it only) stays text.
 - Hero names (decision 229): `GET /api/heroes/name-check?name=` answers whether a
   name is allowed (no session needed; the game asks when a hero is named), and a
   hero's name is stored with its profane words masked, whether a phone registers
@@ -223,6 +246,33 @@ holds them, closed reports 180 days after they closed, mutes once they end.
 Everything of a player (their messages and the ones to them, read marks,
 reports by them or about their messages, a mute) goes with the account through
 the foreign keys.
+
+## Friends' online status (v0.14.4)
+
+A friend shows as online (`FriendView.online` in `GET /api/friends` and an accepted
+request's answer, `ConversationView.online` in `GET /api/chat/direct`) while they made
+a signed-in request in the last `PRESENCE_TTL_SECONDS` (120) and their profile's
+`showOnline` is on (the default; the website's account page has the "Show when
+online" switch, the game its own). `presence/`:
+
+- **The mark:** `MarkPresence` runs after `SessionGuard` on every guarded controller
+  (`@UseGuards(SessionGuard, MarkPresence)`; a public route marks no one) and sets
+  the caller's Redis key (`<prefix>:presence:<userId>`, `SET ... EX 120`): the game's
+  calls and the website's alike. Each process marks a player at most once per 30
+  seconds (an in-memory map of the last mark, pruned past 10,000 players), so a
+  player active every few seconds costs one write per half minute, and the key
+  outlives the window four times over. The write is never awaited.
+- **The read:** one `MGET` for the players asked, then their profiles'
+  `show_online`. A conversation's peer shows online only while a friend: a
+  conversation with a friend no longer never does.
+- **Redis down:** a failed write is lost and a failed read finds no one, so everyone
+  reads offline and every request still answers (a warning at most once a minute).
+  Presence has its own connection (`presence/presence-redis.ts`), which connects
+  again when a command finds it down, at most once every 5 seconds (an attempt and
+  a read wait 500 ms at most; between attempts a command fails at once):
+  `Bun.RedisClient` with no retries, as the cache's connection is, never reconnects
+  once its connection drops. `PresenceStore` is an abstract class:
+  `RedisPresenceStore` in the app, a clocked stand-in in `presence.test.ts`.
 
 ## Friend suggestions (decision 229)
 

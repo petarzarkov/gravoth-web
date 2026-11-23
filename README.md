@@ -8,12 +8,12 @@ privacy policy, the boards with every record's build, sign-in, friends). A Bun m
 format, hooks and conventions) with the server moved in from the game's
 repository.
 
-| Path                 | What it is                                                                                                                                                                                                                                                                                                                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends, friend suggestions and blocks; heroes, their builds, titles and player pages; the boards with their path filter; the game's cloud save; the online realm; chat and its moderation; the `bad-words` list for chat, display names and hero names), Postgres, Resend mail, R2 backups |
-| `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account, friends with their suggestions and, for the admin role, chat moderation. Deployed to Cloudflare Pages by CI; the API serves a copy too                                                                                                         |
-| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, hero classes and talent paths, and error codes. `@gravoth/contracts/constants` carries no zod                                                                                                                                                                                     |
-| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                                                                                                                                                                                              |
+| Path                 | What it is                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/server`        | `@gravoth/server`: the API (better-auth sign-in with email, Google and Discord; profiles, friends with their online status, friend suggestions and blocks; heroes, their builds, titles and player pages; the boards with their path filter; the game's cloud save; the online realm; chat and its moderation; the `bad-words` list for chat, display names and hero names), Postgres, Resend mail, R2 backups |
+| `apps/web`           | `@gravoth/web`: the website (React and Mantine on Bun's bundler): the boards with each row's build, build cards, sign-in, the account, friends (online ones with a green dot) with their suggestions and, for the admin role, chat moderation. Deployed to Cloudflare Pages by CI; the API serves a copy too                                                                                                   |
+| `packages/contracts` | `@gravoth/contracts`: what both sides agree on: request schemas (zod), response shapes, the boards, hero classes and talent paths, and error codes. `@gravoth/contracts/constants` carries no zod                                                                                                                                                                                                              |
+| `docs/`              | `architecture.md` (how it fits), `deploy.md` (the Raspberry Pi, the first move, the setup list, restore)                                                                                                                                                                                                                                                                                                       |
 
 The game itself (Unity, `Gravoth.Core`, the rules checker in
 `dotnet/Gravoth.Validator`) lives in its own repository. The product plan and
@@ -82,7 +82,10 @@ links, verified, pending and flagged records kept off the boards,
 online realms feeding them, friends, blocks, privacy, the rules checker and
 Redis down, account deletion, a backup restored into a scratch database;
 `e2e/realm.e2e.ts`: hero builds, player pages, the realm's lease, revisions and
-one-time transfers, the checker down) and the website in headless Chrome
+one-time transfers (a move retried after a lost answer among them), two phones'
+offline heroes, the checker down; `e2e/presence.e2e.ts`: friends' online status
+in the list and the conversations, its switch, Redis stopped) and the website in
+headless Chrome
 (`e2e/ui.e2e.ts`, the player page, the friends page's suggestions and the chat
 moderation page too). No OAuth client is needed: Google and Discord are simply
 not offered. It needs Docker, Chrome and port 3000 free.

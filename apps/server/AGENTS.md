@@ -37,7 +37,8 @@ bun run admin:grant <displayName>   # chat's moderator role (admin:revoke takes 
 - `drizzle/` - the migrations (drizzle-kit's; `0001` is hand-written: the trigger that keeps builds immutable)
 - `src/auth/` - better-auth and `/api/account`; `src/players/` - profiles, display names, the guest upgrade
 - `src/social/` - profile, friends, friend suggestions and their dismissals' clean-up, blocks; `src/heroes/` - heroes, builds and player pages; `src/boards/` - the boards; `src/saves/` - the cloud save; `src/realm/` - the online realm; `src/chat/` - chat, its filter, moderation and retention
-- `src/players/profanity.ts` - decision 229: the `bad-words` package's list, the one profanity filter (chat masks, display names refuse, hero names are checked by `GET /api/heroes/name-check` and masked when stored).
+- `src/players/profanity.ts` - decision 229: the `bad-words` package's list, the one profanity filter (chat masks, display names refuse, hero names are checked by `GET /api/heroes/name-check` and masked when stored): whole words only (Scunthorpe passes), and a word spelled out letter by letter (`f u c k`, `f.u.c.k`) counts.
+- `src/presence/` - friends' online status (v0.14.4): `MarkPresence` after `SessionGuard` on every guarded controller (`@UseGuards(SessionGuard, MarkPresence)`; a new guarded controller adds it too) marks the caller in Redis, and `Presence.online` answers who shows as online.
 - `src/mail/` - the mailer and its React Email templates; `src/backup/` - the nightly dump to R2
 - `src/cache/`, `src/throttle/`, `src/schedule/` - the scaffold's infrastructure
 - `src/web/` - the website's page (`SpaShell`) and the static options
@@ -63,6 +64,7 @@ bottom is what stops that starting a server.
 - **chat** - `/api/chat` (decision 228): the global channel and friends' direct messages by polling, the rules, the filter (`chat/chat-filter.ts`: links, and the `bad-words` package's list in `players/profanity.ts`, which display names and hero names use too, decision 229), ten sends a minute per player (counted in Postgres under an advisory lock, since `@Throttle` keys by address), repeats, mutes, blocks, reports; `/api/admin/chat` for the `admin` role (`@Roles('admin')`); `chat/chat-retention.ts` at 04:45 (messages 30 days unless an open report holds them, closed reports 180 days, ended mutes).
 - **auth** - better-auth mounted at `/api/auth` (guests, email and password, Google, Discord; its `admin` plugin's `role`), and `/api/account` (the caller with `admin`, the sign-in methods, deletion, the mail-link pages).
 - **mail** - Resend with React Email templates; logged without `RESEND_API_KEY`.
+- **presence** - friends' online status (v0.14.4, `presence/`): a key per signed-in player in Redis (`PRESENCE_TTL_SECONDS`, 120 s), set by `MarkPresence` at most once per player per 30 s and never awaited; `FriendView.online` and `ConversationView.online` read it with `profiles.show_online`. Redis down reads everyone offline and fails no request; presence's own connection (`presence-redis.ts`) reconnects when Redis is back.
 - **social, heroes, boards** - `/api/profile`, `/api/friends` (with its suggestions, below), `/api/blocks`, `/api/heroes` (with every hero's build, decision 226), `/api/builds/:id`, `/api/players/:userId`, `/api/leaderboards` (online heroes only, decision 227). Decision 230: a hero carries its talent `title` and main `path` (`HERO_PATHS`) from the rules checker's read or its latest build; boards filter by `?path=` (`?class=` kept for older clients); `GET /api/heroes/name-check` (public) answers the game's CREATE and RENAME, decision 229.
 - **realm** - `/api/realm`: the online realm (decision 227), one save of online heroes per account, its one-device lease and revisions; `realm/realm-sync.ts` lands the rules checker's read of each upload on the heroes, builds and boards after the reply.
 - **saves** - `/api/saves/me`: the game's cloud save, one copy per account (not a guest's), stored as `bytea` (`database/columns.ts`'s, since drizzle-orm 0.45 has none).
@@ -77,7 +79,7 @@ bottom is what stops that starting a server.
 Postgres is required: the app does not boot without it. Each of the others reports
 itself degraded rather than failing the boot, so the app starts without them.
 
-- **cache** and **throttle** need Redis or Valkey
+- **cache**, **throttle** and **presence** need Redis or Valkey (without it everyone reads offline)
 - the WebSocket relay needs Redis or Valkey, for multi-node fan-out only
 
 ## Rules that produce a boot error when broken

@@ -13,8 +13,9 @@
 #    (the game's calls: guests and their upgrade, mail links, password reset, verified, pending and flagged records kept
 #    off the boards, online realms feeding them, friends, blocks, privacy, the checker and Redis down, deletion, a backup
 #    restored into a scratch database, the cloud saves, realms, chat and hidden suggestions among it), e2e/realm.e2e.ts
-#    (decisions 226 and 227: hero builds, player pages, the realm's lease, revisions and one-time transfers, the boards
-#    it feeds, the checker down) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by
+#    (decisions 226 and 227: hero builds, player pages, the realm's lease, revisions and one-time transfers, a move retried
+#    after a lost answer, two phones' offline heroes, the boards it feeds, the checker down), e2e/presence.e2e.ts (friends'
+#    online status in the friends list and conversations, the switch that hides it, Redis stopped) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by
 #    e2e/pages.ts on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls gravoth-api in
 #    production; the chat moderation page among it).
 # 4. Takes it all down again, volumes included, unless KEEP=1.
@@ -92,6 +93,8 @@ echo "== the API, as the game calls it"
 bun e2e/api.e2e.ts || status=1
 echo "== players' heroes and the online realm, as the game calls them"
 bun e2e/realm.e2e.ts || status=1
+echo "== friends' online status, as the game calls it"
+bun e2e/presence.e2e.ts || status=1
 echo "== the website as Cloudflare Pages serves it, in headless Chrome"
 if command -v "${CHROME:-google-chrome}" >/dev/null; then
   (cd apps/web && GRAVOTH_API_BASE=http://localhost:3000 GRAVOTH_WEB_OUT="$TMP/pages" bun run build >/dev/null)
