@@ -3,6 +3,7 @@ import {
   HERO_CLASSES,
   MAX_ACTIVE_HEROES,
   type HeroClass,
+  type HeroPath,
 } from './constants.js';
 import { BuildSnapshot, type BuildView } from './build.js';
 import { DeviceId } from './realm.js';
@@ -47,6 +48,10 @@ export interface HeroView {
   readonly id: string;
   readonly name: string;
   readonly class: HeroClass;
+  /** Decision 230: the title the game shows, null when the server has none yet. */
+  readonly title: string | null;
+  /** Decision 230: the main talent path, null for a Wanderer or without a title. */
+  readonly path: HeroPath | null;
   readonly hardcore: boolean;
   /** Decision 227: an online hero, whose save is the account's realm on the server; its records are the boards' only ones. */
   readonly online: boolean;

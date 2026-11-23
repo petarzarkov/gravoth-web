@@ -3,6 +3,7 @@ import {
   BuildSnapshot,
   HARDCORE_PREFIX,
   HERO_CLASSES,
+  isHeroPath,
   type HeroClass,
 } from '@gravoth/contracts';
 import { and, eq, isNull, notInArray, sql } from 'drizzle-orm';
@@ -21,6 +22,7 @@ import {
   type HeroCheck,
 } from '../gravoth/validator.client.js';
 import { Builds, buildHash } from '../heroes/builds.service.js';
+import { titleOf } from '../heroes/heroes.service.js';
 import { maskName } from '../players/profanity.js';
 
 const isHeroClass = (value: string): value is HeroClass =>
@@ -197,6 +199,13 @@ export class RealmSync {
     const state = {
       name,
       class: heroClass,
+      // Decision 230: what the game calls the hero, and the path the boards filter by (a checker before them keeps what is stored).
+      ...(checked.title === undefined
+        ? {}
+        : {
+            title: titleOf(checked.title),
+            path: isHeroPath(checked.path) ? checked.path : null,
+          }),
       hardcore: checked.hardcore,
       online: true,
       level: Math.max(1, Math.min(32_767, Math.round(checked.level))),

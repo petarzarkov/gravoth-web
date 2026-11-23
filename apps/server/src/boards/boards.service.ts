@@ -1,12 +1,7 @@
 import { AppConfigService } from '../config.js';
 import { Logger } from '@dunx/core';
 import { HttpError, HttpStatusCode } from '@dunx/http';
-import {
-  CursorError,
-  decodeCursor,
-  encodeCursor,
-  pageOf,
-} from '@dunx/infra/pagination/cursor';
+import { encodeCursor, pageOf } from '@dunx/infra/pagination/cursor';
 import {
   and,
   asc,
@@ -28,6 +23,7 @@ import {
   type HeroClass,
   type Leaderboard,
 } from '../database/schema.js';
+import { markOf, markOfRow, type Mark } from './board-cursor.js';
 import { Builds, toBuildView } from '../heroes/builds.service.js';
 import { Heroes } from '../heroes/heroes.service.js';
 import type { PageQuery } from '../http/page-query.js';
@@ -39,6 +35,7 @@ import type {
   BoardPage,
   BoardView,
   EntryView,
+  HeroPath,
   Neighbourhood,
   SubmitResult,
   SubmitScore,
@@ -58,13 +55,8 @@ interface Scope {
   /** The caller and their accepted friends only. */
   readonly friendsOf?: string | undefined;
   readonly heroClass?: HeroClass | undefined;
-}
-
-/** The position a cursor or a row stands at, in board order. */
-interface Mark {
-  readonly score: number;
-  readonly achievedAt: Date;
-  readonly id: string;
+  /** Decision 230: the heroes whose main talent path this is. */
+  readonly path?: HeroPath | undefined;
 }
 
 const HIDDEN = 'A hidden player';
@@ -89,6 +81,13 @@ export const toBoardView = (board: Leaderboard): BoardView => ({
  * makes the order total, so a keyset cursor (`@dunx/infra/pagination`'s codec over score, time and id) pages without
  * gaps or repeats while scores keep arriving. Flagged rows never show. Every row carries its full build.
  */
+/** Which heroes a read covers on its board: friends only, the old class, decision 230's main talent path. */
+interface ReadFilter {
+  readonly friends: boolean;
+  readonly heroClass?: HeroClass | undefined;
+  readonly path?: HeroPath | undefined;
+}
+
 export class Boards {
   constructor(
     private readonly db: Db,
@@ -152,11 +151,7 @@ export class Boards {
   async read(
     board: Leaderboard,
     page: PageQuery,
-    options: {
-      caller?: string | undefined;
-      friends: boolean;
-      heroClass?: HeroClass | undefined;
-    },
+    options: ReadFilter & { caller?: string | undefined },
   ): Promise<BoardPage> {
     if (options.friends && options.caller === undefined)
       throw new HttpError(HttpStatusCode.UNAUTHORIZED, 'UNAUTHENTICATED');
@@ -164,6 +159,7 @@ export class Boards {
       board,
       friendsOf: options.friends ? options.caller : undefined,
       heroClass: options.heroClass,
+      path: options.path,
     };
     const cursor = page.cursor === undefined ? undefined : markOf(page.cursor);
     const backward = page.direction === 'backward' && cursor !== undefined;
@@ -206,12 +202,13 @@ export class Boards {
     board: Leaderboard,
     caller: string,
     around: number,
-    options: { friends: boolean; heroClass?: HeroClass | undefined },
+    options: ReadFilter,
   ): Promise<Neighbourhood> {
     const scope: Scope = {
       board,
       friendsOf: options.friends ? caller : undefined,
       heroClass: options.heroClass,
+      path: options.path,
     };
     const [mine] = await this.rows(scope, {
       where: eq(e.userId, caller),
@@ -418,6 +415,7 @@ export class Boards {
       scope.heroClass === undefined
         ? undefined
         : eq(hero.class, scope.heroClass),
+      scope.path === undefined ? undefined : eq(hero.path, scope.path),
       me === undefined
         ? undefined
         : sql`(${e.userId} = ${me} OR ${e.userId} IN (
@@ -479,43 +477,11 @@ export class Boards {
         id: row.hero.id,
         name: row.hero.name,
         class: row.hero.class,
+        title: row.hero.title,
+        path: row.hero.path,
         hardcore: row.hero.hardcore,
       },
       build: toBuildView(row.build),
     };
   }
 }
-
-const markOfRow = (row: {
-  entry: { score: number; achievedAt: Date; id: string };
-}): Mark => ({
-  score: row.entry.score,
-  achievedAt: row.entry.achievedAt,
-  id: row.entry.id,
-});
-
-/**
- * A cursor this service minted: `<score>|<ISO time>` and the row id. Anything else is a 400 `INVALID_CURSOR`, raised
- * as an `HttpError` so the request log records the 400 the caller gets.
- */
-const markOf = (cursor: string): Mark => {
-  const invalid = () =>
-    new HttpError(HttpStatusCode.BAD_REQUEST, 'INVALID_CURSOR');
-  let decoded;
-  try {
-    decoded = decodeCursor(cursor);
-  } catch (error) {
-    if (error instanceof CursorError) throw invalid();
-    throw error;
-  }
-  const [score, at] = decoded.s.split('|');
-  const achievedAt = new Date(at ?? '');
-  if (
-    score === undefined ||
-    !/^\d+$/.test(score) ||
-    Number.isNaN(achievedAt.getTime()) ||
-    !/^[0-9a-f-]{36}$/.test(decoded.i)
-  )
-    throw invalid();
-  return { score: Number(score), achievedAt, id: decoded.i };
-};

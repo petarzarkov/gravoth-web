@@ -1,4 +1,4 @@
-import type { HeroClass, ShownVerdict } from '@gravoth/contracts';
+import type { HeroClass, HeroPath, ShownVerdict } from '@gravoth/contracts';
 import {
   Alert,
   Badge,
@@ -89,6 +89,49 @@ export const ClassBadge = ({
   </Badge>
 );
 
+/** Decision 230: each talent path's colour (Might red, Cunning green, Sorcery blue, Void violet, Minion bone). */
+export const PATH_COLOURS: Record<HeroPath, string> = {
+  might: '#ff8c6b',
+  cunning: '#8fe07a',
+  sorcery: '#7fb2ff',
+  void: '#c49bff',
+  minion: '#d9d2b8',
+};
+
+/**
+ * Decision 230: what a hero is, as the game says it: its talent title (Warrior, Skirmisher, an ascendancy's name) in its
+ * path's colour, else (a hero the server has no title for yet) the old class.
+ */
+export const TitleBadge = ({
+  hero,
+  size,
+}: {
+  hero: {
+    readonly class: HeroClass;
+    readonly title?: string | null;
+    readonly path?: HeroPath | null;
+  };
+  size?: 'xs' | 'sm';
+}) =>
+  hero.title === null || hero.title === undefined ? (
+    <ClassBadge
+      heroClass={hero.class}
+      {...(size === undefined ? {} : { size })}
+    />
+  ) : (
+    <Badge
+      className="class-badge"
+      color={
+        hero.path === null || hero.path === undefined
+          ? 'gray'
+          : PATH_COLOURS[hero.path]
+      }
+      {...(size === undefined ? {} : { size })}
+    >
+      {hero.title}
+    </Badge>
+  );
+
 /** A hardcore hero or board: red and filled, beside the class badge (which is outlined). */
 export const HardcoreBadge = ({ size }: { size?: 'xs' | 'sm' }) => (
   <Badge
@@ -102,13 +145,18 @@ export const HardcoreBadge = ({ size }: { size?: 'xs' | 'sm' }) => (
   </Badge>
 );
 
-/** A hero's class and, when it is hardcore, the hardcore badge beside it (under it where a phone's row is too narrow). */
+/** A hero's title (decision 230; its class without one) and, when it is hardcore, the hardcore badge beside it (under it where a phone's row is too narrow). */
 export const HeroBadges = ({
   hero,
   size,
   mt,
 }: {
-  hero: { readonly class: HeroClass; readonly hardcore: boolean };
+  hero: {
+    readonly class: HeroClass;
+    readonly title?: string | null;
+    readonly path?: HeroPath | null;
+    readonly hardcore: boolean;
+  };
   size?: 'xs' | 'sm';
   mt?: number;
 }) => {
@@ -120,7 +168,7 @@ export const HeroBadges = ({
       className="hero-badges"
       {...(mt === undefined ? {} : { mt })}
     >
-      <ClassBadge heroClass={hero.class} {...sized} />
+      <TitleBadge hero={hero} {...sized} />
       {hero.hardcore ? <HardcoreBadge {...sized} /> : null}
     </Group>
   );

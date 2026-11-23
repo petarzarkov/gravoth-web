@@ -33,6 +33,12 @@ import {
   titleOf,
 } from '../format.js';
 
+/** Decision 230: the title the game sent with the build (a game since it does), else null. */
+const titleOfExtras = (extras: Record<string, unknown>): string | null => {
+  const title = extras['title'];
+  return typeof title === 'string' && title.trim().length > 0 ? title : null;
+};
+
 const Stat = ({
   label,
   value,
@@ -337,7 +343,9 @@ export const BuildPage = ({ id }: { id: string }) => {
                   <HeroBadges hero={card.hero} />
                   <Text span>
                     Level {card.level}{' '}
-                    {card.ascendancy ?? CLASS_NAMES[card.hero.class]}
+                    {card.ascendancy ??
+                      titleOfExtras(card.extras) ??
+                      CLASS_NAMES[card.hero.class]}
                   </Text>
                   <Group gap={6} wrap="nowrap" className="build-player">
                     <PlayerAvatar

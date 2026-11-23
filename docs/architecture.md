@@ -113,6 +113,14 @@ boards rank them (`heroes/player-pages.service.ts`, a window over `boards/shown.
 rule), the newest build's level first. Anyone may read one, a guest's too; a hidden
 profile's page is 404 `PLAYER_NOT_FOUND` to anyone but a friend and the player.
 
+Decision 230: a hero's `class` is the game's old id (every hero since the game's
+classless change is a barbarian), so a hero also carries its talent `title` (what
+the game shows: Warrior, Skirmisher, an ascendancy's name) and its main `path`
+(`HERO_PATHS`: might, cunning, sorcery, void, minion; none for a Wanderer), from the
+rules checker's read of a realm or an offline hero's latest build. Board rows,
+player pages and the website show the title; the boards filter by `?path=`
+(`?class=` stays for older clients).
+
 ## The online realm (decision 227)
 
 Each account (not a guest) has at most one realm: the game's own save holding all its

@@ -14,8 +14,12 @@ import { Db } from '../database/db.js';
 import { cloudSave, hero } from '../database/schema.js';
 import { ValidatorClient } from '../gravoth/validator.client.js';
 import { Builds, buildHash, type BuildView } from './builds.service.js';
-import { Heroes } from './heroes.service.js';
-import type { CardPage, PostHeroBuild } from '@gravoth/contracts';
+import { Heroes, titleOf } from './heroes.service.js';
+import {
+  isHeroPath,
+  type CardPage,
+  type PostHeroBuild,
+} from '@gravoth/contracts';
 import type { HeroBuild } from '../database/schema.js';
 
 /**
@@ -49,6 +53,15 @@ export class HeroBuilds {
       await this.db
         .update(hero)
         .set({ retiredAt: null, updatedAt: new Date() })
+        .where(eq(hero.id, owner.id));
+    // Decision 230: the build's title and main path (a game since it sends them) are the hero's.
+    const extras = body.build.extras as Record<string, unknown>;
+    const title = titleOf(extras['title']);
+    const path = isHeroPath(extras['path']) ? extras['path'] : null;
+    if (title !== null && (title !== owner.title || path !== owner.path))
+      await this.db
+        .update(hero)
+        .set({ title, path, updatedAt: new Date() })
         .where(eq(hero.id, owner.id));
     const latest = await this.builds.latest(owner.id);
     if (latest !== undefined && latest.contentHash === buildHash(body.build))

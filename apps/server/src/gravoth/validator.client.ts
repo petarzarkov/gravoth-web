@@ -40,6 +40,10 @@ export interface HeroCheck {
   name: string;
   /** The server's class key (`barbarian`). */
   class: string;
+  /** Decision 230: the title the game shows; absent from a checker before it. */
+  title?: string;
+  /** Decision 230: the main talent path (`might` ... `minion`, or `` for a Wanderer); absent from a checker before it. */
+  path?: string;
   level: number;
   hardcore: boolean;
   plausible: boolean;

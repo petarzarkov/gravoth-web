@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import {
   HERO_CLASSES,
+  HERO_PATHS,
   type BoardFormat,
   type BoardSort,
   type HeroClass,
+  type HeroPath,
 } from './constants.js';
 import type { AvatarView } from './avatar.js';
 import { BuildSnapshot, type BuildView } from './build.js';
@@ -21,7 +23,10 @@ export const BoardScope = z.object({
   season: z.coerce.number().int().min(0).default(0),
   /** `friends`: the caller and their friends only (needs a session). */
   view: z.enum(['all', 'friends']).default('all'),
+  /** The game's old class id (kept for older clients; decision 230's `path` is the filter the boards offer). */
   class: z.enum(HERO_CLASSES).optional(),
+  /** Decision 230: the heroes whose main talent path this is. */
+  path: z.enum(HERO_PATHS).optional(),
 });
 
 /** `GET /api/leaderboards`. */
@@ -105,6 +110,10 @@ export interface EntryView {
     readonly id: string;
     readonly name: string;
     readonly class: HeroClass;
+    /** Decision 230: the title the game shows (Warrior, Skirmisher, an ascendancy's name), null when the server has none yet. */
+    readonly title: string | null;
+    /** Decision 230: the main talent path, null for a Wanderer or a hero the server has no title for. */
+    readonly path: HeroPath | null;
     readonly hardcore: boolean;
   };
   readonly build: BuildView;

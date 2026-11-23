@@ -1,5 +1,10 @@
-import type { BoardView, EntryView, HeroClass } from '@gravoth/contracts';
-import { HERO_CLASSES, avatarBorderOf } from '@gravoth/contracts/constants';
+import type { BoardView, EntryView, HeroPath } from '@gravoth/contracts';
+import {
+  HERO_PATHS,
+  HERO_PATH_NAMES,
+  avatarBorderOf,
+  isHeroPath,
+} from '@gravoth/contracts/constants';
 import {
   Anchor,
   Box,
@@ -25,12 +30,9 @@ import {
 } from '../components/bits.js';
 import { PageTitle } from '../components/layout.js';
 import { useLoad } from '../components/use-load.js';
-import { CLASS_NAMES, formatCompact, formatScore } from '../format.js';
+import { formatCompact, formatScore } from '../format.js';
 import { Link, useNavigation, useQuery } from '../router.js';
 import { isGuest, useSession } from '../session.js';
-
-const isClass = (value: string | null): value is HeroClass =>
-  value !== null && (HERO_CLASSES as readonly string[]).includes(value);
 
 /**
  * The rank, the hero (with its class and hardcore badges under the names) and the score on a phone; the class, level,
@@ -164,7 +166,7 @@ const MyPlace = ({
   boardKey: string;
   scope: {
     hardcore: boolean;
-    class?: HeroClass | undefined;
+    path?: HeroPath | undefined;
     view: 'all' | 'friends';
   };
 }) => {
@@ -195,8 +197,9 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
   const { session } = useSession();
   const signedIn = session !== null && session !== undefined;
   const hardcore = query.get('hardcore') === 'true';
-  const classParam = query.get('class');
-  const heroClass = isClass(classParam) ? classParam : undefined;
+  // Decision 230: the heroes' main talent path (the class every hero since the classless change shares said nothing).
+  const pathParam = query.get('path');
+  const path = isHeroPath(pathParam) ? pathParam : undefined;
   const view =
     query.get('view') === 'friends' && signedIn && !isGuest(session)
       ? 'friends'
@@ -205,9 +208,9 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
   const direction =
     query.get('direction') === 'backward' ? 'backward' : 'forward';
 
-  const scope = { hardcore, class: heroClass, view } as const;
+  const scope = { hardcore, path, view } as const;
   const [page, reload] = useLoad(
-    `${boardKey}:${hardcore}:${heroClass}:${view}:${cursor}:${direction}:${session?.user.id}`,
+    `${boardKey}:${hardcore}:${path}:${view}:${cursor}:${direction}:${session?.user.id}`,
     () => api.board(boardKey, { ...scope, take: 50, cursor, direction }),
   );
 
@@ -215,7 +218,7 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
   const go = (changes: Record<string, string | undefined>) => {
     const next: Record<string, string | undefined> = {
       hardcore: hardcore ? 'true' : undefined,
-      class: heroClass,
+      path,
       view: view === 'friends' ? 'friends' : undefined,
       cursor: undefined,
       direction: undefined,
@@ -263,21 +266,21 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
               ]}
             />
             <NativeSelect
-              aria-label="Class"
-              value={heroClass ?? ''}
+              aria-label="Path"
+              value={path ?? ''}
               onChange={(event) =>
                 go({
-                  class:
+                  path:
                     event.currentTarget.value === ''
                       ? undefined
                       : event.currentTarget.value,
                 })
               }
               data={[
-                { value: '', label: 'All classes' },
-                ...HERO_CLASSES.map((value) => ({
+                { value: '', label: 'All paths' },
+                ...HERO_PATHS.map((value) => ({
                   value,
-                  label: CLASS_NAMES[value],
+                  label: HERO_PATH_NAMES[value],
                 })),
               ]}
             />
@@ -305,9 +308,9 @@ export const BoardPage = ({ boardKey }: { boardKey: string }) => {
             <Stack gap="md">
               {entries.data.length === 0 ? (
                 <Empty>
-                  {heroClass === undefined
+                  {path === undefined
                     ? 'No records yet.'
-                    : `No ${CLASS_NAMES[heroClass]} records yet.`}
+                    : `No ${HERO_PATH_NAMES[path]} records yet.`}
                 </Empty>
               ) : (
                 <EntryTable

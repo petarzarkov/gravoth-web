@@ -191,7 +191,12 @@ export const PlayerPage = ({ userId }: { userId: string }) => {
   }
   const view: PlayerPageView = page.value;
   const border = bestBorder(view.heroes);
-  const classes = [...new Set(view.heroes.map((h) => h.hero.class))];
+  // Decision 230: what the heroes are, as the game says it (their titles; the class only where the server has none).
+  const classes = [
+    ...new Set(
+      view.heroes.map((h) => h.hero.title ?? CLASS_NAMES[h.hero.class]),
+    ),
+  ];
   return (
     <>
       <Group gap="md" mb="lg" wrap="nowrap" className="player-head">
@@ -209,9 +214,7 @@ export const PlayerPage = ({ userId }: { userId: string }) => {
                 {view.heroes.length === 1
                   ? '1 hero'
                   : `${view.heroes.length} heroes`}
-                {classes.length === 0
-                  ? ''
-                  : ` · ${classes.map((c) => CLASS_NAMES[c]).join(', ')}`}
+                {classes.length === 0 ? '' : ` · ${classes.join(', ')}`}
                 {view.player.hidden ? ' · Hidden: friends only' : ''}
               </span>
             }

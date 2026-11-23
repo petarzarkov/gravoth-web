@@ -78,6 +78,13 @@
       "when": 1795416435192,
       "tag": "0010_hero_device",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795418955064,
+      "tag": "0011_hero_title",
+      "breakpoints": true
     }
   ]
 }

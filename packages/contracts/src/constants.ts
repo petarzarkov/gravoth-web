@@ -13,6 +13,34 @@ export const HERO_CLASSES = [
 ] as const;
 export type HeroClass = (typeof HERO_CLASSES)[number];
 
+/**
+ * Decision 230 (the developer: "The boards have some interesting classes that I don't think match the game"): a hero's
+ * main path, the talent style holding most of its points, which the boards filter by. The class above is the game's old
+ * id (every hero since its classless change is a barbarian); a hero shows its talent title (Warrior, Skirmisher, an
+ * ascendancy's name), and a Wanderer (no talents yet) has no path.
+ */
+export const HERO_PATHS = [
+  'might',
+  'cunning',
+  'sorcery',
+  'void',
+  'minion',
+] as const;
+export type HeroPath = (typeof HERO_PATHS)[number];
+
+/** A path as the boards' filter names it: the style and the title of a hero who keeps to it. */
+export const HERO_PATH_NAMES: Readonly<Record<HeroPath, string>> = {
+  might: 'Might (Warrior)',
+  cunning: 'Cunning (Ranger)',
+  sorcery: 'Sorcery (Sorcerer)',
+  void: 'Void (Occultist)',
+  minion: 'Minion (Necromancer)',
+};
+
+export const isHeroPath = (value: unknown): value is HeroPath =>
+  typeof value === 'string' &&
+  (HERO_PATHS as readonly string[]).includes(value);
+
 export const ITEM_SLOTS = [
   'MainHand',
   'OffHand',

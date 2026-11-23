@@ -7,10 +7,18 @@ import { maskName } from '../players/profanity.js';
 import type { HeroView, RegisterHero } from '@gravoth/contracts';
 export type { HeroView, RegisterHero };
 
+/** Decision 230: a title as the game sent it (Warrior, an ascendancy's name), at most 40 characters, or null. */
+export const titleOf = (title: unknown): string | null =>
+  typeof title === 'string' && title.trim().length > 0
+    ? title.trim().slice(0, 40)
+    : null;
+
 export const toHeroView = (row: Hero): HeroView => ({
   id: row.id,
   name: row.name,
   class: row.class,
+  title: row.title,
+  path: row.path,
   hardcore: row.hardcore,
   online: row.online,
   createdAt: row.createdAt.toISOString(),

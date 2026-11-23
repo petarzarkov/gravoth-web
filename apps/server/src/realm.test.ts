@@ -269,6 +269,8 @@ describe('an upload', () => {
     const data = realmOf(
       heroOf(1, 'Ashgrove', 58, {
         records: [record('pit_floor', 70, 1), record('chart_tier', 9, 1)],
+        title: 'Skirmisher',
+        path: 'might',
       }),
       heroOf(2, 'Wren', 44),
     );
@@ -638,6 +640,33 @@ describe('moving offline heroes online', () => {
 });
 
 describe('the boards, online only', () => {
+  it('show the title the rules checker read and filter by the main talent path (decision 230)', async () => {
+    const [ash] = await board('pit_floor');
+    expect(ash?.hero).toMatchObject({
+      name: 'Ashgrove',
+      title: 'Skirmisher',
+      path: 'might',
+    });
+    const might = await call<BoardPage>(
+      base,
+      'GET',
+      '/api/leaderboards/pit_floor?path=might',
+    );
+    expect(might.body.entries.data.map((r) => r.hero.name)).toEqual([
+      'Ashgrove',
+    ]);
+    const voidPath = await call<BoardPage>(
+      base,
+      'GET',
+      '/api/leaderboards/pit_floor?path=void',
+    );
+    expect(voidPath.body.entries.data).toEqual([]);
+    expect(
+      (await call(base, 'GET', '/api/leaderboards/pit_floor?path=templar'))
+        .status,
+    ).toBe(400);
+  });
+
   it("keep an offline hero's score off every board, answering it as v0.13.0 expects", async () => {
     const offline = await call<{ hero: { id: string } }>(
       base,

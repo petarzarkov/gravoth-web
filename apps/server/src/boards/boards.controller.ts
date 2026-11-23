@@ -76,6 +76,7 @@ export class BoardsController {
       caller,
       friends: query.view === 'friends',
       heroClass: query.class,
+      path: query.path,
     });
   }
 
@@ -93,7 +94,11 @@ export class BoardsController {
       board,
       this.context.require().user.id,
       query.around,
-      { friends: query.view === 'friends', heroClass: query.class },
+      {
+        friends: query.view === 'friends',
+        heroClass: query.class,
+        path: query.path,
+      },
     );
   }
 

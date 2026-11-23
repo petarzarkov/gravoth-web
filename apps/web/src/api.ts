@@ -16,6 +16,7 @@ import type {
   CloudSaveView,
   FriendView,
   HeroClass,
+  HeroPath,
   MetaInfo,
   MutePlayer,
   MyHeroes,
@@ -111,6 +112,8 @@ const post = <T>(path: string, body: unknown = {}) =>
 export interface BoardQuery {
   readonly hardcore?: boolean | undefined;
   readonly class?: HeroClass | undefined;
+  /** Decision 230: the heroes whose main talent path this is. */
+  readonly path?: HeroPath | undefined;
   readonly view?: 'all' | 'friends' | undefined;
   readonly take?: number | undefined;
   readonly cursor?: string | undefined;

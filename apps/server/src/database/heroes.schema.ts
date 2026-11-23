@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import {
   HERO_CLASSES,
+  HERO_PATHS,
   type Aura,
   type BuildDocument,
   type BuildSummary,
@@ -67,6 +68,12 @@ export const hero = pgTable(
     retiredAt: timestamp('retired_at', { withTimezone: true }),
     /** Decision 229: the phone holding an offline hero; null for an online hero and a hero no phone has claimed. */
     deviceId: text('device_id'),
+    /**
+     * Decision 230: the title the game shows (Warrior, Skirmisher, an ascendancy's name) and the main talent path the boards
+     * filter by, from the rules checker's read (an online hero) or the latest build (an offline one); null until known.
+     */
+    title: text('title'),
+    path: text('path', { enum: HERO_PATHS }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
