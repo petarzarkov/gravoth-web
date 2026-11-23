@@ -109,23 +109,27 @@ const ByName = ({
   );
 };
 
-/** One player's row: the picture and name (to their player page, given `userId`), when, then the actions at the far end. */
+/**
+ * One player's row: the picture and name (to their player page, given `userId`), when, then the actions at the far
+ * end. `stacked` puts the line under the name, for a longer one (a suggestion's) that a phone's row has no room beside.
+ */
 const Person = ({
   name,
   avatar,
   when,
   userId,
+  stacked,
   children,
 }: {
   name: string;
   avatar?: AvatarView;
   when: string;
   userId?: string;
+  stacked?: boolean;
   children: ReactNode;
-}) => (
-  <Group gap="sm" py={6} className="person-row" wrap="nowrap">
-    {avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />}
-    {userId === undefined ? (
+}) => {
+  const who =
+    userId === undefined ? (
       <Text fw={600} className="person">
         {name}
       </Text>
@@ -139,15 +143,31 @@ const Person = ({
       >
         {name}
       </Anchor>
-    )}
-    <Text size="xs" c="dimmed" style={{ flex: 1 }}>
-      {when}
-    </Text>
-    <Group gap={6} wrap="nowrap">
-      {children}
+    );
+  return (
+    <Group gap="sm" py={6} className="person-row" wrap="nowrap">
+      {avatar === undefined ? null : <PlayerAvatar avatar={avatar} size={36} />}
+      {stacked === true ? (
+        <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
+          {who}
+          <Text size="xs" c="dimmed">
+            {when}
+          </Text>
+        </Stack>
+      ) : (
+        <>
+          {who}
+          <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+            {when}
+          </Text>
+        </>
+      )}
+      <Group gap={6} wrap="nowrap">
+        {children}
+      </Group>
     </Group>
-  </Group>
-);
+  );
+};
 
 export const FriendsPage = () => {
   const { session } = useSession();
@@ -362,6 +382,7 @@ export const FriendsPage = () => {
                           avatar={item.avatar}
                           userId={item.userId}
                           when={item.note}
+                          stacked
                         >
                           <Button
                             size="xs"
