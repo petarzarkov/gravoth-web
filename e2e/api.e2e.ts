@@ -933,6 +933,8 @@ const firstRealm = async (token: string, data: string) => {
     'chat_reads',
     'chat_reports',
     'chat_mutes',
+    // Decision 229's hidden suggestions (e2e/suggestions.e2e.ts runs first, so this holds a row).
+    'suggestion_dismissals',
   ]) {
     const [live, drill] = [
       await count('gravoth', table),

@@ -7,12 +7,14 @@
 #    the score route, and the online realms (decision 227) with their witnessed board records.
 # 3. Runs e2e/saves.e2e.ts (the cloud save: written, read back to the byte, replaced, refused, deleted, never a
 #    guest's), e2e/chat.e2e.ts (decision 228: two players chatting, a guest refused, a report reaching the moderation
-#    routes once `bun run admin:grant` in the app's container gives the role, a mute and its refusal), e2e/api.e2e.ts
+#    routes once `bun run admin:grant` in the app's container gives the role, a mute and its refusal),
+#    e2e/suggestions.e2e.ts (decision 229: friends of friends, a neighbour on the pit floor from two realms the checker
+#    reads, a chat partner, the ranking, a dismissal, a hidden profile and a block, a guest refused), e2e/api.e2e.ts
 #    (the game's calls: guests and their upgrade, mail links, password reset, verified, pending and flagged records kept
 #    off the boards, online realms feeding them, friends, blocks, privacy, the checker and Redis down, deletion, a backup
-#    restored into a scratch database, the cloud saves, realms and chat among it), e2e/realm.e2e.ts (decisions 226 and
-#    227: hero builds, player pages, the realm's lease, revisions and one-time transfers, the boards it feeds, the
-#    checker down) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by
+#    restored into a scratch database, the cloud saves, realms, chat and hidden suggestions among it), e2e/realm.e2e.ts
+#    (decisions 226 and 227: hero builds, player pages, the realm's lease, revisions and one-time transfers, the boards
+#    it feeds, the checker down) and e2e/ui.e2e.ts (the website in headless Chrome, built for Cloudflare Pages and served by
 #    e2e/pages.ts on :3001, calling the API on :3000 across origins, as gravoth.petarzarkov.com calls gravoth-api in
 #    production; the chat moderation page among it).
 # 4. Takes it all down again, volumes included, unless KEEP=1.
@@ -84,6 +86,8 @@ echo "== the cloud save, as the game keeps it"
 bun e2e/saves.e2e.ts || status=1
 echo "== chat and its moderation, as the game and the admin page call them"
 bun e2e/chat.e2e.ts || status=1
+echo "== friend suggestions, as the game calls them"
+bun e2e/suggestions.e2e.ts || status=1
 echo "== the API, as the game calls it"
 bun e2e/api.e2e.ts || status=1
 echo "== players' heroes and the online realm, as the game calls them"

@@ -1,5 +1,5 @@
 // `bun run e2e` (e2e/run.sh): the website driven like a person, in headless Chrome over the DevTools protocol, against
-// the local stack. Screenshots of the account (its cloud save too), friends, board, build, player, chat moderation and
+// the local stack. Screenshots of the account (its cloud save too), friends (their suggestions too), board, build, player, chat moderation and
 // delete pages land in e2e/.tmp/ui.
 // The site as Cloudflare Pages serves it (e2e/pages.ts) on one origin, the API on another, as in production.
 const base = 'http://localhost:3001';
@@ -467,6 +467,61 @@ ok(
   after.status === 200 && after.body.exists === false,
   after.body,
 );
+
+// 3c. Friend suggestions (decision 229): Hal and Ira sign up now (through the API), so they are the newest players this
+// week and head the list Dara has (no friends, records or chat of her own). Hide Ira; add Hal from the list.
+const newcomer = async (name: string) => {
+  const made = await api('POST', '/api/auth/sign-up/email', {
+    name,
+    email: `${name.toLowerCase()}-${run}@example.test`,
+    password: 'a long enough password',
+  });
+  const displayName = `${name}${run}`;
+  await api('PATCH', '/api/profile', { displayName }, made.token!);
+  return { id: made.body.user?.id as string, displayName };
+};
+const hal = await newcomer('Hal');
+const ira = await newcomer('Ira');
+const suggestionRow = (name: string) =>
+  `[...document.querySelectorAll('.suggestion-list .person-row')].find((r) => r.textContent.includes(${JSON.stringify(name)}))`;
+const suggestionButton = (name: string, label: string) =>
+  `[...(${suggestionRow(name)}?.querySelectorAll('button') ?? [])].find((b) => b.textContent.trim() === ${JSON.stringify(label)})`;
+await go('/friends');
+ok(
+  'the friends page suggests the newest players, each with its line, picture and Add and Hide',
+  await until(
+    `(() => { const g = ${suggestionRow(ira.displayName)}; const f = ${suggestionRow(hal.displayName)}; return !!g && !!f && g.textContent.includes('Played this week') && !!g.querySelector('.player-avatar img') && !!${suggestionButton(ira.displayName, 'Add')} && !!${suggestionButton(ira.displayName, 'Hide')}; })()`,
+  ),
+  await js(`document.querySelector('.suggested')?.innerText`),
+);
+ok(
+  "a suggested player's name opens their player page",
+  await until(
+    `!!document.querySelector('.suggestion-list a.person[href="/players/${ira.id}"]')`,
+  ),
+);
+await elementShot('friends-suggested', '.suggested');
+await js(`${suggestionButton(ira.displayName, 'Hide')}.click()`);
+ok(
+  'Hide leaves the player out for 30 days, and the list without them',
+  await until(
+    `${has(`${ira.displayName} won't be suggested for 30 days.`)} && !${suggestionRow(ira.displayName)} && !!${suggestionRow(hal.displayName)}`,
+  ),
+  await js(`document.querySelector('.suggested')?.innerText`),
+);
+await js(`${suggestionButton(hal.displayName, 'Add')}.click()`);
+ok(
+  'Add sends the request: Hal waits under "You asked" and leaves the suggestions',
+  await until(
+    `${has(`Request sent to ${hal.displayName}.`)} && !${suggestionRow(hal.displayName)} && [...document.querySelectorAll('.person-row')].some((r) => r.textContent.includes(${JSON.stringify(hal.displayName)}) && r.textContent.includes('Cancel'))`,
+  ),
+  await js(`document.querySelector('.suggested')?.innerText`),
+);
+await phone();
+await go('/friends');
+await until(`!!document.querySelector('.suggestion-list')`);
+await elementShot('friends-suggested-phone', '.suggested');
+await desktop();
 
 // 4. Ask Eli to be friends; Eli accepts (through the API, as the game would).
 await go('/friends');
