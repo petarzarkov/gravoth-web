@@ -241,9 +241,13 @@ const PSEUDO_SCHEME =
 /** `www.` starting a name: always a link (the website has none). */
 const WWW = /(?:^|[^a-z0-9-])www\./;
 
-/** Whether the text holds a link to anywhere but the website. */
-export const hasForeignLink = (text: string): boolean => {
-  const lower = text.toLowerCase();
+/**
+ * A dot written to dodge the check: spaces on both sides (`evil . com`) or in brackets (`evil(.)com`, `evil [.] com`).
+ * Prose keeps its dots: a sentence's has a space after it only (`done. Club tonight`).
+ */
+const SPACED_DOT = /\s+\.\s+|\s*[[(]\s*\.\s*[\])]\s*/g;
+
+const foreignIn = (lower: string): boolean => {
   if (PSEUDO_SCHEME.test(lower)) return true;
   for (const [link] of lower.matchAll(SCHEMED)) {
     const url = URL.parse(link);
@@ -272,6 +276,13 @@ export const hasForeignLink = (text: string): boolean => {
     }
   }
   return false;
+};
+
+/** Whether the text holds a link to anywhere but the website, its dodged dots read as dots. */
+export const hasForeignLink = (text: string): boolean => {
+  const lower = text.toLowerCase();
+  const tight = lower.replace(SPACED_DOT, '.');
+  return foreignIn(lower) || (tight !== lower && foreignIn(tight));
 };
 
 /**
@@ -303,6 +314,44 @@ const matchesAny = (
 const mask = (word: string, core: string): string =>
   word.replace(core, '*'.repeat(Array.from(core).length));
 
+/** A word of one letter, digit or look-alike symbol. */
+const SINGLE = /^[\p{L}\p{N}@$]$/u;
+
+/** Three or more one-character words in a row, read as one (`f u c k`): the word, and where each character stands. */
+interface SpacedRun {
+  readonly joined: string;
+  readonly at: readonly (readonly [number, number])[];
+}
+
+/**
+ * Spaced-out letters: one-character words with only spaces and punctuation between them (`f u c k`, `s . h . i . t`).
+ * A lone mark (`.`, `-`) between them does not end the run; any longer word does.
+ */
+const spacedRuns = (body: string): SpacedRun[] => {
+  const runs: SpacedRun[] = [];
+  let chars: string[] = [];
+  let at: [number, number][] = [];
+  const close = () => {
+    if (chars.length >= 3) runs.push({ joined: chars.join(''), at });
+    chars = [];
+    at = [];
+  };
+  for (const match of body.matchAll(WORD)) {
+    const word = match[0];
+    const core = word.replace(EDGES, '');
+    if (core === '') continue;
+    if (!SINGLE.test(core)) {
+      close();
+      continue;
+    }
+    const start = match.index + word.indexOf(core);
+    chars.push(core);
+    at.push([start, start + core.length]);
+  }
+  close();
+  return runs;
+};
+
 /** The message as it is stored, or why it is refused. */
 export const filterMessage = (raw: string): FilterOutcome => {
   const body = Array.from(visible(raw.normalize('NFKC')).trim())
@@ -311,8 +360,18 @@ export const filterMessage = (raw: string): FilterOutcome => {
     .trim();
   if (body === '') return { ok: false, code: 'MESSAGE_NOT_ALLOWED' };
   if (hasForeignLink(body)) return { ok: false, code: 'LINKS_NOT_ALLOWED' };
+  // Spaced-out letters first: a hate word refuses the message, an obscenity masks each of its letters.
+  let spaced = body;
+  for (const run of spacedRuns(body).reverse()) {
+    const spelled = spellings(run.joined);
+    if (matchesAny(spelled, HATE_ANYWHERE, HATE_WORDS))
+      return { ok: false, code: 'MESSAGE_NOT_ALLOWED' };
+    if (!matchesAny(spelled, OBSCENE_ANYWHERE, OBSCENE_WORDS)) continue;
+    for (const [from, to] of [...run.at].reverse())
+      spaced = spaced.slice(0, from) + '*' + spaced.slice(to);
+  }
   let refused = false;
-  const masked = body.replace(WORD, (word) => {
+  const masked = spaced.replace(WORD, (word) => {
     const core = word.replace(EDGES, '');
     if (core === '') return word;
     const spelled = spellings(core);

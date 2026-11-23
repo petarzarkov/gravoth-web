@@ -154,13 +154,30 @@ export const wordForms = (word: string): readonly string[] => {
   ];
 };
 
-/** Whether `word` holds one of `anywhere` inside it, folded (`fvck` is `fuck`) or as typed (folding `v` would hide `gravoth` as `grauoth`). */
+/**
+ * Ordinary words that hold an anywhere-word: `cunt` in Scunthorpe, `rapist` in therapist, `nigg` in snigger and niggle,
+ * `retard` in retardant. They are taken out of a word before the anywhere check, so the rest of it still counts
+ * (`therapistfuck` is caught, `my therapist` is not refused).
+ */
+export const SAFE_STEMS: readonly string[] = [
+  'scunthorp',
+  'therapist',
+  'snigger',
+  'niggl',
+  'retardant',
+];
+
+const withoutSafe = (word: string): string =>
+  SAFE_STEMS.reduce((rest, stem) => rest.split(stem).join('#'), word);
+
+/** Whether `word` holds one of `anywhere` inside it, folded (`fvck` is `fuck`) or as typed (folding `v` would hide `gravoth` as `grauoth`), once its `SAFE_STEMS` are out. */
 export const holdsAnywhere = (
   word: string,
   anywhere: readonly string[],
 ): boolean => {
-  const plain = word.replace(/[_-]/g, '').toLowerCase();
-  const joined = fold(plain);
+  const lower = word.replace(/[_-]/g, '').toLowerCase();
+  const plain = withoutSafe(lower);
+  const joined = withoutSafe(fold(lower));
   return anywhere.some((bad) => joined.includes(bad) || plain.includes(bad));
 };
 

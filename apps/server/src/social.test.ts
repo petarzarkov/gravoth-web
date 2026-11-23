@@ -176,6 +176,10 @@ describe('profiles', () => {
     expect(displayNameProblem('Assassin')).toBeUndefined();
     expect(displayNameProblem('Grapefruit')).toBeUndefined();
     expect(displayNameProblem('Kriso-the-Second')).toBeUndefined();
+    // The ordinary words that hold a listed one (SAFE_STEMS), and what is still caught around them.
+    expect(displayNameProblem('Scunthorpe_FC')).toBeUndefined();
+    expect(displayNameProblem('TheTherapist')).toBeUndefined();
+    expect(displayNameProblem('Therapist_cunt')).toBe('not-allowed');
   });
 });
 

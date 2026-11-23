@@ -132,6 +132,39 @@ describe('the filter', () => {
   it('keeps one line of text', () => {
     expect(stored('  a\nb\tc  ')).toBe('a b c');
   });
+
+  it('reads spaced-out letters as one word', () => {
+    expect(stored('f u c k off')).toBe('* * * * off');
+    expect(stored('s . h . i . t')).toBe('* . * . * . *');
+    expect(stored('F  U  C  K!')).toBe('*  *  *  *!');
+    for (const text of ['n i g g e r', 'r a p e'])
+      expect(stored(text)).toBe('MESSAGE_NOT_ALLOWED');
+    for (const text of ['press a b c to win', 'I am a big fan', 'u r a legend'])
+      expect(stored(text)).toBe(text);
+  });
+
+  it('reads a dodged dot as a dot in a link', () => {
+    for (const text of ['evil . com', 'go to evil(.)com', 'evil [ . ] gg/abc'])
+      expect(stored(text)).toBe('LINKS_NOT_ALLOWED');
+    for (const text of [
+      'done. Club tonight',
+      'gg. win next time',
+      'nice . me too',
+    ])
+      expect(stored(text)).toBe(text);
+  });
+
+  it('lets through the ordinary words that hold a listed one', () => {
+    for (const text of [
+      'Scunthorpe United',
+      'my therapist said so',
+      'stop sniggering at every niggle',
+      'fire retardant gear',
+    ])
+      expect(stored(text)).toBe(text);
+    expect(stored('therapistfuck')).toBe('*************');
+    expect(stored('scunthorpe cunt')).toBe('scunthorpe ****');
+  });
 });
 
 describe('the rules', () => {
