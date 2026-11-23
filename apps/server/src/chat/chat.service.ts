@@ -140,7 +140,8 @@ export class Chat {
     const byId = new Map(last.map((row) => [row.id, row]));
     const peers = rows.map((row) => row.peer);
     const [players, unread, online] = await Promise.all([
-      chatPlayers(this.db, peers),
+      // The caller too: the last line may be theirs.
+      chatPlayers(this.db, [...peers, me]),
       this.unreadBy(me),
       this.onlineFriends(me, peers),
     ]);

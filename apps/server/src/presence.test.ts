@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { Logger, provide } from '@dunx/core';
-import type { RedisConnection } from '@dunx/infra/redis';
 import {
   PRESENCE_TTL_SECONDS,
   type ChatConversations,
   type FriendView,
   type RequestOutcome,
 } from '@gravoth/contracts';
+import type { PresenceRedis } from './presence/presence-redis.js';
 import {
   PRESENCE_REFRESH_MS,
   PresenceStore,
@@ -14,7 +14,7 @@ import {
   presenceKey,
 } from './presence/presence.js';
 import { startTestApp, type TestApp } from './testing/app.js';
-import { call, signUp, type Player } from './testing/http.js';
+import { call, guest, signUp, type Player } from './testing/http.js';
 
 /**
  * Friends' online status (v0.14.4): a signed-in request marks its caller (at most once per refresh window), a friend
@@ -119,11 +119,13 @@ describe('a friend', () => {
     expect(store.marks).toBe(after + 1);
   });
 
-  it('is never marked by a public route', async () => {
+  it('is never marked by a public route, and a guest never at all', async () => {
     expireAll();
     const before = store.marks;
     await call(base, 'GET', '/api/leaderboards');
     await call(base, 'GET', `/api/players/${bo.id}`, { token: bo.token });
+    const visitor = await guest(base);
+    expect((await get('/api/heroes', visitor)).status).toBe(200);
     expect(store.marks).toBe(before);
     expect(await seesOnline(bo, ana)).toBe(false);
   });
@@ -186,6 +188,11 @@ describe('a conversation', () => {
         ?.online;
     };
     expect(await peerOnline()).toBe(false);
+    // The last line is the caller's own: it carries their name, not an empty one.
+    const mine = await get<ChatConversations>('/api/chat/direct', ana);
+    expect(
+      mine.body.conversations.find((c) => c.peer.userId === bo.id)?.last?.from,
+    ).toMatchObject({ userId: ana.id, displayName: ana.displayName });
     store.clock += PRESENCE_REFRESH_MS;
     await get('/api/chat/unread', bo);
     expect(await peerOnline()).toBe(true);
@@ -202,16 +209,15 @@ describe('the store over Redis', () => {
   const working = {
     set: async (...args: unknown[]) => {
       sets.push(args);
-      return 'OK';
     },
-    mget: async (...keys: string[]) =>
+    mget: async (keys: readonly string[]) =>
       keys.map((key) => (key.endsWith(':b') ? '1' : null)),
-  } as unknown as RedisConnection;
+  } as unknown as PresenceRedis;
 
   it('sets a key per player with the time to live, and reads them with one MGET', async () => {
     const redis = new RedisPresenceStore(working, logger);
     await redis.mark('a', PRESENCE_TTL_SECONDS);
-    expect(sets).toEqual([[presenceKey('a'), '1', { ex: 120 }]]);
+    expect(sets).toEqual([[presenceKey('a'), 120]]);
     expect([...(await redis.live(['a', 'b', 'c']))]).toEqual(['b']);
     expect((await redis.live([])).size).toBe(0);
   });
@@ -225,7 +231,7 @@ describe('the store over Redis', () => {
         throw new Error('connection refused');
       },
     ]) {
-      const broken = { set: fail, mget: fail } as unknown as RedisConnection;
+      const broken = { set: fail, mget: fail } as unknown as PresenceRedis;
       const redis = new RedisPresenceStore(broken, logger);
       expect(await redis.mark('a', 120)).toBeUndefined();
       expect((await redis.live(['a'])).size).toBe(0);

@@ -2,21 +2,22 @@
  * Friends' online status (v0.14.4): each signed-in player's last activity is a Redis key that lives
  * `PRESENCE_TTL_SECONDS`, refreshed by their authenticated requests (`MarkPresence`, after `SessionGuard`). A player is
  * online to their friends while the key lives and their profile's `showOnline` is on. Redis is never in a request's
- * way: a mark is not awaited, and with Redis down every player reads as offline and every request still answers.
+ * way: a mark is not awaited, and with Redis down every player reads as offline and every request still answers; when
+ * Redis is back, presence's own connection (`PresenceRedis`) connects again.
  */
 import { AuthContext } from '@dunx/auth';
 import { Logger } from '@dunx/core';
 import type { Middleware, Next, RouteContext } from '@dunx/http';
-import { RedisConnection } from '@dunx/infra/redis';
 import { PRESENCE_TTL_SECONDS } from '@gravoth/contracts';
 import type { BunRequest } from 'bun';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Db } from '../database/db.js';
 import { profile } from '../database/schema.js';
+import { PresenceRedis } from './presence-redis.js';
 
 /** At most one mark a player per this, per process: the key outlives it four times over. */
 export const PRESENCE_REFRESH_MS = 30_000;
-/** Past this many players remembered, the ones not marked within the refresh window are forgotten. */
+/** Past this many players remembered, the ones not marked within the refresh window are forgotten (once a window). */
 const REMEMBERED_MAX = 10_000;
 /** At most one warning a minute about Redis. */
 const WARN_EVERY_MS = 60_000;
@@ -40,12 +41,15 @@ export abstract class PresenceStore {
   }
 }
 
-/** A key per player in Redis (`SET ... EX`, read with one `MGET`): a failed mark is lost, a failed read finds no one. */
+/**
+ * A key per player in Redis (`SET ... EX`, read with one `MGET`, over presence's own connection, `PresenceRedis`): a
+ * failed mark is lost, a failed read finds no one.
+ */
 export class RedisPresenceStore extends PresenceStore {
   private warned = 0;
 
   constructor(
-    private readonly redis: RedisConnection,
+    private readonly redis: PresenceRedis,
     private readonly logger: Logger,
   ) {
     super();
@@ -53,21 +57,16 @@ export class RedisPresenceStore extends PresenceStore {
 
   async mark(userId: string, seconds: number): Promise<void> {
     try {
-      await this.redis.set(presenceKey(userId), '1', { ex: seconds });
+      await this.redis.set(presenceKey(userId), seconds);
     } catch (error) {
       this.warn('presence not marked', error);
     }
   }
 
   async live(userIds: readonly string[]): Promise<ReadonlySet<string>> {
-    const [first, ...rest] = userIds;
-    if (first === undefined) return new Set();
+    if (userIds.length === 0) return new Set();
     try {
-      // Bun raises some connection errors synchronously: inside the try either way.
-      const values = await this.redis.mget(
-        presenceKey(first),
-        ...rest.map(presenceKey),
-      );
+      const values = await this.redis.mget(userIds.map(presenceKey));
       return new Set(userIds.filter((_, i) => values[i] != null));
     } catch (error) {
       this.warn('presence not read', error);
@@ -87,6 +86,7 @@ export class RedisPresenceStore extends PresenceStore {
 export class Presence {
   /** When each player was last marked by this process. */
   private readonly marked = new Map<string, number>();
+  private pruned = 0;
 
   constructor(
     private readonly store: PresenceStore,
@@ -99,9 +99,14 @@ export class Presence {
     const last = this.marked.get(userId);
     if (last !== undefined && now - last < PRESENCE_REFRESH_MS) return;
     this.marked.set(userId, now);
-    if (this.marked.size > REMEMBERED_MAX)
+    if (
+      this.marked.size > REMEMBERED_MAX &&
+      now - this.pruned >= PRESENCE_REFRESH_MS
+    ) {
+      this.pruned = now;
       for (const [id, at] of this.marked)
         if (now - at >= PRESENCE_REFRESH_MS) this.marked.delete(id);
+    }
     void this.store.mark(userId, PRESENCE_TTL_SECONDS);
   }
 
@@ -121,7 +126,7 @@ export class Presence {
 
 /**
  * After `SessionGuard` (`@UseGuards(SessionGuard, MarkPresence)`): the caller's request marks them active. A public
- * route has no caller and marks no one.
+ * route has no caller and marks no one, and a guest has no friends to show it to.
  */
 export class MarkPresence implements Middleware {
   constructor(
@@ -131,7 +136,11 @@ export class MarkPresence implements Middleware {
 
   handle(_req: BunRequest, _ctx: RouteContext, next: Next): Promise<Response> {
     const caller = this.context.current();
-    if (caller !== undefined) this.presence.seen(caller.user.id);
+    if (
+      caller !== undefined &&
+      (caller.user as { isAnonymous?: boolean | null }).isAnonymous !== true
+    )
+      this.presence.seen(caller.user.id);
     return next();
   }
 }
